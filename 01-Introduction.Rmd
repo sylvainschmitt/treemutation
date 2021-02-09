@@ -12,3 +12,33 @@ opts_chunk$set(
 ```
 
 # Introduction {-}
+
+## Ressources {-}
+
+* [Niklas' notebook](https://onedrive.live.com/view.aspx?resid=3C16B36AC758A6DB!439537&authkey=!AHS5FemAl1Z9fYI)
+* [tasks](https://github.com/sylvainschmitt/treemutation/projects/1?add_cards_query=is%3Aopen)
+
+## LiDAR imaging {-}
+
+> aeroplane lidar data going back 15 years (2004). Can assess change in canopy structure in target tree neighbourhood over the last 15 years. 
+
+**Why ? NCI almost catch the same thing over 30 years.**
+
+## Sampling site {-}
+
+### Paracou
+
+* proximity
+* lidar data
+
+### Régina {-}
+
+* higher trees
+* destructive sampling
+* clear background for lidar
+* tree rings
+
+## Tools {-}
+
+* R package `lidR`
+* CloudCompare
