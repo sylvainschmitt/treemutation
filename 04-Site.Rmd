@@ -1,4 +1,4 @@
-```{r setupindividuals, include=FALSE}
+```{r setupsite, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
 library(kableExtra)
@@ -8,13 +8,14 @@ library(tidyverse)
 library(raster)
 library(leaflet)
 library(sf)
+library(lidR)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
   cache = T, cache.lazy = F)
 ```
 
-```{r dataindividuals, echo = F}
+```{r datasite, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 p <- read_csv(file = "data/Paracou TREEMUTATION candidates.csv")
 coordinates(p) <- ~ lon + lat
@@ -37,17 +38,34 @@ dcm2004 <- projectRaster(dcm2004, crs = crs)
 dcm2009 <- projectRaster(dcm2009, crs = crs)
 dcm2013 <- projectRaster(dcm2013, crs = crs)
 dcm2015 <- projectRaster(dcm2015, crs = crs)
-rm(dem)
 
 # st_layers("data/Regina TREEMUTATION candidates.gpx")
 r <- st_read("data/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
+lasR1 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz") 
+lasR2 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz") 
+lasR3 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz") 
+dcmR1 <- grid_canopy(lasR1, res = 1, algorithm = p2r())
+dcmR2 <- grid_canopy(lasR2, res = 1, algorithm = p2r())
+dcmR3 <- grid_canopy(lasR3, res = 1, algorithm = p2r())
+projection(dcmR1) <- projection(dem)
+projection(dcmR2) <- projection(dem)
+projection(dcmR3) <- projection(dem)
+dcmR1 <- projectRaster(dcmR1, crs = crs)
+dcmR2 <- projectRaster(dcmR2, crs = crs)
+dcmR3 <- projectRaster(dcmR3, crs = crs)
+rm(dem) 
 ```
 
-# Individuals
+# Site
+
+This chapter support the choice of site for the study.
 
 ## Paracou
 
-```{r paracouIndividualsMap}
+* 4 LiDAR campaigns from 2004 to 2015 (Fig. \@ref(fig:paracouMap))
+* Proximity, easier to follow phenology and collect flowers and fruits
+
+```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns."}
 leaflet() %>%
   addTiles() %>% 
   addRasterImage(aggregate(dcm2004, 4), colors = "Greys", group = "DCM 2004") %>%
@@ -58,31 +76,38 @@ leaflet() %>%
   addCircles(data = p, group = "Individuals", col = "red", radius =  30) %>% 
   addLayersControl(overlayGroups = c("DCM 2004", "DCM 2009", "DCM 2013", "DCM 2015",
                                      'Plots', 'Individuals'),
-                   options = layersControlOptions(collapsed = T))
+                   options = layersControlOptions(collapsed = T)) 
 ```
 
 ## Régina
 
-```{r reginaIndividualsMap}
+* 1 LiDAR in 2016 (ONF, see Fig. \@ref(fig:reginaMap) and Fig. \@ref(fig:\@ref(fig:reginaMap)))
+* Possibility of clearing for drone
+* Destructive sampling for tree rings? Coring individuals. **Ask ONF.**
+* Higher trees. Maybe not older but at least implying more cell divisions regarding
+
+```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
 leaflet() %>%
   addTiles() %>% 
+  addRasterImage(dcmR1, colors = "Greys", group = "DCM") %>%
+   addRasterImage(dcmR2, colors = "Greys", group = "DCM") %>%
+   addRasterImage(dcmR3, colors = "Greys", group = "DCM") %>%
   addCircles(data = r$geometry, group = "Individuals", col = "red", radius =  30)
 ```
 
-## *Dycorinia guyanensis*
-
-### Dgui3M P18-2-148
-
-```{r, eval=F, echo=T}
+```{r, eval=F, echo=F}
 library(lidR)
 library(rgl)
-las <- readLAS("data/YS-20201123-130625classclipDycorinia.las")
-plot(las, bg = "white")
-path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/YS-20201123-130625classclipDycorinia.gif"
-movie3d(spin3d(), duration = 5, movie = path)
+las2gif <- function(path){
+ las <- readLAS(path) 
+ plot(las, bg = "white")
+ movie3d(spin3d(), duration = 5, movie = file.path("/home/sylvain/Documents/ECOFOG/treemutation", path))
+}
+lapply(list.files("data/Lidar_ONF/LAZ_zoi_trees/", pattern = "laz", full.names = T), las2gif)
 ```
 
-```{r}
-include_graphics("data/YS-20201123-130625classclipDycorinia.gif.gif")
+```{r reginaLiDAR, fig.cap="ONF's LiDAR from Regina."}
+include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz.gif")
+include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz.gif")
+include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz.gif")
 ```
-

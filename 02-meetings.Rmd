@@ -1,0 +1,79 @@
+```{r setupmeetings, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+# Meetings
+
+## 11/02/2021 Sylvain's Kick-off
+
+*NT, MH, & SS*
+
+### Funding
+
+* GPR (labex COTE + idex UB): audition 01/21, answer 03-06/21
+* Currently enough for __2__ species this year
+
+### Site
+
+* __Regina__ 
+    * 1 LiDAR in 2016 (ONF, see Fig. \@ref(fig:reginaMap) and Fig. \@ref(fig:\@ref(fig:reginaMap)))
+    * Possibility of clearing for drone
+    * Destructive sampling for tree rings? Coring individuals. **Ask ONF.**
+    * Higher trees. Maybe not older but at least implying more cell divisions regarding mutations.
+* __Paracou__
+    * 4 LiDAR campaigns from 2004 to 2015 (Fig. \@ref(fig:paracouMap))
+    * Proximity, easier to follow phenology and collect flowers and fruits
+
+### Species
+
+1. *Dicorynia guyanensis*
+1. ...
+1. *Eschweilera sp*
+
+* _Sextonia rubra_: 
+    * already sampled
+    * Paracou
+* _Dicorynia_: 
+    * Paracou & Regina
+    * flowering time? **Ask Natalia Norden and Jerome Chave for original data + Patrick Heuret for his shared article**
+    * Suggestion: spot one already flowering before sampling
+    * Check the phenology at the herbarium
+* _Eschwerilera sp_: 
+    * Parcou (small) and Regina (big)
+* _Handoranthus sp_: 
+    * published genomes (to read) but high variation
+    * Regina
+    * Need to be collected for flux cytometry
+* _Caryocar sp_: 
+    * Paracou (big)
+    * many lianas
+    * no self shading?
+
+### Field work
+
+* __Regina__
+    * beginning of march
+    * wood samples
+    * drone
+    * dry leaves of *Handoranthus sp* for flux cytometry from our favorite individuals and two other potential candidates
+    * Sample (Big shot) *Eschweilera sp* for identification and gene pool attribution with Myriam's SSRseq experiment (results in spring)
+* __Paracou__
+    * _Dycorinia_ from interplots. **Ask Partick Heuret and Eric Nicolini.**
+    
+### Genomics
+
+* Check flux cytometry confidence: plot second against first sampling for confidence envelope (Fig. \@ref(fig:fluxconfidence))
+* choose what to sequence
+* get in touch asap sequencing company
+* High molecular DNA extraction at CNRGV
+* Bionano with CNRGV
+* PacBio for HiFi reads
