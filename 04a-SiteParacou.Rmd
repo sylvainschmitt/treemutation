@@ -1,4 +1,4 @@
-```{r setupsite, include=FALSE}
+```{r setupsiteparacou, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
 library(kableExtra)
@@ -15,7 +15,7 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasite, echo = F}
+```{r datasiteparacou, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 p <- read_csv(file = "data/Paracou TREEMUTATION candidates.csv")
 coordinates(p) <- ~ lon + lat
@@ -38,21 +38,6 @@ dcm2004 <- projectRaster(dcm2004, crs = crs)
 dcm2009 <- projectRaster(dcm2009, crs = crs)
 dcm2013 <- projectRaster(dcm2013, crs = crs)
 dcm2015 <- projectRaster(dcm2015, crs = crs)
-
-# st_layers("data/Regina TREEMUTATION candidates.gpx")
-r <- st_read("data/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
-lasR1 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz") 
-lasR2 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz") 
-lasR3 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz") 
-dcmR1 <- grid_canopy(lasR1, res = 1, algorithm = p2r())
-dcmR2 <- grid_canopy(lasR2, res = 1, algorithm = p2r())
-dcmR3 <- grid_canopy(lasR3, res = 1, algorithm = p2r())
-projection(dcmR1) <- projection(dem)
-projection(dcmR2) <- projection(dem)
-projection(dcmR3) <- projection(dem)
-dcmR1 <- projectRaster(dcmR1, crs = crs)
-dcmR2 <- projectRaster(dcmR2, crs = crs)
-dcmR3 <- projectRaster(dcmR3, crs = crs)
 rm(dem) 
 ```
 
@@ -77,37 +62,4 @@ leaflet() %>%
   addLayersControl(overlayGroups = c("DCM 2004", "DCM 2009", "DCM 2013", "DCM 2015",
                                      'Plots', 'Individuals'),
                    options = layersControlOptions(collapsed = T)) 
-```
-
-## Régina
-
-* 1 LiDAR in 2016 (ONF, see Fig. \@ref(fig:reginaMap) and Fig. \@ref(fig:\@ref(fig:reginaMap)))
-* Possibility of clearing for drone
-* Destructive sampling for tree rings? Coring individuals. **Ask ONF.**
-* Higher trees. Maybe not older but at least implying more cell divisions regarding
-
-```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
-leaflet() %>%
-  addTiles() %>% 
-  addRasterImage(dcmR1, colors = "Greys", group = "DCM") %>%
-   addRasterImage(dcmR2, colors = "Greys", group = "DCM") %>%
-   addRasterImage(dcmR3, colors = "Greys", group = "DCM") %>%
-  addCircles(data = r$geometry, group = "Individuals", col = "red", radius =  30)
-```
-
-```{r, eval=F, echo=F}
-library(lidR)
-library(rgl)
-las2gif <- function(path){
- las <- readLAS(path) 
- plot(las, bg = "white")
- movie3d(spin3d(), duration = 5, movie = file.path("/home/sylvain/Documents/ECOFOG/treemutation", path))
-}
-lapply(list.files("data/Lidar_ONF/LAZ_zoi_trees/", pattern = "laz", full.names = T), las2gif)
-```
-
-```{r reginaLiDAR, fig.cap="ONF's LiDAR from Regina."}
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz.gif")
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz.gif")
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz.gif")
 ```
