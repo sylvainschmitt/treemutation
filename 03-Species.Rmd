@@ -12,15 +12,15 @@ opts_chunk$set(
 ```
 
 
-```{r cdataspecies}
-species <- read_csv(file = "data/list_species_TreeAdapt_130220b.csv") %>% 
+```{r dataspecies}
+species <- read_csv(file = "data/Species/rings/list_species_TreeAdapt_130220b.csv") %>% 
   rename(Family = Famille,
          Genus = Genre,
          Species = Espece,
          AnnualRings = `Annual Rings`,
          ReproductivePhenology = `Reproductive Phenology`)
-fcm <- bind_rows(read_csv("data/FCM analyses - TREEMUTATION.csv"),
-                 read_csv("data/Results of FCM analyses - TREEMUTATION.csv")) %>% 
+fcm <- bind_rows(read_csv("data/Species/fluxcytometry/FCM analyses - TREEMUTATION.csv"),
+                 read_csv("data/Species/fluxcytometry/Results of FCM analyses - TREEMUTATION.csv")) %>% 
   rename(GenomeMbp = `1C (Mbp)`)
 species <- left_join(species, fcm)
 ```

@@ -19,33 +19,65 @@ opts_chunk$set(
 
 This chapter support the choice of individuals for the study.
 
-## *Dicorynia guyanensis*
+## Regina
 
-### Dgui3M P18-2-148
+### *Dicorynia guyanensis*
+
+####  AG1664
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/AG1644/_0018393.jpg")
+```
+
+#### Angela
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/Angela/_0018492.jpg")
+```
+
+### *Handroanthus impetiginosus*
+
+#### EBR2923
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/EBR2923/_0018397.jpg")
+```
+
+#### EBR5508
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/EBR5508/_0018444.jpg")
+```
+
+### *Eschweilera sp.*
+
+#### MX2472
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/MX2472/_0018401.jpg")
+```
+
+#### MN5505
+
+```{r}
+include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg")
+```
+
+## Paracou
+
+### *Dicorynia guyanensis*
+
+#### Dgui3M P18-2-148
 
 ```{r, eval=F, echo=T}
 library(lidR)
 library(rgl)
 las <- readLAS("data/YS-20201123-130625classclipDycorinia.las")
 plot(las, bg = "white")
-path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/YS-20201123-130625classclipDycorinia.gif"
+path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/Paracou/AG/YS-20201123-130625classclipDycorinia.gif"
 movie3d(spin3d(), duration = 5, movie = path)
 ```
 
 ```{r}
-include_graphics("data/YS-20201123-130625classclipDycorinia.gif")
+include_graphics("data/Paracou/AG/YS-20201123-130625classclipDycorinia.gif")
 ```
-
-```{r, eval=F}
-library(lidR)
-library(rgl)
-las <- readLAS("data/YS-20201123-130625classclipDycorinia.las")
-chm <- grid_canopy(las, 1, pitfree(subcircle = 0.2))
-algo <- dalponte2016(chm, ttops)
-las <- segment_trees(las, algo) # segment point cloud
-plot(las, bg = "white", size = 4, color = "treeID") # visualize trees
-add_treetops3d(x, ttops)
-tree <- filter_poi(las, treeID == 3)
-plot(tree, size = 8, bg = "white")
-```
-

@@ -17,19 +17,16 @@ opts_chunk$set(
 
 ```{r datasiteparacou, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
-p <- read_csv(file = "data/Paracou TREEMUTATION candidates.csv")
+p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv")
 coordinates(p) <- ~ lon + lat
 proj4string(p) <- crs
-
-path <- "~/Documents/BIOGECO/PhD/data/Paracou"
-limits <- shapefile(file.path(path, "limits", "OverallPlots.shp"))
+limits <- shapefile("data/Paracou/limits/OverallPlots.shp")
 limits <- spTransform(limits, CRSobj = crs)
-
-dcm2004 <- raster(file.path(path, "biotic", "Paracou2004_MNC1m.asc"))
-dcm2009 <- raster(file.path(path, "biotic", "MNC_ParacouAvril2009_1m.tif"))
-dcm2013 <- raster(file.path(path, "biotic", "ParacouMNS1m2013.asc"))
-dcm2015 <- raster(file.path(path, "biotic", "ParacouMNS1m2015.asc"))
-dem <- raster(file.path(path, "topography", "DEM_1m_2015.tif")) # for CRS
+dcm2004 <- raster("data/Paracou/lidar/Paracou2004_MNC1m.asc")
+dcm2009 <- raster("data/Paracou/lidar/MNC_ParacouAvril2009_1m.tif")
+dcm2013 <- raster("data/Paracou/lidar/ParacouMNS1m2013.asc")
+dcm2015 <- raster("data/Paracou/lidar/ParacouMNS1m2015.asc")
+dem <- raster("data/Paracou/lidar/DEM_1m_2015.tif") # for CRS
 projection(dcm2004) <- projection(dem)
 projection(dcm2009) <- projection(dem)
 projection(dcm2013) <- projection(dem)

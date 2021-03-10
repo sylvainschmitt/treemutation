@@ -9,6 +9,7 @@ library(raster)
 library(leaflet)
 library(sf)
 library(lidR)
+library(lwgeom)
 library(osmdata)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
@@ -18,13 +19,11 @@ opts_chunk$set(
 
 ```{r datasiteregina, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
-path <- "~/Documents/BIOGECO/PhD/data/Paracou"
-dem <- raster(file.path(path, "topography", "DEM_1m_2015.tif")) # for CRS
-# st_layers("data/Regina TREEMUTATION candidates.gpx")
-candidates <- st_read("data/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
-lasR1 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz") 
-lasR2 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz") 
-lasR3 <- readLAS("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz") 
+dem <- raster("data/Paracou/lidar/DEM_1m_2015.tif") # for CRS
+candidates <- st_read("data/Regina/trees/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
+lasR1 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_AG164490.laz") 
+lasR2 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_EBR292375.laz") 
+lasR3 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_MX2472.laz") 
 dcmR1 <- grid_canopy(lasR1, res = 1, algorithm = p2r())
 dcmR2 <- grid_canopy(lasR2, res = 1, algorithm = p2r())
 dcmR3 <- grid_canopy(lasR3, res = 1, algorithm = p2r())
@@ -37,7 +36,7 @@ dcmR3 <- projectRaster(dcmR3, crs = crs)
 rm(dem) 
 trees <- lapply(c("AG_ONF.gpx", "EBR_ONF.gpx", "EBV_ONF.gpx", "MN_ONF.gpx"),
                 function(file)
-                  st_read(file.path("data", "Regina", file), layer = "waypoints")) %>% 
+                  st_read(file.path("data", "Regina", "trees", file), layer = "waypoints")) %>% 
   bind_rows() %>% 
   separate(name, c("species", "id", "dbh"), remove = F, convert = T)
 road <- opq(bbox = st_bbox(trees)) %>%
@@ -77,6 +76,10 @@ trees %>%
 ```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
 trees.map <- filter(trees, (distroad < 100 & !grepl("E", species)) | (distroad < 200 & grepl("E", species))) %>% 
     filter((species == "AG" & dbh > 90) | (species != "AG" & dbh > 60))
+trees.map %>% 
+  dplyr::select(-species, -id, -dbh, -distroad) %>% 
+  st_write(dsn = "data/Regina/trees/Regina_TREEMUTATION_selected_candidates.gpx", 
+           delete_dsn = T, driver = "GPX", layer = "waypoints")
 cols <- c("blue", "pink", "green", "black")
 names(cols) <- c("AG", "EBR", "EBV", "MN")
 leaflet() %>%
@@ -102,13 +105,13 @@ library(rgl)
 las2gif <- function(path){
  las <- readLAS(path) 
  plot(las, bg = "white")
- movie3d(spin3d(), duration = 5, movie = file.path("/home/sylvain/Documents/ECOFOG/treemutation", path))
+ movie3d(spin3d(), duration = 5, movie = file.path("/home/sylvain/Documents/ECOFOG/treemutation/data/Regina/lidar/LAZ_zoi_trees/", path))
 }
-lapply(list.files("data/Lidar_ONF/LAZ_zoi_trees/", pattern = "laz", full.names = T), las2gif)
+lapply(list.files("data/Regina/lidar/LAZ_zoi_trees/", pattern = "laz", full.names = T), las2gif)
 ```
 
 ```{r reginaLiDAR, fig.cap="ONF's LiDAR from Regina."}
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_AG164490.laz.gif")
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_EBR292375.laz.gif")
-include_graphics("data/Lidar_ONF/LAZ_zoi_trees/LAS_MX2472.laz.gif")
+include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_AG164490.laz.gif")
+include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_EBR292375.laz.gif")
+include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_MX2472.laz.gif")
 ```

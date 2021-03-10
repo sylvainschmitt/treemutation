@@ -17,13 +17,3 @@ opts_chunk$set(
 
 * [Niklas' notebook](https://onedrive.live.com/view.aspx?resid=3C16B36AC758A6DB!439537&authkey=!AHS5FemAl1Z9fYI)
 * [tasks](https://github.com/sylvainschmitt/treemutation/projects/1?add_cards_query=is%3Aopen)
-
-## Data {-}
-
-* Lidar...
-* ...
-
-## Tools {-}
-
-* R package `lidR`
-* CloudCompare
