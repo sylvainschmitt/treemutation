@@ -23,45 +23,77 @@ This chapter support the choice of individuals for the study.
 
 ### *Dicorynia guyanensis*
 
-####  AG1664
+####  AG1644
 
-```{r}
+```{r ag1644ground, fig.cap="AG1644 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/AG1644/_0018393.jpg")
+```
+
+```{r ag1644drone, fig.cap="AG1644 from the drone."}
+include_graphics("data/Regina/drone/AG1644/DJI_1430.JPG")
 ```
 
 #### Angela
 
-```{r}
+```{r angleagraound,  fig.cap="Angela from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/Angela/_0018492.jpg")
+```
+
+```{r angleadrone,  fig.cap="Angela from the drone."}
+include_graphics("data/Regina/drone/Angela/DJI_2910.JPG")
+```
+
+```{r angleadrone2,  fig.cap="Angela from the drone."}
+include_graphics("data/Regina/drone/Angela/DJI_2520.JPG")
 ```
 
 ### *Handroanthus impetiginosus*
 
 #### EBR2923
 
-```{r}
+```{r EBR2923ground, fig.cap="EBR2923 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/EBR2923/_0018397.jpg")
 ```
 
+
+```{r EBR2923drone, fig.cap="EBR2923 from the drone."}
+include_graphics("data/Regina/drone/EBR2923/DJI_2520.JPG")
+``` 
+
 #### EBR5508
 
-```{r}
+```{r EBR5508ground, fig.cap="EBR5508 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/EBR5508/_0018444.jpg")
 ```
+
+```{r EBR5508drone, fig.cap="EBR5508 from the drone."}
+include_graphics("data/Regina/drone/EBR5508/DJI_1770.JPG")
+``` 
+
 
 ### *Eschweilera sp.*
 
 #### MX2472
 
-```{r}
+```{r MX2472ground, fig.cap="MX2472 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/MX2472/_0018401.jpg")
 ```
 
+```{r MX2472drone, fig.cap="MX2472 from the drone."}
+include_graphics("data/Regina/drone/MX2472/DJI_0760.JPG")
+``` 
+
+
 #### MN5505
 
-```{r}
+```{r MN5505ground, fig.cap="MN5505 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg")
 ```
+
+```{r MN5505drone, fig.cap="MN5505 from the drone."}
+include_graphics("data/Regina/drone/MN5505/DJI_1550.JPG")
+``` 
+
 
 ## Paracou
 

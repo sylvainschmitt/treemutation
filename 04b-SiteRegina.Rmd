@@ -20,32 +20,43 @@ opts_chunk$set(
 ```{r datasiteregina, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 dem <- raster("data/Paracou/lidar/DEM_1m_2015.tif") # for CRS
-candidates <- st_read("data/Regina/trees/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
-lasR1 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_AG164490.laz") 
-lasR2 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_EBR292375.laz") 
-lasR3 <- readLAS("data/Regina/lidar/LAZ_zoi_trees/LAS_MX2472.laz") 
-dcmR1 <- grid_canopy(lasR1, res = 1, algorithm = p2r())
-dcmR2 <- grid_canopy(lasR2, res = 1, algorithm = p2r())
-dcmR3 <- grid_canopy(lasR3, res = 1, algorithm = p2r())
-projection(dcmR1) <- projection(dem)
-projection(dcmR2) <- projection(dem)
-projection(dcmR3) <- projection(dem)
-dcmR1 <- projectRaster(dcmR1, crs = crs)
-dcmR2 <- projectRaster(dcmR2, crs = crs)
-dcmR3 <- projectRaster(dcmR3, crs = crs)
+first_candidates <- st_read("data/Regina/trees/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
+angela <- st_read("data/Regina/trees/Angela.gpx")
+las <- lapply(list.files("data/Regina/lidar/LAZ_zoi_trees/", pattern = ".laz$", full.names = T), readLAS)
+dcm <- lapply(las, grid_canopy, res = 1, algorithm = p2r())
+dcm <- do.call(merge, dcm)
+projection(dcm) <- projection(dem)
+dcm <- projectRaster(dcm, crs = crs)
 rm(dem) 
-trees <- lapply(c("AG_ONF.gpx", "EBR_ONF.gpx", "EBV_ONF.gpx", "MN_ONF.gpx"),
+inventory <- lapply(c("AG_ONF.gpx", "EBR_ONF.gpx", "EBV_ONF.gpx", "MN_ONF.gpx"),
                 function(file)
                   st_read(file.path("data", "Regina", "trees", file), layer = "waypoints")) %>% 
   bind_rows() %>% 
   separate(name, c("species", "id", "dbh"), remove = F, convert = T)
-road <- opq(bbox = st_bbox(trees)) %>%
+road <- opq(bbox = st_bbox(inventory)) %>%
   add_osm_feature(key = 'highway', value = "primary") %>%
     add_osm_feature(key = 'name', value = "Route de l'Est") %>%
     osmdata_sf()
 road <- road$osm_lines %>% 
   st_union()
-trees$distroad <- as.numeric(st_distance(trees, road))
+inventory$distroad <- as.numeric(st_distance(inventory, road))
+new_candidates <- filter(inventory, (distroad < 100 & !grepl("E", species)) | 
+                           (distroad < 200 & grepl("E", species))) %>% 
+  filter((species == "AG" & dbh > 90) | 
+           (species != "AG" & dbh > 60))
+# new_candidates %>% 
+#   dplyr::select(-species, -id, -dbh, -distroad) %>% 
+#   st_write(dsn = "data/Regina/trees/Regina_TREEMUTATION_selected_candidates.gpx", 
+#            delete_dsn = T, driver = "GPX", layer = "waypoints")
+candidates <- bind_rows(separate(first_candidates, name, c("species", "id", "dbh"), remove = F, convert = T),
+                        filter(new_candidates, id %in% c("5508", "5505")),
+                        mutate(angela, name = "angela", id = NA, species = "AG"))
+candidates$species[3] <- "MN"
+rm(first_candidates, new_candidates, angela, inventory)
+drone <- lapply(list.files("data/Regina/drone/20210309/", full.names = T), read_csv) %>% 
+  bind_rows() %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+                 crs = '+proj=latlong +zone=22 +datum=WGS84')
 ```
 
 ## Régina
@@ -55,63 +66,14 @@ trees$distroad <- as.numeric(st_distance(trees, road))
 * Destructive sampling for tree rings? Coring individuals. **Ask ONF.**
 * Higher trees. Maybe not older but at least implying more cell divisions regarding
 
-```{r reginaDBH, fig.cap="Tree DBH distribution in Regina."}
-trees %>% 
-  filter((distroad < 100 & !grepl("E", species)) | (distroad < 200 & grepl("E", species))) %>% 
-  dplyr::select(species, dbh) %>% 
-  mutate(species = recode(species,
-                          "AG" = "Angelique",
-                          "EBR" = "Eben rose",
-                          "EBV" = "Eben vert",
-                          "MN" = "Mahot noir")) %>%
-  ggplot(aes(dbh, fill = species)) +
-  geom_histogram() +
-  facet_wrap(~ species, scales = "free") +
-  scale_fill_manual(guide = "none", values = c("blue", "pink", "green", "black")) +
-  ggtitle("", "(distroad < 100 & !grepl(\"E\", species)) | (distroad < 200 & grepl(\"E\", species))") +
-  geom_vline(aes(xintercept = dbh), data = data.frame(species = "Angelique", dbh = 90),
-             linetype = "dashed", linewidth = 2)
-```
 
 ```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
-trees.map <- filter(trees, (distroad < 100 & !grepl("E", species)) | (distroad < 200 & grepl("E", species))) %>% 
-    filter((species == "AG" & dbh > 90) | (species != "AG" & dbh > 60))
-trees.map %>% 
-  dplyr::select(-species, -id, -dbh, -distroad) %>% 
-  st_write(dsn = "data/Regina/trees/Regina_TREEMUTATION_selected_candidates.gpx", 
-           delete_dsn = T, driver = "GPX", layer = "waypoints")
-cols <- c("blue", "pink", "green", "black")
-names(cols) <- c("AG", "EBR", "EBV", "MN")
 leaflet() %>%
-  addTiles() %>% 
-  addRasterImage(dcmR1, colors = "Greys", group = "DCM") %>%
-  addRasterImage(dcmR2, colors = "Greys", group = "DCM") %>%
-  addRasterImage(dcmR3, colors = "Greys", group = "DCM") %>%
-  addCircles(data = trees.map$geometry, label = trees.map$name,
-             group = "ToCheck", col = unname(cols[trees.map$species]), 
-             radius =  trees.map$dbh) %>% 
-    addRasterImage(dcmR3, colors = "Greys", group = "DCM") %>%
-  addCircles(data = candidates$geometry, label = candidates$name,
-             group = "Candidates", col = "red", radius = 10) %>% 
-  addLayersControl(overlayGroups = c("DCM", "Candidates", "ToCheck"),
-                   options = layersControlOptions(collapsed = T)) %>% 
-  addLegend(position = "bottomleft", colors = cols, labels = names(cols)) %>% 
-  addScaleBar("bottomright")
+  addTiles(group = "OSM") %>% 
+  addRasterImage(dcm, colors = "Greys", group = "DCM") %>%
+  addCircles(data = candidates, label = ~name, col = "red", radius = 20, group = "Trees") %>% 
+  addCircles(data = drone, col = "blue", radius = 2, label = ~filename, group = "Drone") %>% 
+  addLayersControl(overlayGroups = c("OSM", "DCM", "Trees", "Drone"),
+                   options = layersControlOptions(collapsed = T)) 
 ```
 
-```{r, eval=F, echo=F}
-library(lidR)
-library(rgl)
-las2gif <- function(path){
- las <- readLAS(path) 
- plot(las, bg = "white")
- movie3d(spin3d(), duration = 5, movie = file.path("/home/sylvain/Documents/ECOFOG/treemutation/data/Regina/lidar/LAZ_zoi_trees/", path))
-}
-lapply(list.files("data/Regina/lidar/LAZ_zoi_trees/", pattern = "laz", full.names = T), las2gif)
-```
-
-```{r reginaLiDAR, fig.cap="ONF's LiDAR from Regina."}
-include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_AG164490.laz.gif")
-include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_EBR292375.laz.gif")
-include_graphics("data/Regina/lidar/LAZ_zoi_trees/LAS_MX2472.laz.gif")
-```
