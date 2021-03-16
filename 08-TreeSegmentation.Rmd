@@ -1,0 +1,207 @@
+```{r setuptreeseg, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Tree Segmentation
+
+The aim of this chapter is to test tree segmentation with QSM on the las cloud from *Dicorynia guyanensis* in Paracou.
+
+## [`treeseg`](https://github.com/apburt/treeseg)
+
+Failed, and no further documentation, dropping thus `treeseg`.
+
+```{bash, eval=F, echo=T}
+sudo apt install pdal
+pdal translate YS-20201123-130625classclipDycorinia.las YS-20201123-130625classclipDycorinia.pcd
+~/Tools/treeseg/build/downsample 5 YS-20201123-130625classclipDycorinia.pcd 
+```
+
+## `Computree`
+
+### [Windows version](http://rdinnovation.onf.fr/projects/computree/wiki/Fr_installation_v5)
+
+Not working with wine when calling downsampling with SimpleTree plugin. 
+Test on voncyane windows validated the software, to be tested on Niklas computer thursday afternoon.
+
+```{bash, eval=F, echo=T}
+cd ~/Tools/Computree
+wget http://rdinnovation.onf.fr/attachments/download/2788/SimpleForest_v5.1.3_computree_v5.0.221b.zip
+unzip SimpleForest_v5.1.3_computree_v5.0.221b.zip 
+cd SimpleForest_v5.1.3_computree_v5.0.221b/
+wine CompuTreeGui.exe 
+```
+
+### [Linux version](http://rdinnovation.onf.fr/projects/computreedevtools/wiki/Fr_Ubuntu_1804)
+
+Still failing, waiting for Alexandre Piboule feedbacks.
+
+```{bash, eval=F, echo=T}
+cd ~/Tools/Computree
+sudo apt-get update
+sudo apt-get install subversion
+sudo apt-get install build-essential qtcreator qt5-default qt5-doc qt5-doc-html qtbase5-doc-html qtbase5-examples
+wget http://rdinnovation.onf.fr/attachments/download/2378/kit_dev_linux.zip
+unzip kit_dev_linux.zip
+cd kit_dev_linux
+./recuperer_depots.sh
+sudo apt-get install libopencv-dev 
+sudo apt-get install libpcl-dev # pcl 1.10 need pcl 1.8
+sudo apt-get install libgdal-dev
+sudo apt-get install libgsl-dev
+qtcreator
+# > open > all.pro
+# > projet > unactivate shadow build
+# > projet/run > “Environnement d’exécution” > rajouter ” ;. ” à la fin de la variables LD_LIBRARY_PATH
+qmake all.pro
+# > pcl1.8 to pcl1.10 in code
+sudo ln -s /usr/local/include/opencv4/opencv2/ /usr/local/include/opencv2 # fix opencv2/core/core.hpp issue
+# > compile
+# > run
+```
+
+## [Tree Segmentation with `lidr`](https://github.com/redfoxgis/tree_segmentation)
+
+Works well to delineate the tree cloud but not to segment it. Can be a good step for AMAPvox.
+
+```{r, echo=T, eval=F}
+require(lidR)
+require(rlas) # Necessary for writelax
+require(rgdal) # Writing to shp or raster
+require(tictoc) # for tic() toc() function
+require(rgl)
+data <- "data/Paracou/AG/YS-20201123-130625classclipDycorinia.las"
+las <- readLAS(data) 
+# lascheck(las)
+# summary(las)
+# sort(unique(las@data$Classification))
+# plot(las, color = "Classification")
+las_class <- lasfilter(las, Classification == 1)
+# plot(las_class)
+dtm <- grid_terrain(las, algorithm = knnidw(k = 8, p = 2))
+las_normalized <- lasnormalize(las, dtm)
+lasfilternoise = function(las, sensitivity)
+{
+  p95 <- grid_metrics(las, ~quantile(Z, probs = 0.95), 10)
+  las <- lasmergespatial(las, p95, "p95")
+  las <- lasfilter(las, Z < p95*sensitivity)
+  las$p95 <- NULL
+  return(las)
+}
+las_denoised <- lasfilternoise(las_normalized, sensitivity = 1.2)
+# plot(las_denoised)
+# plot(las_normalized)
+chm <- grid_canopy(las_denoised, 0.5, pitfree(c(0,2,5,10,15), c(3,1.5), subcircle = 0.2))
+# plot_dtm3d(chm)
+ker <- matrix(1,5,5)
+chm_s <- focal(chm, w = ker, fun = median)
+algo <- watershed(chm_s, th = 10, tol = 0.7, ext = 1)
+las_watershed  <- lastrees(las_denoised, algo)
+trees <- lasfilter(las_watershed, !is.na(treeID))
+plot(trees, color = "treeID", colorPalette = pastel.colors(100))
+path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/Paracou/AG/YSsegmented.gif"
+movie3d(spin3d(), duration = 5, movie = path)
+```
+
+```{r}
+include_graphics("data/Paracou/AG/YSsegmented.gif.gif")
+```
+
+```{r, eval=F}
+require(lidR)
+require(rlas) # Necessary for writelax
+require(rgdal) # Writing to shp or raster
+require(tictoc) # for tic() toc() function
+data <- "data/Paracou/lidar/test/Paracou2009_284584_580489.laz"
+las <- readLAS(data) 
+# lascheck(las)
+# summary(las)
+# sort(unique(las@data$Classification))
+# plot(las, color = "Classification")
+las_class <- lasfilter(las, Classification == 1)
+# plot(las_class)
+dtm <- grid_terrain(las, algorithm = knnidw(k = 8, p = 2))
+las_normalized <- lasnormalize(las, dtm)
+lasfilternoise = function(las, sensitivity)
+{
+  p95 <- grid_metrics(las, ~quantile(Z, probs = 0.95), 10)
+  las <- lasmergespatial(las, p95, "p95")
+  las <- lasfilter(las, Z < p95*sensitivity)
+  las$p95 <- NULL
+  return(las)
+}
+las_denoised <- lasfilternoise(las_normalized, sensitivity = 1.2)
+# plot(las_denoised)
+# plot(las_normalized)
+chm <- grid_canopy(las_denoised, 0.5, pitfree(c(0,2,5,10,15), c(3,1.5), subcircle = 0.2))
+# plot_dtm3d(chm)
+ker <- matrix(1,5,5)
+chm_s <- focal(chm, w = ker, fun = median)
+algo <- watershed(chm_s, th = 4)
+las_watershed  <- lastrees(las_denoised, algo)
+trees <- lasfilter(las_watershed, !is.na(treeID))
+plot(trees, color = "treeID", colorPalette = pastel.colors(100))
+```
+
+## [Forest Metrics](https://github.com/yurithefury/ForestMetrics)
+
+Hard to install and no better than lidR as it does not segment the crown.
+
+```{bash, eval=F, echo=T}
+sudo apt-get update
+sudo apt-get install git build-essential linux-libc-dev
+sudo apt-get install cmake cmake-gui 
+sudo apt-get install libeigen3-dev
+sudo apt-get install libboost-all-dev
+sudo apt-get install libflann-dev
+sudo apt-get install libvtk6-qt-dev
+sudo apt-get install libqhull-dev
+sudo apt-get install libproj-dev 
+sudo apt autoremove
+# pcl skipping 1.10
+wget https://github.com/PointCloudLibrary/pcl/archive/pcl-1.8.1.tar.gz
+tar -xf pcl-1.8.1.tar.gz
+cd pcl-pcl-1.8.1 && mkdir build && cd build
+cmake ..
+make
+sudo make install
+# ForestMetrics
+git clone --recursive https://github.com/yurithefury/ForestMetrics.git ForestMetrics
+cd ForestMetrics
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## [sp4e](https://github.com/mparkan/sp4e_project)
+
+Segmenting cloud but no QSM.
+
+```{bash, eval=F, echo=T}
+cd ~/Tools
+git clone https://github.com/mparkan/sp4e_project.git
+cd sp4e_project
+```
+
+## [TreeQSM](https://github.com/InverseTampere/TreeQSM)
+
+Mathlab, giving this one up.
+
+## Google Search
+
+* [GitHub tree segmentatuion lidar](https://www.google.com/search?channel=fs&client=ubuntu&q=GitHub+tree+segmentatuion+lidar)
+

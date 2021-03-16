@@ -17,9 +17,16 @@ opts_chunk$set(
 
 ```{r datasiteparacou, echo = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
-p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv")
-coordinates(p) <- ~ lon + lat
-proj4string(p) <- crs
+p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv") %>% 
+  st_as_sf(coords = c("lon", "lat"),
+                 crs = '+proj=utm +zone=22 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0')
+p %>% 
+  dplyr::select(-creator, -version, -href, -`ns1:text`,
+                -`ns1:time`, -`ns1:ele`, -`ns1:time2`, -`ns1:name`,
+                -`ns1:sym`, -genus, -species, -Northing, -Easting,
+                -`Long Zone`) %>%
+  st_write(dsn = "data/Paracou/trees/Paracou TREEMUTATION candidates.gpx",
+           delete_dsn = T, driver = "GPX", layer = "waypoints")
 limits <- shapefile("data/Paracou/limits/OverallPlots.shp")
 limits <- spTransform(limits, CRSobj = crs)
 dcm2004 <- raster("data/Paracou/lidar/Paracou2004_MNC1m.asc")
