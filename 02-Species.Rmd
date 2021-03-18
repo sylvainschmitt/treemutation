@@ -1,0 +1,87 @@
+```{r setupspecies, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+```{r dataspecies}
+species <- read_csv(file = "data/Species/rings/list_species_TreeAdapt_130220b.csv") %>% 
+  rename(Family = Famille,
+         Genus = Genre,
+         Species = Espece,
+         AnnualRings = `Annual Rings`,
+         ReproductivePhenology = `Reproductive Phenology`)
+fcm <- bind_rows(read_csv("data/Species/fluxcytometry/FCM analyses - TREEMUTATION.csv"),
+                 read_csv("data/Species/fluxcytometry/Results of FCM analyses - TREEMUTATION.csv")) %>% 
+  rename(GenomeMbp = `1C (Mbp)`)
+species <- left_join(species, fcm)
+```
+
+# Species
+
+This chapter support the choice in species for the study.
+
+```{r tablespecies}
+species %>% 
+  filter(TreeAdapt == 1) %>% 
+  dplyr::select(Family, Genus, Species, AnnualRings, ReproductivePhenology, ID, GenomeMbp) %>% 
+  unique() %>% 
+  group_by(Family, Genus, Species, AnnualRings, ReproductivePhenology) %>% 
+  summarise(m = mean(GenomeMbp, na.rm = T), s = sd(GenomeMbp, na.rm = T)) %>% 
+  filter(!is.na(m)) %>% 
+  mutate(GenomeMbp = paste0(round(m), " (", round(s), ")")) %>% 
+  dplyr::select(-m, -s) %>% 
+  kable(col.names = c("Family", "Genus", "Species", "Annual rings", "Reproductive phenology", "Genome (Mbp)"), caption = "Species characteristics.")
+```
+
+<!-- ## Flux cytometry -->
+
+```{r fluxconfidence, fig.cap="Uncertainty in flux cytometry repeats.", eval=F}
+dplyr::select(species, Genus, Species, ID, Replicate, GenomeMbp) %>% 
+  unique() %>% 
+  separate("ID", "ID") %>% 
+  na.omit() %>% 
+  mutate(SpeciesLong = paste(substr(Genus, 1, 1), Species)) %>% 
+  reshape2::dcast(SpeciesLong + ID ~ Replicate, value.var = "GenomeMbp") %>% 
+  na.omit() %>% 
+  rename("GenomeSize1" = "1", "GenomeSize2" = "2") %>% 
+  ggplot(aes(GenomeSize1, GenomeSize2, label = SpeciesLong)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  geom_abline(col = "red") +
+  ggrepel::geom_label_repel(box.padding = 1)
+```
+
+
+## *Dicorynia guianensis*
+
+Currently **first choice** due to:
+
+* commercial interest
+* rings
+* relatively small genome (691 Mbp)
+* fructification (irregular but no masting)
+
+
+About phenology:
+
+* Loubry D., Déterminisme du comportement phénologique des arbres en forêttropicale humide de Guyane française (5° lat. N.), thèse, Université Paris VI, 104-123,1994.
+* Caron, H., Dutech, C., & Bandou, E. (2008). Variations spatiotemporelles du régime de reproduction de Dicorynia guianensis Amshoff (Caesalpiniaceae) en forêt guyanaise, (July), 2008
+* Norden, N., Chave, J., Belbenoit, P., Caubère, A., Châtelet, P., Forget, P. M., & Thébaud, C. (2007). Mast fruiting is a frequent strategy in woody species of eastern South America. PLoS ONE, 2(10). https://doi.org/10.1371/journal.pone.0001079
+* Jésel Sébastien. 2005. Ecologie et dynamique de la régénération de Dicorynia guianensis (Caesalpiniaceae) dans une forêt guyanaise. Paris : INA-PG, 288 p. Thèse de doctorat : Ecologie forestière : Institut national agronomique Paris-Grignon
+
+## *Sextonia rubra*
+
+> The objectives  of  TREEMUTATION  are  synergistically  complementary  with  those  of  the  proposed  CEBA strategic  project  TREE-D.  If  both  projects  are  retained,  one  of  the  three  species  to  be  studied  will  be  a  Sextonia rubra (Mez) van der Werff(Lauraceae) tree, an economically significant tree for French Guiana with remarkable antifungal and insecticidal properties (Rodrigues et al., 2011). Given that TREE-D will  fell the target tree, the sampling design will be adapted accordingly: the target tree will not be part of any permanent plot, data on light environment and tree architecture would need to be obtained prior to tree cutting,  and  samples  along  the  trunk  will  be  incorporated.  Furthermore,  as Sextonia  rubra is  known  to produce seasonal variation in wood chemistry (Ponton, Dupouey, Rose, Giuliani, & Thiaudière, 2015), it could  be  aged  dendrochronologically,  so  each  branching  event  could  be  dated  unambiguously.  The collaboration  between  both  projects  will  allow  the  study  of  the  correlation  between  intra-individual genetic, endophytic, and chemical variance, allowing us, for the first time, to have an intimate look at the potential interplay among these three aspects of a tree. 
+
+## *Eschweilera coriacea*
+
+> One species of interest to include is Eschweilera  coriacea (DC.)  S.A.  Mori  (Lecythidaceae),  the  third-most  abundant  angiosperm  tree  in Amazonia (ter Steege et al., 2013)with high genetic diversity (Heuertz et al., 2019)and a broad ecological niche  (S.  Schmitt,  pers.  obs)  in  French  Guiana  and  for  which  15  individuals  >  30  cm  diameter  at  breast height (28 ind. > 10cm) are accessible from the COPAS.Local adaptive processes in Eschweilera coriacea and  other  members  of  the Parvifolia clade  are  currently  being  studied  using gene  capture,  phenotypic traits,  and  detailed  habitat  data  (Sylvain  Schmitt’s  thesis);  having  a  full Eschweilera genome  would facilitate the annotation of genic regions for research on selection processes (positive, negative, polygenic (Pritchard, Pickrell, & Coop, 2010; Zeng et al., 2018)). It would also benefit collaborative research on phylo-and biogeography in the Lecythidaceae (projects CEBA RARETREE and GUYAMAZON LECYTOMICS). 

@@ -1,0 +1,86 @@
+```{r setuptreeseg, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Tree 3D
+
+The aim of this chapter is to test tree segmentation and lighton the las cloud from *Dicorynia guyanensis* in Paracou.
+
+## Tree Segmentation
+
+Using [`lidr`](https://github.com/redfoxgis/tree_segmentation).
+Works well to delineate the tree cloud but not build back architecture.
+Can be a good step for AMAPvox.
+
+```{r, echo=F, eval=F}
+require(lidR)
+require(rlas) # Necessary for writelax
+require(rgdal) # Writing to shp or raster
+require(tictoc) # for tic() toc() function
+require(rgl)
+data <- "data/Paracou/AG/YS-20201123-130625classclipDycorinia.las"
+las <- readLAS(data) 
+# lascheck(las)
+# summary(las)
+# sort(unique(las@data$Classification))
+# plot(las, color = "Classification")
+las_class <- lasfilter(las, Classification == 1)
+# plot(las_class)
+dtm <- grid_terrain(las, algorithm = knnidw(k = 8, p = 2))
+las_normalized <- lasnormalize(las, dtm)
+lasfilternoise = function(las, sensitivity)
+{
+  p95 <- grid_metrics(las, ~quantile(Z, probs = 0.95), 10)
+  las <- lasmergespatial(las, p95, "p95")
+  las <- lasfilter(las, Z < p95*sensitivity)
+  las$p95 <- NULL
+  return(las)
+}
+las_denoised <- lasfilternoise(las_normalized, sensitivity = 1.2)
+# plot(las_denoised)
+# plot(las_normalized)
+chm <- grid_canopy(las_denoised, 0.5, pitfree(c(0,2,5,10,15), c(3,1.5), subcircle = 0.2))
+# plot_dtm3d(chm)
+ker <- matrix(1,5,5)
+chm_s <- focal(chm, w = ker, fun = median)
+algo <- watershed(chm_s, th = 10, tol = 0.7, ext = 1)
+las_watershed  <- lastrees(las_denoised, algo)
+trees <- lasfilter(las_watershed, !is.na(treeID))
+plot(trees, color = "treeID", colorPalette = pastel.colors(100))
+path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/Paracou/AG/YSsegmented.gif"
+movie3d(spin3d(), duration = 5, movie = path)
+```
+
+```{r DguiSegmented, fig.cap="Individual segmented with lidR."}
+include_graphics("data/Paracou/AG/YSsegmented.gif.gif")
+```
+
+## Tree architecture
+
+The reconstruction of the architecture, i.e. rebuilding the trunk and the branches. On this point there are plenty of poorly documented, impossible to install and not so open tools. But after a long battle I managed to make `treeseg` work a bit despite its lack of real documentation. And as I suspected unfortunately the data doesn't seem to be good enough for this task. Indeed, besides the fact that we are in a complex rainforest, this reconstruction is normally done from high resolution LiDAR TLS data. But here I have only few points that represent the trunk or the main branches. The algorithm is therefore unable to reconstruct the cylinders. 
+
+## Tree light
+
+```{bash, eval=F, echo=F}
+cd ~/Tools
+mkdir amapvox
+cd amapvox
+wget http://amap-dev.cirad.fr/attachments/download/1851/AMAPVox-1.7.3.zip
+sh AMAPVox.sh
+```
+
+For this part I am still waiting for Nicolas to share with me the trajectos (3D path of the drone) to use AMAPvox. Nevertheless I don't see how this will orientate more the sampling than using a device on the spot like with the *Sextonia*, especially if we can't reconstruct the architecture beforehand. So I think I'll stop here and wait for the postdoc to face this calculation for the *a posteriori* analysis of the mutations.

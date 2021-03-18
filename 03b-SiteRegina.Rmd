@@ -17,7 +17,7 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasiteregina, echo = F}
+```{r datasiteregina, include = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 dem <- raster("data/Paracou/lidar/DEM_1m_2015.tif") # for CRS
 first_candidates <- st_read("data/Regina/trees/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
@@ -61,11 +61,16 @@ drone <- lapply(list.files("data/Regina/drone/20210309/", full.names = T), read_
 
 ## Régina
 
-* 1 LiDAR in 2016 (ONF, see Fig. \@ref(fig:reginaMap) and Fig. \@ref(fig:\@ref(fig:reginaMap)))
-* Possibility of clearing for drone
-* Destructive sampling for tree rings? Coring individuals. **Ask ONF.**
-* Higher trees. Maybe not older but at least implying more cell divisions regarding
+Plus:
 
+* 1 LiDAR in 2016 (ONF, see Fig. \@ref(fig:reginaMap)
+* Possibility of clearing for drone
+* Destructive sampling for tree rings
+* Taller trees (older? and more cell divisions)
+
+Cons:
+
+* Distance for phenology
 
 ```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
 leaflet() %>%

@@ -1,0 +1,25 @@
+```{r setupgenome, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Genome assembly
+
+ Assemble high-quality annotated reference genomes for three trees of three different species.
+
+> In each species, using a single genotype, such as leaves from a single branch, we will extract DNA and obtain long reads -2 runs of each Mini and Prometh ION targeting a total coverage of 100x -and short reads -sequencing one of the libraries to be used for the detection of mutations (below) using Illumina NovaSeq6000  technology  and  targeting  a  minimum  coverage  of  100x.  The  sequencing  services  will  be subcontracted to CEA Genoscope, Evry. Ideally, we would use cambium tissue to produce the reference genomes, however, since a limited amount of cambium tissue can be sampled per tree, we will use leaf tissue. Assembling the quality-filtered reads from both sequencing technologies will provide long scaffolds (Johnson et al., 2019). In each species, we will build an “optimal map” of the genome using high-resolution restriction   maps   from   single,   labelled   molecules   of   DNA   obtained   through   Bionano   technology (subcontracted  to  CNRGV,  Toulouse).  In  combination  with  the  previous  scaffolds  this  will provide  a chromosomal assembly.The three genomes will be annotated using automated pipelines (Bolger, Arsova, & Usadel, 2018).
+
+> Seedling original genotype (T4.1): Short read sequencing data will be demultiplexed, quality-filtered, and mapped to the reference genomes. The “zero mutation reference” genotype will be constructed from the consensus genotype  calls  obtained  from  short  read  sequencing  of  the  three  cambium  samples  using  a standard variant calling approach such as  GATK (“Best Practices for Variant Calling with the GATK,” 2015).

@@ -1,4 +1,4 @@
-```{r setuptreeseg, include=FALSE}
+```{r setupAsegmentation, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
 library(kableExtra)
@@ -15,19 +15,46 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
+# Appendix 2: Tree Segmentation
 
-# Tree Segmentation
-
-The aim of this chapter is to test tree segmentation with QSM on the las cloud from *Dicorynia guyanensis* in Paracou.
+This appendix explored tree segmentation with QSM on the las cloud from *Dicorynia guyanensis* in Paracou.
 
 ## [`treeseg`](https://github.com/apburt/treeseg)
 
 Failed, and no further documentation, dropping thus `treeseg`.
 
 ```{bash, eval=F, echo=T}
-sudo apt install pdal
-pdal translate YS-20201123-130625classclipDycorinia.las YS-20201123-130625classclipDycorinia.pcd
-~/Tools/treeseg/build/downsample 5 YS-20201123-130625classclipDycorinia.pcd 
+## Convert 
+# las to pcd
+pdal translate YS-20201123-130625classclipDycorinia.las test.pcd --writers.pcd.order="X=Float:2,Y=Float:2,Z=Float:2" # to avoid float issue
+# visualize in cloud compare
+tail -n +11 test.pcd > test.xyz
+# computing bounding box
+Rscript -e 'summary(readr::read_delim("test.xyz", col_names = F, delim = " ")[1:2])'
+echo 286791 286811 583888 583910 > test.dat
+# fixing variables
+# open with geany and replace X Y Z by x y z (should be further automated)
+
+## downsample 
+# 1. resoluation in meters
+~/Tools/treeseg/build/downsample 0.001 test.pcd # 0.04 online
+~/Tools/treeseg/build/pcdPointTreeseg2txt test.tile.downsample.test.pcd
+
+## getdemslice
+# 1. the resolution of the DEM in meters
+# 2) the percentile which is considered to constitute the ground (i.e., if all the points inside each DEM tile are lined up by their z coordinate - the point closest to the Nth percentile is considered the ground - sometimes useful for noisy data). 
+# 3)&4) The zmin and zmax of the slice. So e.g.,:
+~/Tools/treeseg/build/getdemslice 1 1 0 5 test.tile.downsample.test.pcd # 2 3 3 6
+~/Tools/treeseg/build/pcdPointTreeseg2txt test.slice.pcd
+
+## Find stems
+~/Tools/treeseg/build/findstems 15 0.2 2 test.dat test.slice.pcd
+~/Tools/treeseg/build/pcdPointTreeseg2txt test.intermediate.slice.clusters.pcd
+~/Tools/treeseg/build/pcdPointTreeseg2txt test.intermediate.slice.clusters.regions.pcd
+
+## Segments stems
+~/Tools/treeseg/build/segmentstem 12.5 test.tile.downsample.test.pcd test.intermediate.slice.clusters.regions.pcd
+
 ```
 
 ## `Computree`
@@ -44,6 +71,42 @@ unzip SimpleForest_v5.1.3_computree_v5.0.221b.zip
 cd SimpleForest_v5.1.3_computree_v5.0.221b/
 wine CompuTreeGui.exe 
 ```
+
+[Overview ](https://www.youtube.com/watch?v=1crJUgVnXB0):
+
+1. Import the cloud
+1. Reduce points density
+1. Classify ground points (TLS)
+1. Ground point filter
+1. Statistical outlier filter
+1. Dtm pyramidal Mlesac fit
+1. Cut cloud above DTM
+1. Cut cloud above DTM
+1. Cut cloud above DTM
+1. Stem filter
+1. Statistical outlier filter
+1. Radius outlier filter
+1. Segmentation euclidean clustering
+1. Dikstra based tree segmentation
+1. Voroni based tree segmentation
+1. Height based tree identification from segmented clouds
+1. Height based tree identification from segmented clouds
+1. Cut cloud above dtm
+1. Cut cloud above dtm
+1. Stem filter
+1. Euclidean clustering filter
+1. Merge clouds from two groups
+1. Statistical outlier filter
+1. Euclidean clustering filter
+1. Sphere following
+1. QSM median filter
+1. QSM based tree clustering
+1. Sphere following advanced
+1. QSM median filter
+1. QSM correct shoots
+1. QSM allometric correction
+1. QSM to ground exploration
+1. QSM list exporter
 
 ### [Linux version](http://rdinnovation.onf.fr/projects/computreedevtools/wiki/Fr_Ubuntu_1804)
 
@@ -204,4 +267,3 @@ Mathlab, giving this one up.
 ## Google Search
 
 * [GitHub tree segmentatuion lidar](https://www.google.com/search?channel=fs&client=ubuntu&q=GitHub+tree+segmentatuion+lidar)
-

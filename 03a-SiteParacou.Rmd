@@ -15,16 +15,14 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasiteparacou, echo = F}
+```{r datasiteparacou, include = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv") %>% 
   st_as_sf(coords = c("lon", "lat"),
-                 crs = '+proj=utm +zone=22 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0')
+                 crs = '+proj=utm +zone=22 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0') %>% 
+  mutate(name = `ns1:name`) # some columns with the name need to be named `name`
 p %>% 
-  dplyr::select(-creator, -version, -href, -`ns1:text`,
-                -`ns1:time`, -`ns1:ele`, -`ns1:time2`, -`ns1:name`,
-                -`ns1:sym`, -genus, -species, -Northing, -Easting,
-                -`Long Zone`) %>%
+  dplyr::select(name, geometry) %>%
   st_write(dsn = "data/Paracou/trees/Paracou TREEMUTATION candidates.gpx",
            delete_dsn = T, driver = "GPX", layer = "waypoints")
 limits <- shapefile("data/Paracou/limits/OverallPlots.shp")
@@ -51,8 +49,16 @@ This chapter support the choice of site for the study.
 
 ## Paracou
 
+Plus:
+
 * 4 LiDAR campaigns from 2004 to 2015 (Fig. \@ref(fig:paracouMap))
-* Proximity, easier to follow phenology and collect flowers and fruits
+* Proximity, (for phenology to collect flowers and fruits)
+
+Cons:
+
+* Smaller trees
+* Non destructive sampling
+* Avoid trunk
 
 ```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns."}
 leaflet() %>%

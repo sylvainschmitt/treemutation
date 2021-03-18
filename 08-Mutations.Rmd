@@ -1,0 +1,44 @@
+```{r setupmutations, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Mutations
+
+*Chapter to be split*
+
+## Mutations detection
+
+> For each species, we will extract DNA and construct 27 individually tagged genomic libraries to produce short read sequencing (see sampling strategy, WP2 above) with NovaSeq6000 SP technology, targeting aminimum  of  50x  coverage  per  library  (70-90x  should  be  realistic,  we  will  go  for  100x  if  possible).  The possible sequencing depth affordable in the project will depend on the genome size of chosen species and  some  extent  on  fluctuating  sequencing  prices.  Lab  work  will  be  conducted  at  Ecofog  and  PGTB (Biogeco); the sequencing will be subcontracted to CEA Genoscope, Evry.
+
+> Detection of mutations (T4.2): For mutation detection, we will  minimise the impact of library preparation and  sequencing  errors  by  retaining  only  mutations  detected  by  comparison  with  the “zero  mutation reference” (Hanlon et al 2019) and in each branch (Orr et al. 2019), giving a total of 9 genotype sampling points in each tree. We will quantify the occurrence of mutations in each of the 24 leaf libraries per tree using a high-sensitivity method (Cibulskis et al., 2013). De novomutations appear in single meristem cells and  their  abundance  in  tree  tissues  will  depend  on  the  specific  cell’s  divisions  and  contribution  to generating tree tissues. Fixation of de novo mutations in tissues is expected to be rare and the expected time  to  fixation  is  long,  see (Nicholson  et  al.,  2018)for  an  example  in  humans.  The  detection  of  novel mutations must thus be sensitive to low allele copy number in tissues. For this reason, we will test and use mutation detection methods typically used in cancer mutation research, that are optimized for strong allelic frequency skews (Alioto et al., 2015).The artificial inclusion of in silicomutationsinto the reads and permutations among branch labels allows the estimation of the recovery rate of true mutations, the false negative rates, and the false positive rates (Orr et al., 2019). We will test whether the rate of accumulation of  mutations  is  increased  in  high-light-exposed  branches  compared  to  those  with  low-light  exposure accounting  for  the  physical  tree  branches  (tree  architecture -WP3),  the  mutation  history,  and  light environment (WP3).
+
+## Mutations history
+
+> Phylogenetic history of intraindividual mutations (T4.3): Once the confirmed mutations are available, we will use phylogenomic methods to establish the intra-tree evolutionary history of mutations and assess its fit with with the history expected from tree architecture (WP2) as illustrated by (Orr et al., 2019).
+
+## Matiations & UVs
+
+> Effects  of  UV  light  on  mutation  rates (T4.4): We  will  test  the  hypothesis  that  sunlight  enhances  the accumulation of mutation by comparing the number of mutations per physical branch meter in high and low light exposure branches and will compare mutation rates across species. Appropriate accounting for differences in light environment will be done based on modelling of light environment (T2.3) anddirect measurements of sunlight (T2.6).
+
+## Mutations rate
+
+> Evolution  of  mutation  rates(T5.1):  To  attempt  explaining  any  differences  in  observed  mutation  rates between  the  three  sequenced  species,  we  will  collect  data  from  the  literature  on  the  intra-individual accumulation of mutations (or somatic mutation rates) in plants and examine if a phylogenetic pattern (Soltis, Folk, & Soltis, 2019)can be observed after carefully ensuring the comparability of data considering the methods used in each study. (Soltis et al., 2019). We will then examine the evolution of gene families involved  in  UV  response  and  DNA  damage  tolerance  and  repair (Nakagawa  et  al.,  2011;  Oztas,  Selby, Sancar,  &  Adebali,  2018;  Ulm  &  Jenkins,  2015)and  any  other  relevant  pathways  to  explain  possible differences  in  the  rate  of  accumulation  of  mutations  between  plant  species,  and  the  three  sequenced species  in  particular.  Publically  available  data  on  the  same  gene  families  across  plant  lineages  will  be included (One Thousand Plant Transcriptomes Initiative, 2019). We will particularly address differences in gene  family  evolution  in  these  pathways    in  plants  with  different  life  history  traits  (e.g.  annual  plants, temperate trees).
+
+## Germline segregation
+
+> Timing  of  germline  segregation (T5.2):We  will  assess  whether  soma  and  germline  undergo  early segregation in tropical trees by assessing the transmission of mutations specific to each branch to gametic tissues, pollen or fruit pericarp, expected to carry a maternal genotype (Smouse, Sork, Scofield, & Grivet, 2012)and  to  zygotes  formed  on  the  branch  using  targeted  genotyping.  If  mutations  are  not  typically transmitted,  an  early  soma-germline  segregation  is  likely (Lanfear,  2018).  In  this  case,  mutations accumulated in tropical  tree tissues would indeed be  typically somatic, i.e., characteristic of vegetative tissues   only,   without   typically   entering   the   germline   andrepresenting   evolutionary   dead-ends. Conversely,  if  gametic  tissues  most  resemble  nearby  vegetative  tissues  (Figure  2  B)  and  mutations  are typically  transmitted  to  zygotes  in  proportions  expected  from  meiosis  as  in  oak (Plomion  et  al.,  2018), these  mutations  accumulated  through  an  individual’s lifetime  could  not  be  called  purely  somatic:  their transmission  to  offspring  and  thus  their  evolutionary  relevance  would  be  demonstrated.  We  will  then compare the timing of germline segregation among the three species, considering their life history and species-richness of their families, and compare with recent studies from other scientists (this topic is an active field of research).
+

@@ -1,17 +1,6 @@
-```{r setupmeetings, include=FALSE}
-rm(list = ls()) ; invisible(gc()) ; set.seed(42)
-library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
-library(tidyverse)
-theme_set(bayesplot::theme_default())
-opts_chunk$set(
-  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
-  cache = T, cache.lazy = F)
-```
+# (APPENDIX) Appendix {-} 
 
-# Meetings
+# Appendix 1: Meetings
 
 ## 11/02/2021 Sylvain's Kick-off
 
@@ -50,7 +39,7 @@ opts_chunk$set(
 * _Eschwerilera sp_: 
     * Parcou (small) and Regina (big)
 * _Handoranthus sp_: 
-    * published genomes (to read) but high variation
+    * published genosegmenmes (to read) but high variation
     * Regina
     * Need to be collected for flux cytometry
 * _Caryocar sp_: 

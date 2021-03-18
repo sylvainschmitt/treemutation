@@ -1,0 +1,11 @@
+# Sampling
+
+```{r}
+include_graphics("data/Images/sampling.png")
+```
+
+> Cambium:Three  samples  of  cambium  from  equidistant  positions  around  the  trunk  at  the  tree base: these are expected to best approximate the genotype of the young seedling from which the tree has grown, as tree base cambium has had the lowest number of cell divisions since the germination of the seed (Hanlon et al., 2019). The consensus genotype of these three cambium samples will be used as the reference “zero mutations genotype” for the detection of mutations (WP4); 
+
+> Triplicate  leaves:Three  consecutive  young  leaves  (biological  replicates)  from  each  of  the  eight chosen branches per tree will be collected (Orr et al, 2019). These sampling points should be from four pairs of branches (statistical replicates), where branches in each pair should experience contrasting light exposure as described in WP2 and Figure 1. Young leaves will be preferred as they have fewer secondary compounds and higher quality DNA can be extracted from them (Moreira & Oliveira, 2011).
+
+> Reproductive tissues:The trees will be revisited during flowering and fruiting season to collect pollen and/or fruits/zygotes from the selected branches of each tree.

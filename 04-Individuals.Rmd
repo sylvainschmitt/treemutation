@@ -1,0 +1,122 @@
+```{r setupindividuals, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+library(lidR)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+# Individuals
+
+This chapter support the choice of individuals for the study.
+
+## *Dicorynia guyanensis*
+
+### Angela - Regina
+
+**Best candidates because currently with fruits (18/03).**
+
+```{r angleagraound,  fig.cap="Angela from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/Angela/_0018492.jpg")
+```
+
+```{r angleadrone,  fig.cap="Angela from the drone."}
+include_graphics("data/Regina/drone/Angela/DJI_2910.JPG")
+```
+
+```{r angleadrone2,  fig.cap="Angela from the drone."}
+include_graphics("data/Regina/drone/Angela/DJI_2520.JPG")
+```
+
+###  AG1644 - Regina
+
+```{r ag1644ground, fig.cap="AG1644 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/AG1644/_0018393.jpg")
+```
+
+```{r ag1644drone, fig.cap="AG1644 from the drone."}
+include_graphics("data/Regina/drone/AG1644/DJI_1430.JPG")
+```
+
+### Dgui3M P18-2-148 - Paracou
+
+Unfortunately, we can't reconstruct the architecture from the UAV-LS data (see tree segmentation).
+The individual is currently without fruits in Paracou (18/03).
+
+```{r, eval=F, echo=F}
+library(lidR)
+library(rgl)
+las <- readLAS("data/YS-20201123-130625classclipDycorinia.las")
+plot(las, bg = "white")
+path <- "/home/sylvain/Documents/ECOFOG/treemutation/data/Paracou/AG/YS-20201123-130625classclipDycorinia.gif"
+movie3d(spin3d(), duration = 5, movie = path)
+```
+
+```{r uavDgui3M, fig.cap="UAV-LS data for Dgui3M P18-2-148."}
+include_graphics("data/Paracou/AG/YS-20201123-130625classclipDycorinia.gif")
+```
+
+## *Sextonia rubra*
+
+**Need to report TreeD data here.**
+
+## *Eschweilera sp.*
+
+### MX2472 - Regina
+
+Apparently an *E. coriacea*, need Pascal confirmation.
+
+```{r MX2472ground, fig.cap="MX2472 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/MX2472/_0018401.jpg")
+```
+
+```{r MX2472drone, fig.cap="MX2472 from the drone."}
+include_graphics("data/Regina/drone/MX2472/DJI_0760.JPG")
+``` 
+
+### MN5505 - Regina
+
+Apparently an *E. grandiflora*, need Pascal confirmation. So not good for the project.
+
+```{r MN5505ground, fig.cap="MN5505 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg")
+```
+
+```{r MN5505drone, fig.cap="MN5505 from the drone."}
+include_graphics("data/Regina/drone/MN5505/DJI_1550.JPG")
+``` 
+
+## *Handroanthus impetiginosus*
+
+### EBR2923 - Regina
+
+```{r EBR2923ground, fig.cap="EBR2923 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/EBR2923/_0018397.jpg")
+```
+
+```{r EBR2923drone, fig.cap="EBR2923 from the drone."}
+include_graphics("data/Regina/drone/EBR2923/DJI_2520.JPG")
+``` 
+
+### EBR5508 - Regina
+
+```{r EBR5508ground, fig.cap="EBR5508 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/EBR5508/_0018444.jpg")
+```
+
+```{r EBR5508drone, fig.cap="EBR5508 from the drone."}
+include_graphics("data/Regina/drone/EBR5508/DJI_1770.JPG")
+``` 
+
+
+
+
