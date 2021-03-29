@@ -1,3 +1,10 @@
+treemutation 1.0.9008
+* hypothesis
+
+treemutation 1.0.9007
+* tree 3D: segmentation ok, architecture fail, light waiting
+* reorganize
+
 treemutation 1.0.9006
 * tree segmentation and light begins
 

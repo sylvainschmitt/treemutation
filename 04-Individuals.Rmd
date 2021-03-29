@@ -71,21 +71,9 @@ include_graphics("data/Paracou/AG/YS-20201123-130625classclipDycorinia.gif")
 
 ## *Eschweilera sp.*
 
-### MX2472 - Regina
-
-Apparently an *E. coriacea*, need Pascal confirmation.
-
-```{r MX2472ground, fig.cap="MX2472 from the ground."}
-include_graphics("data/Regina/pictures/TreeMutation20200308/MX2472/_0018401.jpg")
-```
-
-```{r MX2472drone, fig.cap="MX2472 from the drone."}
-include_graphics("data/Regina/drone/MX2472/DJI_0760.JPG")
-``` 
-
 ### MN5505 - Regina
 
-Apparently an *E. grandiflora*, need Pascal confirmation. So not good for the project.
+**E. coriacea** following Pascal. Currently the' best candidate.
 
 ```{r MN5505ground, fig.cap="MN5505 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg")
@@ -95,9 +83,23 @@ include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg"
 include_graphics("data/Regina/drone/MN5505/DJI_1550.JPG")
 ``` 
 
+### MX2472 - Regina
+
+**Probably an _[E. pracelara_](http://sweetgum.nybg.org/science/projects/lp/taxon-checklist/?ClaFamily=Lecythidaceae&ClaGenus=Eschweilera), but not _E. coriacea_ => Rejected.**
+
+```{r MX2472ground, fig.cap="MX2472 from the ground."}
+include_graphics("data/Regina/pictures/TreeMutation20200308/MX2472/_0018401.jpg")
+```
+
+```{r MX2472drone, fig.cap="MX2472 from the drone."}
+include_graphics("data/Regina/drone/MX2472/DJI_0760.JPG")
+``` 
+
 ## *Handroanthus impetiginosus*
 
 ### EBR2923 - Regina
+
+**Probably _Handroantus serratifolia_ (Pascal). => Rejected.**
 
 ```{r EBR2923ground, fig.cap="EBR2923 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/EBR2923/_0018397.jpg")
@@ -108,6 +110,8 @@ include_graphics("data/Regina/drone/EBR2923/DJI_2520.JPG")
 ``` 
 
 ### EBR5508 - Regina
+
+**Probably _Handroantus serratifolia_ (Pascal). => Rejected.**
 
 ```{r EBR5508ground, fig.cap="EBR5508 from the ground."}
 include_graphics("data/Regina/pictures/TreeMutation20200308/EBR5508/_0018444.jpg")
