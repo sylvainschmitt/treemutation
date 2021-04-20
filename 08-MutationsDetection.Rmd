@@ -1,0 +1,57 @@
+```{r setupmutations, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Mutations detection
+
+## *In silico* mutations
+
+**The pipeline is currently designed to generate data from one normal sample and one mutated sample but could be extended to accommodate more samples similarly to the sampling design of the project.**
+
+I am planning on using the methodology from @Cibulskis2013 (Fig. \@ref(fig:Cibulskis2013)) to generate *in silico* mutation to further develop detection pipelines.
+I want to code the workflow with [`singularity` & `snakemake`](https://github.com/sylvainschmitt/snakemake_singularity) for further ease of use with true data and to improve reproducibility.
+I plan on using a reduced representation of the [oak genome](https://urgi.versailles.inra.fr/download/oak/Qrob_PM1N.fa.gz) from @Plomion2018 (*e.g. a chromosome or a specific region*) including features that we expect (high heterozygosity, repetitive regions, etc).
+@Cibulskis2013 used true reads (Fig. \@ref(fig:Cibulskis2013)), that we could select by mapping back raw reads from @Plomion2018 on the selected reference, but I would rather generate *in silico* reads with [`insilicoseq`](https://insilicoseq.readthedocs.io/en/latest/) to save time.
+Reads are then randomly split in two datasets (virtual normal and virtual mutated) and can be used to test the specificity (Fig. \@ref(fig:Cibulskis2013)) of the detection pipeline (see below).
+Next, virtual somatic mutations are generated *in silico* at known allele frequency in the virtual mutated dataset using `SomaticSpike`, which is part of the `MuTect` software package (Fig. \@ref(fig:Cibulskis2013)).
+Finally, this dataset can be used to test the sensitivity (Fig. \@ref(fig:Cibulskis2013)) of the detection pipeline (see below).
+
+The pipeline in a nutshell:
+
+1. Get the [oak genome](https://urgi.versailles.inra.fr/download/oak/Qrob_PM1N.fa.gz) from @Plomion2018
+1. Subsample a chromosome or a specific region
+1. Generate *in silico* reads with [`insilicoseq`](https://insilicoseq.readthedocs.io/en/latest/)
+1. Split reads in a virtual **normal** dataset and a virtual **premutated** dataset (to be used to test **specificity**)
+1. Generate the **mutated** dataset from the **premutated** dataset using [`SomaticSpike`](https://github.com/broadinstitute/somatic-benchmark/blob/master/SomaticSpike/src/org/broadinstitute/cga/tools/gatk/walkers/cancer/simulation/SomaticSpike.java) (data to be used to test **sensitivity**)
+
+```{r Cibulskis2013, fig.cap="@Cibulskis2013 virtual tumore approach."}
+include_graphics("data/biblio/Sibulkis2013FigS1.png")
+```
+
+## Mutation detection
+
+* `singularity` & `snakemake` workflow?
+* use @Cibulskis2013 best workflow with one or several mapping / mutation detection software
+* maybe develop a pipeline doing multiple methods and use quality check to select the best depending on data
+* https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
+* `Mutect2`, `VarScan2`, `SomaticSniper`, `Mutect`, `RADIA`, `MuSE`
+
+## *Sextonia rubra*
+
+## *Dicorynia guianensis*
+
+## Project description
+
+> For each species, we will extract DNA and construct 27 individually tagged genomic libraries to produce short read sequencing (see sampling strategy, WP2 above) with NovaSeq6000 SP technology, targeting aminimum  of  50x  coverage  per  library  (70-90x  should  be  realistic,  we  will  go  for  100x  if  possible).  The possible sequencing depth affordable in the project will depend on the genome size of chosen species and  some  extent  on  fluctuating  sequencing  prices.  Lab  work  will  be  conducted  at  Ecofog  and  PGTB (Biogeco); the sequencing will be subcontracted to CEA Genoscope, Evry.
+
+> Detection of mutations (T4.2): For mutation detection, we will  minimise the impact of library preparation and  sequencing  errors  by  retaining  only  mutations  detected  by  comparison  with  the “zero  mutation reference” (Hanlon et al 2019) and in each branch (Orr et al. 2019), giving a total of 9 genotype sampling points in each tree. We will quantify the occurrence of mutations in each of the 24 leaf libraries per tree using a high-sensitivity method (Cibulskis et al., 2013). De novomutations appear in single meristem cells and  their  abundance  in  tree  tissues  will  depend  on  the  specific  cell’s  divisions  and  contribution  to generating tree tissues. Fixation of de novo mutations in tissues is expected to be rare and the expected time  to  fixation  is  long,  see (Nicholson  et  al.,  2018)for  an  example  in  humans.  The  detection  of  novel mutations must thus be sensitive to low allele copy number in tissues. For this reason, we will test and use mutation detection methods typically used in cancer mutation research, that are optimized for strong allelic frequency skews (Alioto et al., 2015).The artificial inclusion of in silicomutationsinto the reads and permutations among branch labels allows the estimation of the recovery rate of true mutations, the false negative rates, and the false positive rates (Orr et al., 2019). We will test whether the rate of accumulation of  mutations  is  increased  in  high-light-exposed  branches  compared  to  those  with  low-light  exposure accounting  for  the  physical  tree  branches  (tree  architecture -WP3),  the  mutation  history,  and  light environment (WP3).

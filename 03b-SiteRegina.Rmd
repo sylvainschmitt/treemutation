@@ -27,7 +27,7 @@ dcm <- lapply(las, grid_canopy, res = 1, algorithm = p2r())
 dcm <- do.call(merge, dcm)
 projection(dcm) <- projection(dem)
 dcm <- projectRaster(dcm, crs = crs)
-rm(dem) 
+# rm(dem) 
 inventory <- lapply(c("AG_ONF.gpx", "EBR_ONF.gpx", "EBV_ONF.gpx", "MN_ONF.gpx"),
                 function(file)
                   st_read(file.path("data", "Regina", "trees", file), layer = "waypoints")) %>% 
@@ -51,12 +51,22 @@ new_candidates <- filter(inventory, (distroad < 100 & !grepl("E", species)) |
 candidates <- bind_rows(separate(first_candidates, name, c("species", "id", "dbh"), remove = F, convert = T),
                         filter(new_candidates, id %in% c("5508", "5505")),
                         mutate(angela, name = "angela", id = NA, species = "AG"))
+# candidates %>% 
+#   dplyr::select(name, geometry) %>% 
+#   st_write(dsn = "data/Regina/trees/Regina_TREEMUTATION_candidates2.gpx",
+#            delete_dsn = T, driver = "GPX", layer = "waypoints")
 candidates$species[3] <- "MN"
 rm(first_candidates, new_candidates, angela, inventory)
 drone <- lapply(list.files("data/Regina/drone/20210309/", full.names = T), read_csv) %>% 
   bind_rows() %>% 
   st_as_sf(coords = c("longitude", "latitude"),
                  crs = '+proj=latlong +zone=22 +datum=WGS84')
+# trajectosONF <- vroom::vroom("data/Regina/lidar/Trajectos/Trajectos_241116.txt", 
+#              col_names = c("TempsGPS", "ROLL", "Pict", "Yaw", "X", "Y", "H")) %>% 
+#   st_as_sf(coords = c("X", "Y", "H"), crs = projection(dem)) %>% 
+#   st_combine() %>% 
+#   st_cast("POLYGON") %>% 
+#   st_transform(crs = crs)
 ```
 
 ## Régina
@@ -74,11 +84,12 @@ Cons:
 
 ```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
 leaflet() %>%
-  addTiles(group = "OSM") %>% 
+  addTiles(group = "OSM") %>%
+  # addPolygons(st_zm(trajectosONF), group = "trajectos", col = "blue") %>% 
   addRasterImage(dcm, colors = "Greys", group = "DCM") %>%
   addCircles(data = candidates, label = ~name, col = "red", radius = 20, group = "Trees") %>% 
   addCircles(data = drone, col = "blue", radius = 2, label = ~filename, group = "Drone") %>% 
-  addLayersControl(overlayGroups = c("OSM", "DCM", "Trees", "Drone"),
+  addLayersControl(overlayGroups = c("OSM", "trajectos", "DCM", "Trees", "Drone"),
                    options = layersControlOptions(collapsed = T)) 
 ```
 

@@ -1,4 +1,4 @@
-```{r setupmutations, include=FALSE}
+```{r setupmutationsanalyses, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
 library(kableExtra)
@@ -16,15 +16,9 @@ opts_chunk$set(
 ```
 
 
-# Mutations
+# Mutations Analyses
 
 *Chapter to be split*
-
-## Mutations detection
-
-> For each species, we will extract DNA and construct 27 individually tagged genomic libraries to produce short read sequencing (see sampling strategy, WP2 above) with NovaSeq6000 SP technology, targeting aminimum  of  50x  coverage  per  library  (70-90x  should  be  realistic,  we  will  go  for  100x  if  possible).  The possible sequencing depth affordable in the project will depend on the genome size of chosen species and  some  extent  on  fluctuating  sequencing  prices.  Lab  work  will  be  conducted  at  Ecofog  and  PGTB (Biogeco); the sequencing will be subcontracted to CEA Genoscope, Evry.
-
-> Detection of mutations (T4.2): For mutation detection, we will  minimise the impact of library preparation and  sequencing  errors  by  retaining  only  mutations  detected  by  comparison  with  the “zero  mutation reference” (Hanlon et al 2019) and in each branch (Orr et al. 2019), giving a total of 9 genotype sampling points in each tree. We will quantify the occurrence of mutations in each of the 24 leaf libraries per tree using a high-sensitivity method (Cibulskis et al., 2013). De novomutations appear in single meristem cells and  their  abundance  in  tree  tissues  will  depend  on  the  specific  cell’s  divisions  and  contribution  to generating tree tissues. Fixation of de novo mutations in tissues is expected to be rare and the expected time  to  fixation  is  long,  see (Nicholson  et  al.,  2018)for  an  example  in  humans.  The  detection  of  novel mutations must thus be sensitive to low allele copy number in tissues. For this reason, we will test and use mutation detection methods typically used in cancer mutation research, that are optimized for strong allelic frequency skews (Alioto et al., 2015).The artificial inclusion of in silicomutationsinto the reads and permutations among branch labels allows the estimation of the recovery rate of true mutations, the false negative rates, and the false positive rates (Orr et al., 2019). We will test whether the rate of accumulation of  mutations  is  increased  in  high-light-exposed  branches  compared  to  those  with  low-light  exposure accounting  for  the  physical  tree  branches  (tree  architecture -WP3),  the  mutation  history,  and  light environment (WP3).
 
 ## Mutations history
 

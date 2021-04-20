@@ -1,0 +1,158 @@
+# Appendix 3: Literature
+
+This appendix keeps literature review up-to-date.
+
+## Genome assembly
+
+### @Johnson2020
+
+**Draft genome assemblies using sequencing reads from Oxford Nanopore Technology and Illumina platforms for four species of North American Fundulus killifish**
+
+_de novo_ assembly of high-quality genomes combining short-read Illumina data to polish assemblies from long-read ONT data.
+
+### @Plomion2018
+
+**Oak genome reveals facets of long lifespan**
+
+### Msc
+
+* also mutation detection
+* Use @Cibulkis2013 to detect somatic mutations
+* orthogroups expanded in tandem duplicated genes are enriched in gene ontology terms relating to biotic interactions (disease-resistance R genes)
+* expanded orthorgroups are more degenerated (higher pi0/pi4) than stable orhogroups
+* rapide selection on leucine-rich repeat receptor like kinase (LRR-RLK) for oak immunity
+* compared genome size from Kmer (Jellyfish) and flux cytometry
+* assembly, TE detection and annotation, gene prediction and annotation, mutation detection
+* consider mutation rate estimation meaningless
+* mutation detection: BWA-MEM + MuTect
+
+### SI
+
+### https://www.oakgenome.fr/?page_id=587
+
+
+
+## Mutation detection
+
+### @Orr2019
+
+**A phylogenomic approach reveals a low somatic mutation rate in a long-lived plant**
+
+* **Methodology**
+    * 8 samples with Illumina HiSeq 2k5
+    * *de novo* reference aligned on *E. grandis* and iteratively corrected using `bcftools consensus`
+    * variant calling for positive control mapping with `NGM` and variant detection with `GATK4` keeping variants present
+        1. in all three replicates of each branch types
+        1. at least one branch tip had a different genotype than the other branch tips
+        1. the site is biallelic (multiple somatic mutations are improbable)
+        1. total depth is less or equal to ~2 times the expected depth (avoid alignment issues) 
+        1. excessive heterozygosity is less or equal 40 (avoid genotyping errors)
+        1. the site is not in a repetitive region of *E. grandis*
+    * positive control used to compute phylogenetic trees, comparing the distance to architecture to identify the most pasimonious tree
+    * somatic mutations detected using `GEAR's dng-call` method (Ramu et al. 2013) with expectations bades on the physical tree architecture
+
+### @Ramu2013
+
+**DeNovoGear: De novo indel and point mutation discovery and phasing**
+
+Tools to detect ponit mutations used in Orr et al. 2019 and compared with `SAMtools`, `polyMutt`, and `GATK`.
+
+### @Hanlon2019
+
+**Somatic mutations substantially increase the per‐generation mutation rate in the conifer Picea sitchensis**
+
+* **Methodology**
+    * gene capture 2 leaf samples and 2 bark samples
+    * aligned on natural hybrid `NextGenMap`
+    * `GATK` haplotype call with `-ERC` and vcf with invariant and varying sites
+    * filter poor quality site
+    * filter weakly supported sample (leaf or bark) genotype (MAF<0.05) probably due to sequencing error
+    * filtering site and genotype level for high confidence and low confidence mutation pools
+    * keep site were all four sample passed
+    * bark are the same, leaves are the same, but bark and leaves differ
+    * visual check on IGV (alignment errors):
+        * All reads that showed the candidate mutant allele also showed a unique allele at a nearby site in the heterozygous samples, and at least one of the homozygous samples contained reads supporting the two alleles
+        * At the candidate site and at a nearby polymorphic site, there were three haplotypes in the heterozygous samples, each sup- ported by multiple reads
+        * All four samples contained at least one read supporting the candidate mutant allele
+    * validated mutations by resequencing with primers
+* **Results**
+    * somatic base substitution rate of 2.7 × 10−8 per base pair within a generation
+* **Discussion**
+    * although somatic mutations raise genetic load in conifers, they generate important genetic variation and enable selection both among cell lineages within individual trees and among offspring
+    
+### @Cibulskis2013
+
+**Sensitive detection of somatic point mutations in impure and heterogeneous cancer samples**
+
+* `MuTect` has higher sensitivity with similar specificity, especially for mutations with allelic fractions as low as 0.1
+* The sensitivity and specificity of any somatic mutation–calling method varies along the genome and depends on several factors:
+    * the depth of sequence coverage in the tumor and a patient-matched normal sample
+    * the local sequencing error rate
+    * the allelic fraction of the mutation 
+    * the evidence thresholds used to declare a mutation
+* **Methodolgy**
+    * Somatic mutation detection:
+        * alignment of normal and tumor reads
+        * marking duplicated reads
+        * recalibration of base quality scores
+        * local realignement
+        * removal of low quality sequence data
+        * variant detcion using a bayesian classifier
+        * filtering to remove false positive resulting from correlated sequencing artifacts that are not captured by the error model
+        * designation of the variants as somatic or germline by a second bayesian classifier
+    * Variant detection
+        * compare M0 assuming no variant at the site and non-reference bases due to random sequencing errors
+        * to M(m,f) assuming true variant allele m at allele fraction f
+        * compute log odds score (LOD) and use a threshold depending on expected mutation frequency and desired false positive rate
+    * Variant filtering
+        * STD standard = no filters vs HC high confidence applying 6 filters
+        * Filter proximal gap
+        * Filter strand bias
+        * Filter poor mapping
+        * Filter triallelic site
+        * Filter clustered position
+        * Filter observed in control
+    * Specificity
+        * Overcalling events for the tumor data
+            * sequencing errors
+            * innacurate read placements
+        * undercalling germline events in the matched normal data
+            * low sequencing depth
+            
+### @Nicholson2018
+
+**Fixation and Spread of Somatic Mutations in Adult Human Colonic Epithelium**
+
+Variant fixation requires all wild-type stem cells to be displaced defining a process of monoclonal conversion of crypts that takes many years in human colonic epithelium. But biased behaviors are confirmed to subvert these processes to achieve variant over representation.
+
+### @Alioto2015
+
+**A comprehensive assessment of somatic mutation detection in cancer using whole-genome sequencing**
+
+* PCR-free library preparation
+* Mutation coverage > 100X
+* Control coverage close to mutation coverage ($\pm10\%$)
+* Optimize aligner/variant caller combination (`BWA` for SSM with next step)
+* Combine several mutations callers (`Strelka` and `MuTect` for SSM)
+* Allow mutations in or near repeats
+* Filter by mapping quality, strand bias, positional bias, presence of soft-clipping to minimize mapping artefacts
+
+## Unclassified
+
+### @Michael2020
+
+**Building near-complete plant genomes**
+
+## To read
+
+### @Belser2018
+
+### @Edwards1990
+
+### @Leebens-Mack2019
+
+* Schmid-Siegert et al. 2017
+
+### links
+
+* https://academic.oup.com/bioinformatics/article/32/20/3058/2196489?login=true

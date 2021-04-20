@@ -18,7 +18,38 @@ opts_chunk$set(
 
 # Genome assembly
 
- Assemble high-quality annotated reference genomes for three trees of three different species.
+*Assembly of high-quality annotated reference genomes for three trees of three different species.*
+
+## Sequencing
+
+* CNRGV, Toulouse
+* Genomic reads with PacBio HiFi
+* Optical maps with Bionano
+* Illumina HiSeq/NovaSeq
+
+## Assembly workflow
+
+* Participation in developing a `singularity` and `snakemake` workflow (see [test](https://github.com/sylvainschmitt/snakemake_singularity) on GitHub and [repostiory](https://forgemia.inra.fr/ludovic.duvaux/woodysv) on forgeMIA) with Ludovic Duvaux
+* Steps:
+    1. converting `bam` files to `fastq`: converting HiFi reads to regular fastq with the package `simlink`
+    1 assembly of contigs: using `hifiasm` first but step to test additional assembler such as `canu` and `spades`
+    1. removing haplotigs: [`purge_dups`](https://github.com/dfguan/purge_dups) and `purge_haplotigs`
+    1. optical maps: proprietary program of bionano & manual curation by CNRGV to obatin a haploid optical map
+    1. gap closing: using Illumina reads with [`SOAPdenovo2`](https://sourceforge.net/projects/soapdenovo2/files/GapCloser/bin/r6/)
+    1. quality check:
+        * [`Jellyfish`](https://github.com/gmarcais/Jellyfish)
+        * [KAT plot](https://www.researchgate.net/publication/309161336_The_present_and_future_of_de_novo_whole-genome_assembly)
+        * BUSCO
+        * synteny:
+            * Dgeanies
+            * jupiterPlot
+        * quast
+
+## Annotation workflow
+
+Have a look to @Plomion2018
+
+## Project description
 
 > In each species, using a single genotype, such as leaves from a single branch, we will extract DNA and obtain long reads -2 runs of each Mini and Prometh ION targeting a total coverage of 100x -and short reads -sequencing one of the libraries to be used for the detection of mutations (below) using Illumina NovaSeq6000  technology  and  targeting  a  minimum  coverage  of  100x.  The  sequencing  services  will  be subcontracted to CEA Genoscope, Evry. Ideally, we would use cambium tissue to produce the reference genomes, however, since a limited amount of cambium tissue can be sampled per tree, we will use leaf tissue. Assembling the quality-filtered reads from both sequencing technologies will provide long scaffolds (Johnson et al., 2019). In each species, we will build an “optimal map” of the genome using high-resolution restriction   maps   from   single,   labelled   molecules   of   DNA   obtained   through   Bionano   technology (subcontracted  to  CNRGV,  Toulouse).  In  combination  with  the  previous  scaffolds  this  will provide  a chromosomal assembly.The three genomes will be annotated using automated pipelines (Bolger, Arsova, & Usadel, 2018).
 
