@@ -44,7 +44,7 @@ include_graphics("data/biblio/Sibulkis2013FigS1.png")
 * use @Cibulskis2013 best workflow with one or several mapping / mutation detection software
 * maybe develop a pipeline doing multiple methods and use quality check to select the best depending on data
 * https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
-* `Mutect2`, `VarScan2`, `SomaticSniper`, `Mutect`, `RADIA`, `MuSE`
+* `Mutect2`, `VarScan2`, `SomaticSniper`, `Mutect`, `RADIA`, `MuSE`, `DeNovoGear`
 
 ## *Sextonia rubra*
 

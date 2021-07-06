@@ -66,3 +66,38 @@
 * High molecular DNA extraction at CNRGV
 * Bionano with CNRGV
 * PacBio for HiFi reads
+
+## 27/05/2021 William Marrande
+
+### Sampling
+
+* No experience on cambium
+* PacBio 50-150kb < Bionano
+* CTAB or Kit
+* Send by plane
+
+### Assembly
+
+* PacBio HiFi best contiguity
+* hifiasm separate haplophase
+* different apporaches for optical map
+    * calssical assembly with bionano software (only 3% of N recently)
+    * if issues (gaps or N), local tools to make it better
+
+## 06/07/2021 Mutation detection
+
+### Virtual experiment
+
+* Barplot of callers performance across AF at low (50X) and high (100X) coverage
+* Check `VarScan` AF=0.1 C=200
+
+### Swiss data
+
+* Map swiss mutations (+1000 bp) on 3P genome
+* Compare GATK/Strelka2
+* Full genome
+*  Stringent filters common with both GATK and Strelka2
+
+### Angela
+
+* 
