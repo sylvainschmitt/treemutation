@@ -1,0 +1,349 @@
+```{r setupmutationsswiss, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+```{r datamutationsswiss}
+snv <- read_tsv("data/mutations/swiss/napoleon_mutations.tsv") %>% 
+  dplyr::rename(tumor = Mutation, Mutation = SNV, REF = Ref, ALT = Alt) %>% 
+  dplyr::select(-Lower_genom, -Upper_genome) %>% 
+  separate(Contig, c("Contig", "POS"), convert = T)
+genome <- read_tsv("data/mutations/swiss/Qrob_PM1N.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6)
+```
+
+# Mutations swiss
+
+This chapter described the reanalyses of data from @Schmid-Siegert2017 currently done in the [`swiss` branch of the `generate_muation` repository](https://github.com/sylvainschmitt/detectMutations/tree/swiss).
+
+## Napoleon's SNVs on 3P
+
+I reported the mutations (Tab. \@ref(tab:snvnapoleonTab)) from the [supplementary table 2](https://static-content.springer.com/esm/art%3A10.1038%2Fs41477-017-0066-9/MediaObjects/41477_2017_66_MOESM1_ESM.pdf) from @Schmid-Siegert2017.
+I downloaded Napoleon's genome from NCBI, removed spaces, and index it.
+In R, I defined scaffolds of 500bp before and after the SNVs in a bed file for further extraction of the sequences using `bedtools`. 
+Finally, I used `blat` to align the 100bp scaffolds with known SNVs from Napoleon on the 3P genome from Bordeaux.
+I used a homemade script to get back the SNV position on the 3P genome considering that `blat` output is zero index whereas the VCF is 1 index.
+I found back only 14 of the original 17 SNV's from Napoleon (Fig. \@ref(fig:napoleonsSnvsFig)). 
+Moreover, 3 were not in the assembled chromosome.
+Consequently, I will focus on the 11 SNVs in the 12 chromosome of the 3P assembly (Fig. \@ref(fig:napoleonsSnvsFig)).
+
+```{r snvnapoleonTab}
+kable(snv, caption = "SNVs in the Napoleon Oak. Rerported from @Schmid-Siegert2017.")
+```
+
+```{bash napoleonsSnvs1, eval=F, echo=T}
+sed -i "s/ //g" Napoleon_genome.fa
+samtools faidx Napoleon_genome.fa
+```
+
+```{R napoleonsSnvs2, eval=F, echo=T}
+N <- 500
+mutations <- read_tsv("data/swiss/Naopleon_mutations.tsv") %>% 
+  select(SNV, Contig) %>% 
+  separate(Contig, c("Contig", "Pos"), convert = T) %>% 
+  mutate(Start = Pos - N-1, Stop = Pos + N)
+genome <- read_tsv("data/swiss/Napoleon_genome.fa.fai", 
+                   col_names = c("Seq", "Size", "X1", "X2", "X3")) %>% 
+  select(Seq) %>% 
+  separate(Seq, paste0("X", 1:3), remove = F) %>% 
+  mutate(Contig = gsub("1Quercusroburisolateech66", "", X2)) %>% 
+  select(Seq, Contig)
+genome %>% 
+  left_join(mutations) %>% 
+  filter(!is.na(SNV)) %>% 
+  select(Seq, Start, Stop) %>% 
+  write_tsv("data/swiss/Naopleon_mutations.bed", col_names = F)
+```
+
+```{bash napoleonsSnvs3, eval=F, echo=T}
+bedtools getfasta -fi Napoleon_genome.fa -bed Naopleon_mutations.bed -fo Naopleon_mutations.fa
+~/Tools/blatSrc/bin/blat Qrob_PM1N.fa Naopleon_mutations.fa napoleon_mutations.psl
+```
+
+```{r napoleonsSnvs4, eval=T, echo=T}
+aln <- read_tsv("data/mutations/swiss/napoleon_mutations.psl", skip = 5, 
+                col_names = c("matches", "misMatches", "repMatches", "nCount", 
+                              "qNumInsert", "qBaseInsert",
+                              "tNumInsert", "tBaseInsert", "strand", 
+                              "qName", "qSize", "qStart", "qEnd", 
+                              "tName", "tSize", "tStart", "tEnd", 
+                              "blockCount", "blockSizes", "qStarts", "tStarts"), 
+                col_types = cols(blockSizes = col_character(), tStarts = col_character())) # psl3 generics
+snv <- snv %>% 
+  left_join(aln, by = c("Mutation" = "qName")) %>% 
+  dplyr::select(-Contig, -POS, -Context, -Position) %>% 
+  mutate(POS0 = 500+1) %>% # PSL 0-indexed !!
+  filter(qStart <= POS0, qEnd >= POS0) %>% 
+  group_by(Mutation) %>% 
+  filter(matches == max(matches)) %>% 
+  separate_rows(blockSizes, qStarts, tStarts, sep = ",", convert = T) %>% 
+  filter(!is.na(qStarts)) %>% 
+  filter(qStarts <= POS0) %>% 
+  mutate(posSNV = tStarts + POS0 - qStarts) %>% 
+  mutate(tEnd = tStarts + blockSizes) %>% 
+  filter(posSNV <= tEnd) %>% 
+  dplyr::select(Mutation, tName, posSNV, tumor, REF, ALT) %>% 
+  dplyr::rename(POS = posSNV, CHROM = tName) %>% 
+  unique()
+rm(aln)
+```
+
+```{r napoleonsSnvsFig}
+ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
+  geom_point(aes(y = POS/10^6), col = "red", data = snv) +
+  ggrepel::geom_label_repel(aes(y = POS/10^6, label = Mutation), col = "red", data = snv) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank())
+```
+
+## Napoelon's and raw mutations
+
+I used for the moment only the mutations obtained with `Strelka2`. 
+I'm trying to find back Napoleon's original SNVs in raw mutations, to look at the metric we want to filter on:
+
+* alternate allele count in the normal sample (should be 0)
+* reference allele count in the mutated sample (should be at least a few copies)
+* read depth for both mutated and normal sample (should be not too high or too low)
+
+I was first expecting the mutations to be unique to a branch. 
+For instance, a mutation on the upper branch should not be found in the upper branch.
+So I separated the raw mutations in two datasets (Tab. \@ref(tab:rawMutTab)),
+the mutations common to the two branches and the mutation unique to each branch.
+**Surprisingly, I found back mutations in the both!**
+
+
+```{r rawMutTab}
+lapply(list(Unique = "data/mutations/swiss/mutations_strelka2.sql", 
+            Common = "data/mutations/swiss/mutations_strelka2_2.sql"), src_sqlite) %>% 
+  lapply(tbl, "mutations") %>% 
+  lapply(tally) %>%
+  lapply(collect) %>% 
+  bind_rows(.id = "SNV") %>% 
+  kable(caption = "Mutations", format.args = list(big.mark = " "))
+```
+
+### Unique
+
+In the mutation unique to one branch, I found back only **SNV4** (Tab. \@ref(tab:uniqMutTab) and Fig. \@ref(fig:uniqMutFig)).
+
+```{r uniqMut}
+overlap1 <- lapply(1:nrow(snv), function(i)
+  src_sqlite("data/mutations/swiss/mutations_strelka2.sql") %>% 
+    tbl("mutations") %>% 
+    filter(CHROM == local(snv[i,]$CHROM)) %>% 
+    filter(POS == local(snv[i,]$POS)) %>% 
+    # filter(REF %in% local(c(snv[i,]$REF, snv[i,]$ALT))) %>%
+    # filter(ALT %in% local(c(snv[i,]$REF, snv[i,]$ALT))) %>%
+    collect() %>% 
+    mutate(Mutation  = snv[i,]$Mutation)
+) %>% bind_rows()
+```
+
+```{r uniqMutTab}
+overlap1 %>% 
+  dplyr::select(Mutation, tumor, normal, REF, ALT, mutation_altCountT1, mutation_refCountT1, normal_altCountT1, normal_refCountT1) %>% 
+  kable(caption = "Unique mutations.", col.names = c("Mutation", "Mutated", "Normal", "Ref", "Alt", 
+                                                    "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount"))
+```
+
+```{r uniqMutFig}
+ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
+  geom_point(aes(y = POS/10^6), col = "red", data = overlap1) +
+  ggrepel::geom_label_repel(aes(y = POS/10^6, label = Mutation), col = "red", 
+                            data = dplyr::select(overlap1, CHROM, POS, Mutation) %>% unique()) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank())
+```
+
+### Common
+
+In the mutation common to both branches, I found back 6 SNVs duplicated on each call (Tab. \@ref(tab:comMutTab) and Fig. \@ref(fig:comMutFig)).
+**`Strelka2` is detecting putative mutations in the normal sample !**
+
+```{r comMut}
+overlap2 <- lapply(1:nrow(snv), function(i)
+  src_sqlite("data/mutations/swiss/mutations_strelka2_2.sql") %>% 
+    tbl("mutations") %>% 
+    filter(CHROM == local(snv[i,]$CHROM)) %>% 
+    filter(POS == local(snv[i,]$POS)) %>% 
+    collect() %>% 
+    mutate(Mutation  = snv[i,]$Mutation)
+) %>% bind_rows()
+```
+
+```{r comMutTab}
+overlap2 %>% 
+  dplyr::select(Mutation, tumor, normal, REF, ALT, mutation_altCountT1, mutation_refCountT1, normal_altCountT1, normal_refCountT1) %>% 
+  kable(caption = "Common mutations.", col.names = c("Mutation", "Mutated", "Normal", "Ref", "Alt", 
+                                                    "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount"))
+```
+
+```{r comMutFig}
+ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
+  geom_point(aes(y = POS/10^6), col = "red", data = overlap2) +
+  ggrepel::geom_label_repel(aes(y = POS/10^6, label = Mutation), col = "red", 
+                            data = dplyr::select(overlap2, CHROM, POS, Mutation) %>% unique()) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank())
+```
+
+### Metrics
+
+I joined the two datasets, keeping candidates with the lowest alternate allele count in the normal sample (should be 0 but not always).
+I thus obtained 7 out of the 11 expected SNVs (63%).
+I looked at different metrics for each  (Fig. \@ref(fig:overlapMetrics)):
+
+* `mutation_DP` and `normal_DP` are the read depth for the two sample, and shows as expected values between hal and two times the mean coverage (60X)
+* `normal_altCountT1` is the number of alternate allele count in the normal sample, should be 0, but is equal to 3 and 4 (9% of reads) for two SNVs
+* `mutation_altCountT1` is the number of alternate allele count in the mutated sample, should be not too low, and is most the time above 5
+* `mutation_AF` is the allele frequency of mutations, was assumed as close to 0.5, but vary from 0.1 to over 0.3
+
+```{r overlap, echo=T}
+overlap <- bind_rows(overlap1, overlap2) ; rm(overlap1, overlap2)
+overlap <- overlap %>% 
+  group_by(Mutation) %>% 
+  filter(normal_altCountT1 == min(normal_altCountT1))
+```
+
+```{r overlapMetrics}
+overlap %>% 
+  dplyr::select(Mutation, FILTER, mutation_DP, normal_DP,
+                mutation_altCountT1, normal_altCountT1,
+                mutation_AF) %>% 
+  reshape2::melt(c("Mutation", "FILTER")) %>% 
+  ggplot(aes(value, fill = FILTER)) +
+  geom_histogram() +
+  facet_wrap(~ variable, scales = "free") +
+  theme(legend.position = c(0.8, 0.2))
+```
+
+### Conclusion
+
+**The main conclusion is that the SNVs detected by @Schmid-Siegert2017 have not always no reads in the "normal" sample and that they show a wide variation of allelic frequency.**
+
+Secondly, we were planning to filter raw mutations keeping candidates unique to a sample and using DP > 30, DP < 120, normal_AltCount = 0, and mutation_AltCount > 5. 
+But if we want to keep the maximum of SNVs from the original publication, we should use all raw mutations with DP > 28, DP < 120, normal_AltCount < 5, and mutation_AltCount > 3.
+
+
+## Filtered mutations
+
+I used for the moment only the mutations obtained with `Strelka2`. 
+
+### Base filter
+
+* DP > 30
+* DP < 120
+* normal_AltCount = 0
+* mutation_AltCount > 5
+
+```{r mutBase}
+normalAlt <- 0
+mutationAlt <- 5
+lowDP <- 30
+highDP <- 120
+mut_base <- lapply(list(Unique = "data/mutations/swiss/mutations_strelka2.sql", 
+            Common = "data/mutations/swiss/mutations_strelka2_2.sql"), src_sqlite) %>% 
+  lapply(tbl, "mutations") %>% 
+  lapply(filter, normal_altCountT1 <= normalAlt, normal_altCountT2 <= normalAlt) %>% 
+  lapply(filter, mutation_altCountT1 >= mutationAlt, mutation_altCountT2 >= mutationAlt) %>% 
+  lapply(filter, normal_DP <= highDP, mutation_DP <= highDP, normal_DP >= lowDP, mutation_DP >= lowDP) %>% 
+  lapply(collect) %>% 
+  bind_rows(.id = "type") %>% 
+  group_by(CHROM, POS) %>% 
+  filter(normal_altCountT1 == min(normal_altCountT1))
+```
+
+```{r mutBaseFig}
+ggplot(mut_base, aes(mutation_AF, fill = (FILTER == "PASS"))) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mut_base))) +
+  xlim(0, 0.5) +
+  xlab("Allele frequency")
+```
+
+### Napoleon's filter
+
+* DP > 28
+* DP < 120
+* normal_AltCount < 5
+* mutation_AltCount > 3
+
+```{r mutNap}
+normalAlt <- 5
+mutationAlt <- 3
+lowDP <- 25
+highDP <- 120
+mut_nap <- lapply(list(Unique = "data/mutations/swiss/mutations_strelka2.sql", 
+            Common = "data/mutations/swiss/mutations_strelka2_2.sql"), src_sqlite) %>% 
+  lapply(tbl, "mutations") %>% 
+  lapply(filter, normal_altCountT1 <= normalAlt, normal_altCountT2 <= normalAlt) %>% 
+  lapply(filter, mutation_altCountT1 >= mutationAlt, mutation_altCountT2 >= mutationAlt) %>% 
+  lapply(filter, normal_DP <= highDP, mutation_DP <= highDP, normal_DP >= lowDP, mutation_DP >= lowDP) %>% 
+  lapply(collect) %>% 
+  bind_rows(.id = "type") %>% 
+  group_by(CHROM, POS) %>% 
+  filter(normal_altCountT1 == min(normal_altCountT1))
+```
+
+```{r mutNapFig}
+ggplot(mut_nap, aes(mutation_AF, fill = (FILTER == "PASS"))) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mut_nap))) +
+  xlim(0, 0.5) +
+  xlab("Allele frequency")
+```
+
+### `Strelka`'s filter
+
+* FILTER = "PASS"
+* normal_AltCount = 0
+* mutation_AltCount > 5
+
+```{r mutStrelka}
+mut_strelka <- lapply(list(Unique = "data/mutations/swiss/mutations_strelka2.sql", 
+                           Common = "data/mutations/swiss/mutations_strelka2_2.sql"), src_sqlite) %>% 
+  lapply(tbl, "mutations") %>% 
+  lapply(filter, FILTER == "PASS") %>% 
+  lapply(collect) %>% 
+  bind_rows(.id = "type") %>% 
+  group_by(CHROM, POS) %>% 
+  filter(normal_altCountT1 == 0) %>% 
+  filter(mutation_altCountT1 >= 10)
+```
+
+```{r mutStrelkaFig}
+g1 <- ggplot(mut_strelka, aes(mutation_AF)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mut_strelka))) +
+  xlim(0, 0.5) +
+  xlab("Allele frequency")
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = mutation_AF), data = mut_strelka, size = 1) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis(option = "inferno")
+cowplot::plot_grid(g1, g2, nrow = 2)
+```
+
+
