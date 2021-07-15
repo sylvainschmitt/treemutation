@@ -1,0 +1,25 @@
+```{r setuprates, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+
+# Mutations rate
+
+> Evolution  of  mutation  rates(T5.1):  To  attempt  explaining  any  differences  in  observed  mutation  rates between  the  three  sequenced  species,  we  will  collect  data  from  the  literature  on  the  intra-individual accumulation of mutations (or somatic mutation rates) in plants and examine if a phylogenetic pattern (Soltis, Folk, & Soltis, 2019)can be observed after carefully ensuring the comparability of data considering the methods used in each study. (Soltis et al., 2019). We will then examine the evolution of gene families involved  in  UV  response  and  DNA  damage  tolerance  and  repair (Nakagawa  et  al.,  2011;  Oztas,  Selby, Sancar,  &  Adebali,  2018;  Ulm  &  Jenkins,  2015)and  any  other  relevant  pathways  to  explain  possible differences  in  the  rate  of  accumulation  of  mutations  between  plant  species,  and  the  three  sequenced species  in  particular.  Publically  available  data  on  the  same  gene  families  across  plant  lineages  will  be included (One Thousand Plant Transcriptomes Initiative, 2019). We will particularly address differences in gene  family  evolution  in  these  pathways    in  plants  with  different  life  history  traits  (e.g.  annual  plants, temperate trees).
+
+```{r}
+include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+```

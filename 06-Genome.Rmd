@@ -29,25 +29,32 @@ opts_chunk$set(
 
 ## Assembly workflow
 
-* Participation in developing a `singularity` and `snakemake` workflow (see [test](https://github.com/sylvainschmitt/snakemake_singularity) on GitHub and [repostiory](https://forgemia.inra.fr/ludovic.duvaux/woodysv) on forgeMIA) with Ludovic Duvaux
-* Steps:
-    1. converting `bam` files to `fastq`: converting HiFi reads to regular fastq with the package `simlink`
-    1 assembly of contigs: using `hifiasm` first but step to test additional assembler such as `canu` and `spades`
-    1. removing haplotigs: [`purge_dups`](https://github.com/dfguan/purge_dups) and `purge_haplotigs`
-    1. optical maps: proprietary program of bionano & manual curation by CNRGV to obatin a haploid optical map
-    1. gap closing: using Illumina reads with [`SOAPdenovo2`](https://sourceforge.net/projects/soapdenovo2/files/GapCloser/bin/r6/)
-    1. quality check:
-        * [`Jellyfish`](https://github.com/gmarcais/Jellyfish)
-        * [KAT plot](https://www.researchgate.net/publication/309161336_The_present_and_future_of_de_novo_whole-genome_assembly)
-        * BUSCO
-        * synteny:
-            * Dgeanies
-            * jupiterPlot
-        * quast
+### V1
+
+The first assembly will be produced by William Marande in the CNRGV.
+
+### V2
+
+A second version can be produced using a `singularity` and `snakemake` workflow developed by Ludovic Duvaux (possible collaboration).
+The wrokflow uses the following steps:
+
+1. converting `bam` files to `fastq`: converting HiFi reads to regular fastq with the package `simlink`
+1 assembly of contigs: using `hifiasm` first but step to test additional assembler such as `canu` and `spades`
+1. removing haplotigs: [`purge_dups`](https://github.com/dfguan/purge_dups) and `purge_haplotigs`
+1. optical maps: proprietary program of bionano & manual curation by CNRGV to obatin a haploid optical map
+1. gap closing: using Illumina reads with [`SOAPdenovo2`](https://sourceforge.net/projects/soapdenovo2/files/GapCloser/bin/r6/)
+1. quality check:
+    * [`Jellyfish`](https://github.com/gmarcais/Jellyfish)
+    * [KAT plot](https://www.researchgate.net/publication/309161336_The_present_and_future_of_de_novo_whole-genome_assembly)
+    * BUSCO
+    * synteny:
+        * Dgeanies
+        * jupiterPlot
+    * quast
 
 ## Annotation workflow
 
-Have a look to @Plomion2018
+Have a look to @Plomion2018.
 
 ## Project description
 

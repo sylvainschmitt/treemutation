@@ -1,0 +1,111 @@
+```{r setupmutationsinsilico, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+```{r datamutationsinsilico}
+stats <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+  group_by(caller, N, R, AF, C) %>% 
+  summarise_at(c("FN", "FP", "TP", "Precision", "Recall"), mean, na.rm = T) %>% 
+  mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  ungroup()
+```
+# Mutations *in silico*
+
+This chapter described the *in silico* experiment using the [generateMutations](https://github.com/sylvainschmitt/generateMutations) and the [detectMutations](https://github.com/sylvainschmitt/detectMutations) workflows to test the effect of coverage/sequencing depth and allelic frequency on the performance of 7 tools to detect mutations either generalist or specific to mutations. Report to the manuscript in preparation for description:
+
+* [manuscript](https://drive.google.com/file/d/1wKsOdGNDb1m1tBbbdIJYAinK1Ekrbs6p/view?usp=sharing)
+* [SI](https://drive.google.com/file/d/13GgYO3wpa1iEgP-iwz11W6GGxBKLDFEe/view?usp=sharing)
+
+```{r mutissf1, fig.cap="Performance of mutation detection tools  with allelic fraction and coverage. The inferno, black to yellow, colour scale indicates the recall and the precision rates for each tool to detect mutations."}
+stats %>% 
+  # mutate(Precision = ifelse(is.na(Precision), 0, Precision)) %>% 
+  reshape2::melt(c("caller", "N", "R", "AF", "C"),
+                 variable.name = "metric", value.name = "metric.value") %>% 
+  filter(metric %in% c("Precision", "Recall")) %>% 
+  mutate(metric = factor(metric, level = c("Recall", "Precision"))) %>% 
+  ggplot(aes(AF, C, fill = metric.value)) +
+  geom_tile() +
+  facet_grid(caller ~ metric) +
+  viridis::scale_fill_viridis("", option = "inferno") +
+  xlab("Allele Fraction") + ylab("Coverage") +
+  theme(strip.text.y = element_text(angle = 0),
+        legend.position = "bottom",
+        legend.key.width = unit(40, "points"))
+```
+
+```{r mutissf2, fig.cap="Best performing mutation detection tools depending on allelic fraction and coverage. The best performing tools were defined on the best recall rate first and best precision rate second for precision rates above 0.9. The labels in white indicate the recall rate (R) and the precision rate (P) for the best performing tools."}
+stats %>%
+  filter(Precision > 0.9) %>% 
+  group_by(AF, C) %>% 
+  filter(Recall == max(Recall)) %>% 
+  filter(Precision == max(Precision)) %>% 
+  group_by(AF, C, Precision, Recall) %>% 
+  summarise(caller = paste(unique(caller), sep = ", ", collapse = ", ")) %>% 
+  ggplot(aes(AF, C)) +
+  geom_tile(aes(fill = caller, alpha = Recall)) +
+  geom_text(aes(label = round(Recall, 2)), col = "black", size	= 3) +
+  scale_fill_brewer("", palette = "Paired") +
+  theme(legend.position = "bottom") +
+  xlab("Allele Fraction") + ylab("Coverage") +
+  theme(strip.text.y = element_text(angle = 0),
+        legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 4)) +
+  scale_alpha_continuous(guide = "none")
+```
+
+```{r mutissf3, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage. Tools to detect mutations include freebayes (red), MuSE (light green), Somatic Sniper (light blue), VarScan (pink), GATK (orange), Mutect2 (dark green), and Strelka2 (purple)."}
+stats %>% 
+  reshape2::melt(c("caller", "FN", "FP", "TP", "Precision", "Recall"),
+                 variable.name = "parameter", value.name = "parameter.value") %>% 
+  reshape2::melt(c("caller", "parameter", "parameter.value"),
+                 variable.name = "metric", value.name = "metric.value") %>% 
+  filter(metric %in% c("Precision", "Recall")) %>% 
+  filter(parameter != "N") %>% 
+  mutate(parameter = recode(parameter, "N" = "Number\nof mutations", "R" = "Transition\nTransversion Ratio",
+                            "AF" = "Allele\nFrequency", "C" = "Coverage")) %>% 
+  ggplot(aes(as.factor(parameter.value), metric.value, col = caller, fill = caller)) +
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(metric ~ parameter, scales = "free") +
+  theme(legend.position = "bottom", axis.title = element_blank()) +
+  scale_color_discrete("") +
+  scale_fill_discrete("")
+```
+
+```{r mutissf4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
+read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+  filter(C %in% c(25, 75, 150)) %>% 
+  mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "75X", "150X"))) %>% 
+  dplyr::select(caller, C, AF, Recall, Precision) %>% 
+  reshape2::melt(c("caller", "C", "AF")) %>% 
+  group_by(caller, C, AF, variable) %>% 
+  na.omit() %>% 
+  mutate(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95)) %>% 
+  ggplot(aes(x = AF, col = caller, fill = caller)) +
+  geom_ribbon(aes(ymin = q5, ymax = q95), alpha = 0.3, col = NA) +
+  geom_line(aes(y = m)) +
+  geom_point(aes(y = value), alpha = 0.5) +
+  facet_grid(C ~ variable) +
+  xlab("Allele frequency") +
+  ylab("") +
+  scale_color_brewer("", palette = "Paired") +
+  scale_fill_brewer("", palette = "Paired") +
+  theme(legend.position = "bottom")
+```

@@ -17,7 +17,7 @@ _de novo_ assembly of high-quality genomes combining short-read Illumina data to
 ### Msc
 
 * also mutation detection
-* Use @Cibulkis2013 to detect somatic mutations
+* Use @Cibulskis2013 to detect somatic mutations
 * orthogroups expanded in tandem duplicated genes are enriched in gene ontology terms relating to biotic interactions (disease-resistance R genes)
 * expanded orthorgroups are more degenerated (higher pi0/pi4) than stable orhogroups
 * rapide selection on leucine-rich repeat receptor like kinase (LRR-RLK) for oak immunity

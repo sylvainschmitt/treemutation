@@ -1,6 +1,9 @@
+treemutation 1.0.0.9012
+* MutationsSwiss: `Strelka2` done
+* Chapters structure revised
+
 treemutation 1.0.0.9011
 * MutationsSwiss: Napoleon's SNVs, raw mutations, and first filters (TODO: reorganize chapters) 
-
 
 treemutation 1.0.0.9010
 * meeting 06/07/2021 Mutation detection

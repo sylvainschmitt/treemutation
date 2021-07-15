@@ -1,0 +1,25 @@
+```{r setupgermline, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(kableExtra)
+if(knitr:::is_html_output()) options(knitr.table.format = "html") 
+if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
+library(tidyverse)
+library(raster)
+library(leaflet)
+library(sf)
+knit_hooks$set(webgl = hook_webgl)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+# Germline segregation
+
+> Timing  of  germline  segregation (T5.2):We  will  assess  whether  soma  and  germline  undergo  early segregation in tropical trees by assessing the transmission of mutations specific to each branch to gametic tissues, pollen or fruit pericarp, expected to carry a maternal genotype (Smouse, Sork, Scofield, & Grivet, 2012)and  to  zygotes  formed  on  the  branch  using  targeted  genotyping.  If  mutations  are  not  typically transmitted,  an  early  soma-germline  segregation  is  likely (Lanfear,  2018).  In  this  case,  mutations accumulated in tropical  tree tissues would indeed be  typically somatic, i.e., characteristic of vegetative tissues   only,   without   typically   entering   the   germline   andrepresenting   evolutionary   dead-ends. Conversely,  if  gametic  tissues  most  resemble  nearby  vegetative  tissues  (Figure  2  B)  and  mutations  are typically  transmitted  to  zygotes  in  proportions  expected  from  meiosis  as  in  oak (Plomion  et  al.,  2018), these  mutations  accumulated  through  an  individual’s lifetime  could  not  be  called  purely  somatic:  their transmission  to  offspring  and  thus  their  evolutionary  relevance  would  be  demonstrated.  We  will  then compare the timing of germline segregation among the three species, considering their life history and species-richness of their families, and compare with recent studies from other scientists (this topic is an active field of research).
+
+```{r}
+include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+```
+
