@@ -13,9 +13,59 @@ opts_chunk$set(
 
 # Mutations Angela virtual
 
-This chapter describes the generated fake data corresponding to Angela architecture and sampling design and the tested of our workflow to detect them back currently done in the [`angela` branch of the `generateMutations` repository](https://github.com/sylvainschmitt/generateMutations/tree/angela) and the [`angela` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/angela).
+This chapter describes the generated data corresponding to Angela architecture and sampling design and the tested of our workflow to detect them back currently done in the [`angela` branch of the `generateMutations` repository](https://github.com/sylvainschmitt/generateMutations/tree/angela) and the [`angela` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/angela).
 
-```{r}
-include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+
+```{r datamutationsangelavirtual}
+mutations <- read_tsv("data/mutations/angela_virtual/experiment1.tsv") %>% 
+  mutate(sample0 = ifelse(origin == "branch", branch, sample))
+genome <- read_tsv("data/mutations/angela_virtual/trunk.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^3)
 ```
 
+## Generated mutations
+
+I used a sampling design with 3 cambium samples (C1, C2, & C3), one main branch (B1) and 2 branch tips (TL & TO) with three leaves on each (L1, L2, L3, Fig. \@ref(fig:genAngelaDesign)). I generated 5 mutations per branch and tips resulting in 10 mutations per leaf with an allelic frequency of **AF=0.3**  and a coverage of **C=100X** (Fig. \@ref(fig:genAngleaVirtual)).
+
+```{r genAngelaDesign, fig.cap="Sampling design used to generate mutations following Angela sampling scheme."}
+include_graphics("data/mutations/angela_virtual/sampling.png")
+```
+
+
+
+```{r genAngleaVirtual, fig.cap="Generated mutations with Angela sampling design."}
+ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
+  geom_point(aes(y = POS/10^3, col = sample0), data = filter(mutations, generated == 1)) +
+  coord_flip() +
+  ylab("Position (kb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank()) +
+  scale_color_discrete("Mutation origin") +
+  theme(legend.position = "bottom")
+```
+
+## Detected mutations
+
+Even with an allele frequency of 0.3 we detected back all mutations without false positive. 
+The use of repeated sampling of leaves almost ensure a precision of 1,
+and `Strelka2` combined with and high coverage is reaching a recall close to 1.
+
+```{r detAngelaVirtual}
+mutations %>% 
+  group_by(sample, status) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(sample ~ status) %>% 
+  mutate(FN = 0, FP = 0) %>% 
+  mutate(Precision = round(TP/(TP+FP), 2), 
+         Recall = round(TP/(TP+FN), 2)) %>% 
+  kable(col.names = c("Sample", "True\nPositive", "False\nNegative", "False\nPositive", "Precision", "Recall"),
+        caption = "Assessment for the virtual detection of mutations with Angela sampling design.")
+```
+
+
+## Conclusion
+
+The next steps could be to include an allelic frequency spectrum instead of a defined value and a sampling scheme with 5 branches and a variable number of mutations between the branches and the tips. But I don't really see the point. If the pipeline detects mutations at low allelic frequencies, it will also perform well at high frequencies. And if the pipeline detects mutations with a recall of 1, changing the number of mutations among branches and ends will have no impact.
