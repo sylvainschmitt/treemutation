@@ -383,24 +383,24 @@ schmid <- bind_rows(overlap, overlapG) %>%
   mutate(SNV = paste0(CHROM, "_", "Pos", POS)) %>% 
   group_by(CHROM, POS, SNV) %>% 
   summarise(AF = max(AF))
-gatk_l <- gatkraw %>% 
-  mutate(AF = altCount_tumor/(altCount_tumor+refCount_tumor)) %>% 
-  filter(DP_tumor <= 60*1.1, DP_tumor >= 30) %>% 
-  filter(altCount_normal == 0) %>% 
-  filter(altCount_tumor >= 5) %>% 
-  filter(AF <= 0.5) %>% 
-  mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-  dplyr::select(CHROM, POS, SNV, AF) %>% 
-  collect()
-strelka_l <- strelka2raw %>% 
-  filter(mutation_DP <= 60*1.1, mutation_DP >= 30) %>% 
-  filter(normal_altCountT1 == 0) %>% 
-  filter(mutation_altCountT1 >= 5) %>% 
-  filter(mutation_AF <= 0.5) %>% 
-  mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-  rename(AF = mutation_AF) %>% 
-  dplyr::select(CHROM, POS, SNV, AF) %>% 
-  collect()
+# gatk_l <- gatkraw %>% 
+#   mutate(AF = altCount_tumor/(altCount_tumor+refCount_tumor)) %>% 
+#   filter(DP_tumor <= 60*1.1, DP_tumor >= 30) %>% 
+#   filter(altCount_normal == 0) %>% 
+#   filter(altCount_tumor >= 5) %>% 
+#   filter(AF <= 0.5) %>% 
+#   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
+#   dplyr::select(CHROM, POS, SNV, AF) %>% 
+#   collect()
+# strelka_l <- strelka2raw %>% 
+#   filter(mutation_DP <= 60*1.1, mutation_DP >= 30) %>% 
+#   filter(normal_altCountT1 == 0) %>% 
+#   filter(mutation_altCountT1 >= 5) %>% 
+#   filter(mutation_AF <= 0.5) %>% 
+#   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
+#   rename(AF = mutation_AF) %>% 
+#   dplyr::select(CHROM, POS, SNV, AF) %>% 
+#   collect()
 gatk_w <- gatkraw %>% 
   mutate(AF = altCount_tumor/(altCount_tumor+refCount_tumor)) %>% 
   filter(DP_tumor <= 60*1.1, DP_tumor >= 30) %>% 
@@ -433,21 +433,19 @@ strelka_r <- strelka2raw %>%
   dplyr::select(CHROM, POS, SNV, AF) %>% 
   collect() 
 datasets <- list(
-  "Schmid-Siegert et al. 2017" = schmid,
-  "gatk low" = gatk_l,
-  "strelka low" = strelka_l,
-  "gatk weak" = gatk_w,
-  "strelka weak" = strelka_w,
-  "strelka robust" = strelka_r
+  "Schmid" = schmid,
+  "GATK" = gatk_w,
+  "Strelka2" = strelka_w,
+  "Robust" = strelka_r
 )
-rm(schmid, gatk_l, strelka_l, gatk_w, strelka_w, strelka_r)
+rm(schmid, gatk_w, strelka_w, strelka_r)
 ```
 
 ```{r datasetsswissTab}
 lapply(datasets, nrow) %>% 
   bind_rows(.id = "dataset") %>% 
   reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>% 
-  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " "))
+  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " ")) 
 ```
 
 ```{r datasetsswissAF, fig.cap="Allele frequency for the different datasets."}
@@ -455,10 +453,14 @@ bind_rows(datasets, .id = "dataset") %>%
   ggplot(aes(AF, col = dataset), fill = NA) +
   geom_density() +
   scale_color_discrete("Dataset") +
-  xlab("Allelic frequency")
+  xlab("Allelic frequency") 
 ```
 
-```{r datasetsswissVenn}
+```{r datasetsswissVenn2}
+ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F)
+```
+
+```{r datasetsswissVenn, eval=F}
 # overlaps <- lapply(datasets, select, SNV, AF) %>% 
 #   bind_rows(.id = "dataset") %>% 
 #   ungroup() %>% 
@@ -476,3 +478,24 @@ bind_rows(datasets, .id = "dataset") %>%
 read_tsv("save/overlaps.tsv") %>% 
   kable(caption = "Overlaps among the different datasets.", format.args = list(big.mark = " "))
 ```
+
+## Alignment per chromosome
+
+```{bash, eval=F, echo=T}
+n=1000000 # 10^6
+samtools view lower_Qrob_Chr01.md.cram -t ~/work/detectMutations/data/bordeaux/Qrob_PM1N.fa | head -n $n | awk '{print $1}' > reads/lower_Qrob_Chr01.reads
+samtools view lower_Qrob_Chr02.md.cram -t ~/work/detectMutations/data/bordeaux/Qrob_PM1N.fa | head -n $n | awk '{print $1}' > reads/lower_Qrob_Chr02.reads
+samtools view lower_Qrob_Chr03.md.cram -t ~/work/detectMutations/data/bordeaux/Qrob_PM1N.fa | head -n $n | awk '{print $1}' > reads/lower_Qrob_Chr03.reads
+samtools view lower_Qrob_Chr04.md.cram -t ~/work/detectMutations/data/bordeaux/Qrob_PM1N.fa | head -n $n | awk '{print $1}' > reads/lower_Qrob_Chr04.reads
+```
+
+
+```{r, fig.height=10, fig.width=10}
+ggvenn::ggvenn(list(chr1 = read_tsv("data/mutations/swiss/lower_Qrob_Chr01.reads", col_names = "read")$read,
+                    chr2 = read_tsv("data/mutations/swiss/lower_Qrob_Chr02.reads", col_names = "read")$read,
+                    chr3 = read_tsv("data/mutations/swiss/lower_Qrob_Chr03.reads", col_names = "read")$read,
+                    chr4 = read_tsv("data/mutations/swiss/lower_Qrob_Chr04.reads", col_names = "read")$read), 
+               show_percentage = T) +
+  ggtitle("Based on the first 10^6 reads aligning on each chromosome")
+```
+

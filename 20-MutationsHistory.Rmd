@@ -1,25 +1,108 @@
 ```{r setuphistory, include=FALSE}
-rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+rm(list = ls()) ; invisible(gc()) ; set.seed(420)
 library(knitr)
 library(kableExtra)
 if(knitr:::is_html_output()) options(knitr.table.format = "html") 
 if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
-library(raster)
-library(leaflet)
-library(sf)
-knit_hooks$set(webgl = hook_webgl)
+library(ape)
+library(phangorn)
+library(ggtree)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
   cache = T, cache.lazy = F)
 ```
 
+```{r insilicomut}
+n_branches <- 5
+tips <- c("L", "O")
+p_null <- 3
+phylo <- rtree(n_branches, tip.label = paste0("B", 1:n_branches))
+branches <- phylo$tip.label
+for(b in branches){
+  phylo <- add.tips(phylo, paste0(b, "_L"), b, edge.length = abs(rnorm(1, mean(phylo$edge.length)/4, sd(phylo$edge.length)/2)))
+  phylo <- add.tips(phylo, paste0(b, "_O"), b, edge.length = abs(rnorm(1, mean(phylo$edge.length)/4, sd(phylo$edge.length)/2)))
+  phylo <- drop.tip(phylo, b)
+}
+branches_list <- lapply(branches, function(b) c(paste0(b, "_L"), paste0(b, "_O")))
+names(branches_list) <- branches
+phylo <- makeNodeLabel(phylo, "u", prefix = "#", nodeList = branches_list)
+rm(branches_list, b)
+# orr et al. 2019 0.06 subs/site = 2.0 M
+archi <- phylo
+archi$edge.length <- (phylo$edge.length + 
+                        abs(rnorm(length(phylo$edge.length), 0, sd(phylo$edge.length)))
+                      ) * (1/0.06) # subs/site to meters 
+nulltrees <- lapply(ape::rmtree(10^p_null-1, length(archi$tip.label), tip.label = archi$tip.label), 
+                    treedist, archi) %>% 
+  bind_rows() %>% 
+  mutate(null = 1) %>% 
+  bind_rows(treedist(phylo, archi)) %>% 
+  mutate(null = ifelse(is.na(null), 0, null)) %>% 
+  reshape2::melt("null") %>% 
+  mutate(variable = gsub(".", " ", variable, fixed = T)) %>% 
+  filter(variable %in% c("branch score difference", "path difference")) %>%
+  arrange(value) %>% 
+  group_by(variable) %>% 
+  mutate(rank = 1:n()) %>% 
+  mutate(pvalue = rank/n()) %>% 
+  mutate(pvalue = ifelse(pvalue == min(pvalue), paste("P <", pvalue), paste("P =", pvalue))) 
+```
+
+```{r shuffle_tree, eval=F, echo=F}
+shuffle_tree = function(tree){
+  max_rf = 2*(length(tree$tip.label) - 3) # max RF dist
+  rf = 0
+  while(rf < max_rf){
+    null_tree = tree
+    null_tree$tip.label = sample(null_tree$tip.label)
+    rf = RF.dist(null_tree, tree)
+  }
+  return(new.tree)
+}
+plot(shuffle_tree(phylo))
+```
+
 # Mutations history
 
 > Phylogenetic history of intraindividual mutations (T4.3): Once the confirmed mutations are available, we will use phylogenomic methods to establish the intra-tree evolutionary history of mutations and assess its fit with with the history expected from tree architecture (WP2) as illustrated by (Orr et al., 2019).
 
-```{r}
-include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+## *in silico*
+
+Let's generate a tree from 10 branch tips belonging to 5 branches with varying genetic distances due to mutations.
+We can simulate a corresponding architecture with physical distance in meters instead of substitutions per site, and we will use a normal low to introduce noise in physical branches length compared to phylogeny length.
+We thus obtained two similar trees (Fig. \@ref(fig:treeplot)), significantly more similar than random trees with the same number of tips (Fig. \@ref(fig:nulltreesinsilico), **the model null is too weak to me**).
+
+```{r treeplot, fig.cap="Simulated phylogeny and archtiecture of sampled branches and tips."}
+cowplot::plot_grid(
+  ggtree(phylo) +
+    geom_nodelab(nudge_x = 0.06) +
+    geom_tiplab() +
+    geom_treescale() +
+    xlim(0,2) +
+    ggtitle("Phylogeny", "subtitutions per site"),
+  ggtree(archi) +
+    geom_nodelab(nudge_x = 2) +
+    geom_tiplab() +
+    geom_treescale() +
+    xlim(0,50) +
+    ggtitle("Architecture", "meters"),
+  nrow = 1
+) 
 ```
+
+```{r nulltreesinsilico, fig.cap="Observed differences between phylogeny and architecture compared to null trees with the same number of tips."}
+ggplot(nulltrees, aes(value)) +
+  geom_histogram(data = filter(nulltrees, null == 1), fill = "lightgrey") +
+  geom_vline(aes(xintercept = value), col = "red", size = 1.2, data = filter(nulltrees, null == 0)) +
+  geom_label(aes(x = value, label = pvalue),
+             y = c(100, 100), x = c(5, 58.5),
+             col = "red",
+            data = filter(nulltrees, null == 0)) +
+  facet_wrap(~ variable, scales = "free") 
+```
+
+
+
 
