@@ -5,21 +5,192 @@ library(kableExtra)
 if(knitr:::is_html_output()) options(knitr.table.format = "html") 
 if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
-library(raster)
-library(leaflet)
-library(sf)
-knit_hooks$set(webgl = hook_webgl)
+library(ape)
+library(phangorn)
+library(ggtree)
+library(rstan)
+library(rstanarm)
+library(bayesplot)
 theme_set(bayesplot::theme_default())
+options(mc.cores = 4)
+rstan_options(auto_write = TRUE)
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
   cache = T, cache.lazy = F)
 ```
 
 
-# Matiations & UVs
+# Mutations & UVs
 
 > Effects  of  UV  light  on  mutation  rates (T4.4): We  will  test  the  hypothesis  that  sunlight  enhances  the accumulation of mutation by comparing the number of mutations per physical branch meter in high and low light exposure branches and will compare mutation rates across species. Appropriate accounting for differences in light environment will be done based on modelling of light environment (T2.3) anddirect measurements of sunlight (T2.6).
 
-```{r}
-include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+## *in silico*
+
+Let's generate a tree from 10 branch tips belonging to 5 branches with varying physical distances in meters.
+We can simulate for each tip a transmittance value calibrated on the data from Angela (`Transmittance_exact_Att_correc.txt`).
+We can simulate a number of mutations $N$ for each $tip$ based on the $transmittance$ and the total branch $length$ (Fig. \@ref(fig:insilicomutuvsplot)).
+
+Let's detect back the effect of light on the number of mutations.
+For that we will use two models with a Poisson distribution associated to a log link inferring the light influence either (1) as a fixed effect or (2) as a covariate with the transmittance value:
+
+$$N_{tip,light} \sim \mathcal Plog (N_0 + \beta_1 . length_{tip}) ~(Null)$$
+
+$$N_{tip,light} \sim \mathcal Plog (N_0 + N_{light} + \beta_1 . length_{tip}) ~(Fix)$$
+
+$$N_{tip} \sim \mathcal Plog (N_0 + \beta_1 . length_{tip} + \beta_2 . transmittance_{tip}) ~(Cov)$$
+
+Interestingly, the effect of the total branch length is always confounded with the intercept in my simulations (Fig. \@ref(fig:insilicoreg)).
+Nevertheless, the models were able to identify the effect of light and transmittance but with high uncertainty (non-significant) despite a strong simulated effect.
+Indeed, the confounding effect of branch length is complicated to decipher with this very low sample size.
+
+I further used a second approach focused on branch length between architecture and phylogeny.
+The idea is that if we try to relate phylogenetic distance to architectural distance,
+the tips exposed to light should show a higher coefficient due to their faster substitution per branch meter (Fig. \@ref(fig:insilicomutuvsplot2)).
+This model could also be quickly accommodated to include the effect of transmittance that should increase the slope (substitution per site per branch meter).
+
+```{r insilicomutuvs}
+transmittance0 <- read_tsv("data/lidar_olivier/files/Transmittance_exact_Att_correc.txt") %>% 
+  mutate(tip = paste0(ID, "_", Condition)) %>% 
+  filter(!(tip %in% c("B1_L", "B4_L"))) %>% 
+  group_by(Condition) %>% 
+  summarise(m = mean(Transmittance), s = sd(Transmittance))
+n_branches <- 5
+tips <- c("L", "O")
+N0 <- 10
+beta1 <- 1
+beta2 <- 50
+archi <- rtree(n_branches, tip.label = paste0("B", 1:n_branches))
+branches <- archi$tip.label
+for(b in branches){
+  archi <- add.tips(archi, paste0(b, "_L"), b, edge.length = abs(rnorm(1, mean(archi$edge.length)/1, sd(archi$edge.length)/1)))
+  archi <- add.tips(archi, paste0(b, "_O"), b, edge.length = abs(rnorm(1, mean(archi$edge.length)/1, sd(archi$edge.length)/1)))
+  archi <- drop.tip(archi, b)
+}
+archi$edge.length <- archi$edge.length * (1/0.06)
+length <- adephylo::distRoot(archi, method = "patristic")
+isdata <- data.frame(tip = names(length), length = length) %>% 
+  separate(tip, c("branch", "light"), remove = F) %>% 
+  rowwise() %>% 
+  mutate(transmittance = ifelse(light == transmittance0$Condition[1], 
+                                rnorm(1, transmittance0$m[1], transmittance0$s[1]), 
+                                rnorm(1, transmittance0$m[2], transmittance0$s[2]))) %>% 
+  ungroup() %>% 
+  mutate(lightnum = ifelse(light == "O", 1, 2), branchnum = as.numeric(gsub("B", "", branch))) %>% 
+  mutate(mu = N0 + beta1*length + beta2*transmittance) %>%
+  mutate(N = round(mu))
+```
+
+```{r insilicomutuvsplot, fig.cap="Simulated archtiecture with varying number of mutations depending on branch total length and transmittance."}
+cowplot::plot_grid(
+  phylobase::phylo4d(archi, tip.data = isdata) %>% 
+    ggtree(right = T) +
+    geom_tiplab(offset = 1) +
+    geom_tippoint(aes(color = transmittance, size = N)) +
+    xlim(0, max(isdata$length)+5) +
+    ggtitle("Architecture (m)", paste("N0 =",  N0, ", beta1 =", beta1, "(length), beta2 =", beta2, "(transmittance)")) +
+    theme_tree2() +
+    viridis::scale_color_viridis("Transmittance", option = "B") +
+    scale_size_continuous("Number of mutations") +
+    theme(legend.position = "right"),
+  isdata %>% 
+    dplyr::select(tip, light, N, length, transmittance) %>% 
+    reshape2::melt(c("tip", "light")) %>% 
+    mutate(variable = recode(variable, 
+                             "length" = "Branch total length (m)",
+                             "transmittance" = "Transmittance", 
+                             "N" = "Number of mutations")) %>% 
+    mutate(variable = factor(variable, levels = c("Branch total length (m)", "Transmittance", "Number of mutations"))) %>% 
+    ggplot(aes(light, value, fill = light)) +
+    geom_boxplot(col = "grey") +
+    facet_wrap(~ variable, scales = "free", nrow = 3) +
+    theme(legend.position = "bottom",
+      axis.line.y = element_blank(), axis.ticks.y = element_blank(),
+          axis.title = element_blank(), axis.text.y = element_blank()) +
+    viridis::scale_fill_viridis(discrete = T, direction = -1, option = "B") +
+    coord_flip(),
+  rel_widths = c(3,1)
+)
+```
+
+```{r insilicoregrun, include=FALSE}
+m_null <- stan_glm(N ~ length, data = isdata, family = poisson, chains = 2, show_messages = F)
+m_fix <- stan_glm(N ~ length + light, data = isdata, family = poisson, chains = 2, show_messages = F)
+m_cov <- stan_glm(N ~ length + transmittance, data = isdata, family = poisson, chains = 2, show_messages = F)
+```
+
+```{r insilicoregplot, fig.cap="Results of linear regression with a Poisson-log model for the simulated data."}
+cowplot::plot_grid(
+  mcmc_intervals(m_null),
+  mcmc_intervals(m_fix),
+  mcmc_intervals(m_cov),
+  labels = c("Null", "Fix", "Cov"),
+  nrow = 3
+) 
+```
+
+```{r insilicomutuvs2, include=FALSE}
+n_branches <- 5
+increase <- 1.2 # %
+archi <- rtree(n_branches, tip.label = paste0("B", 1:n_branches))
+branches <- archi$tip.label
+archi$edge.length <- archi$edge.length * (1/0.06)
+for(b in branches){
+  length <- 
+  archi <- add.tips(archi, paste0(b, "_L"), b, edge.length = abs(rnorm(1, mean(archi$edge.length)*increase, sd(archi$edge.length))))
+  archi <- add.tips(archi, paste0(b, "_O"), b, edge.length = abs(rnorm(1, mean(archi$edge.length)*increase, sd(archi$edge.length))))
+  archi <- drop.tip(archi, b)
+}
+phylo <- archi
+phylo$edge.length <- phylo$edge.length * 0.06 + abs(rnorm(length(phylo$edge.length), 0, 10^-2))
+phylo$edge.length[
+  sapply(which(phylo$tip.label %in% paste0(paste0("B", 1:n_branches), "_L")),
+                         function(x,y) which(y == x), y = phylo$edge[,2])
+  ] <- phylo$edge.length[
+  sapply(which(phylo$tip.label %in% paste0(paste0("B", 1:n_branches), "_L")),
+                         function(x,y) which(y == x), y = phylo$edge[,2])
+  ] * increase
+lengths <- lapply(c(archi = archi, phylo = phylo), 
+                  function(x)
+                    data.frame(
+                      length = adephylo::distRoot(x, method = "patristic")) %>% 
+                    rownames_to_column("tip")) %>% 
+  bind_rows(.id = "tree") %>% 
+  reshape2::dcast(tip ~ tree) %>% 
+  separate(tip, c("branch", "Condition"), remove = F)
+reg <- stan_glm(phylo ~ Condition + archi, data = lengths, family="gaussian", chains = 2, show_messages = F) 
+```
+
+```{r insilicomutuvsplot2, fig.cap="Simulated archtiecture and phylogeny with varying length depending on light exposure."}
+cowplot::plot_grid(
+  phylobase::phylo4d(archi, tip.data = data.frame(
+    length = adephylo::distRoot(archi, method = "patristic")) %>% 
+      rownames_to_column("tip")) %>% 
+    ggtree(right = T) +
+    geom_tiplab(offset = 1) +
+    geom_tippoint(aes(color = length), size = 3) +
+    theme_tree2() +
+    ggtitle("Architecture (m)") +
+    viridis::scale_color_viridis("Total length", option = "B") +
+    theme(legend.position = "right") +
+    xlim(0, 50),
+  phylobase::phylo4d(phylo, tip.data = data.frame(
+    length = adephylo::distRoot(phylo, method = "patristic")) %>% 
+      rownames_to_column("tip")) %>% 
+    ggtree(right = T) +
+    geom_tiplab(offset = 0.1) +
+    geom_tippoint(aes(color = length), size = 3) +
+    theme_tree2() +
+    ggtitle("Phylogeny (subtitutions per site)") +
+    viridis::scale_color_viridis("Total length", option = "B") +
+    theme(legend.position = "right") +
+    xlim(0, 3),
+  ggplot(lengths, aes(archi, phylo, col = Condition)) +
+    geom_point() +
+    geom_smooth(method = "lm") +
+    xlab("Architecture distance") +
+    ylab("Phylogeny distance") +
+    viridis::scale_color_viridis(direction = -1, discrete = T, option = "B"),
+  mcmc_intervals(reg),
+  nrow = 2
+)
 ```
