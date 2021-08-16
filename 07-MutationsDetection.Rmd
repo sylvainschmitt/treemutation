@@ -48,9 +48,13 @@ We re-analyzed mutations from @Schmid-Siegert2017 with `Strelka2` and  `GATK` to
 include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/swiss/dag/dag.minimal.svg")
 ```
 
-## French data - @Plomion2018
+## Bordeaux data - @Plomion2018
 
 We re-analyzed mutations from @Plomion2018 with `Strelka2` and  `Mutect2` to compare original and obtained mutations to show the interest of `Strelka2` and high sequencing depth.
+
+```{r detectMutationsBdx, fig.cap="Detect mutations workflow for Swiss data."}
+include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/bordeaux/dag/dag.minimal.svg")
+```
 
 ## Angela virtual
 

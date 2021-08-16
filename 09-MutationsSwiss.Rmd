@@ -24,7 +24,7 @@ strelka2raw <- src_sqlite("data/mutations/swiss/strelka2_raw.sql") %>% tbl("muta
 gatkraw <- src_sqlite("data/mutations/swiss/gatk_raw.sql") %>% tbl("mutations")
 ```
 
-# Mutations swiss
+# Mutations Swiss
 
 This chapter describes the reanalyses of data from @Schmid-Siegert2017 currently done in the [`swiss` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/swiss).
 
@@ -47,6 +47,7 @@ ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
         axis.ticks.y = element_blank())
 ```
+
 ## `Strelka2`
 
 `Strelka2` produced `r round(collect(tally(strelka2raw))$n/10^6, 1)` millions of candidate mutations.
@@ -118,7 +119,7 @@ overlapSfiltered %>%
   theme(legend.position = c(0.8, 0.2)) +
   geom_vline(aes(xintercept = value, fill = NA), size = 1.1, col = "black", linetype = "dashed",
              data = data.frame(
-               value = c(30-0.5, 60*1.1+0.5, 30-0.5, 60*1.1+0.5, 10-0.5, 0+0.5, 20),
+               value = c(30-0.5, 120+0.5, 30-0.5, 120+0.5, 10-0.5, 0+0.5, 20),
                variable = c("mutation_DP", "mutation_DP", 
                             "normal_DP", "normal_DP", 
                             "mutation_altCountT1", "normal_altCountT1", "QSS")
@@ -127,16 +128,16 @@ overlapSfiltered %>%
 
 ### Filtering
 
-We originally planned to filter mutations with following filters:
+We filtered mutations with following filters:
 
 * A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 120, normal_DP >= 30, mutation_DP <= 120, mutation_DP >= 30`)
 * A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
 * A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
-* An allele frequency of mutations below 0.5 (`mutation_AF <= 0.5`)
+* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
 
-We obtained 228 candidates  (Fig \@ref(fig:mutFilteredS)).
+We obtained 223 candidates  (Fig \@ref(fig:mutFilteredS)).
 We then used the suggested automatic filter of `Strelka2`,
-resulting in a robust dataset of 91 mutations (Fig \@ref(fig:mutRobustS)).
+resulting in a robust dataset of 87 mutations (Fig \@ref(fig:mutRobustS)).
 
 ```{r mutS}
 mutFilteredS <- strelka2raw %>% 
@@ -144,9 +145,9 @@ mutFilteredS <- strelka2raw %>%
   filter(mutation_DP <= 120, mutation_DP >= 30) %>% 
   filter(normal_altCountT1 == 0) %>% 
   filter(mutation_altCountT1 >= 10) %>% 
-  filter(mutation_altCountT1 < 30) %>% 
+  filter(mutation_AF <= 0.5) %>% 
   collect() 
-mutRobustS <- filter(mutFilteredS, FILTER == "PASS")
+mutRobustS <- filter(mutFilteredS, FILTER == "PASS") 
 ```
 
 ```{r mutFilteredS, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
@@ -161,7 +162,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   ylab("Position (Mb)") +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
   viridis::scale_color_viridis(option = "inferno")
-cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
 ```
 
 ```{r mutRobustS, fig.cap="Robust mutations allele frequency (A) and positions on the 3P genome (B)."}
@@ -176,24 +177,25 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   ylab("Position (Mb)") +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
   viridis::scale_color_viridis(option = "inferno")
-cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
 ```
 
 ## `GATK`
 
-<!-- `GATK` produced 49.8 millions of candidates! -->
+`GATK` produced `r round(collect(tally(gatkraw))$n/10^6, 1)` millions of candidates!
 
 ### Overlap with mutations from Schmid-Siegert
 
-<!-- I tried to find back Napoleon's original mutations to have a look to their metrics. -->
-<!-- I found back only 8 out of the 11 expected mutations (73%) (Tab. \@ref(tab:napoMutTab2) and Fig. \@ref(fig:napoMutFig2)). -->
-<!-- I looked at different metrics for each  (Fig. \@ref(fig:overlapMetrics2)): -->
+I tried to find back Napoleon's original mutations to have a look to their metrics.
+I found back only 12 out of the 14 expected mutations (86%) (Tab. \@ref(tab:napoMutTab2) and Fig. \@ref(fig:napoMutFig2)).
+I looked at different metrics for each  (Fig. \@ref(fig:overlapMetrics)):
 
-<!-- * `mutation_DP` and `normal_DP` are the read depth for the two sample, and shows as expected values between half and two times the mean coverage (60X) -->
-<!-- * `normal_altCountT1` is the number of alternate allele count in the normal sample, should be 0, but is equal to 3 and 4 (9% of reads) for two SNVs -->
-<!-- * `mutation_altCountT1` is the number of alternate allele count in the mutated sample, should be not too low, and is most the time above 5 -->
+* `mutation_DP` and `normal_DP` are the read depth for the two sample, and shows as expected values between half and two times the mean coverage (60X)
+* `normal_altCountT1` is the number of alternate allele count in the normal sample, should be and is 0
+* `mutation_altCountT1` is the number of alternate allele count in the mutated sample, should be not too low, and is most the time above 10
 
-<!-- **The main conclusion is that the mutations detected by @Schmid-Siegert2017 have not always no reads in the "normal" sample and that they show a wide variation of allelic frequency. For instance, the SNV6 not detected by `Strelka2` has 10 copies in the lower branch!** -->
+**The main conclusion is that the mutations detected by @Schmid-Siegert2017 have no reads in the "normal" sample using `GATK` with hard filtering which probably already removed low-DP copies in the normal sample, while `Strelka2` detect them.**
+
 
 ```{r napoMut2}
 # overlapG <- lapply(1:nrow(snv), function(i)
@@ -203,200 +205,121 @@ cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 #     collect() %>%
 #     mutate(Mutation  = snv[i,]$Mutation)
 # ) %>% bind_rows()
-# overlapG <- mutate(overlapG, AF = altCount_tumor/(altCount_tumor+refCount_tumor))
 # write_tsv(overlapG, file = "save/overlap_gatk.tsv")
-# overlapG <- read_tsv("save/overlap_gatk.tsv") 
+overlapG <- read_tsv("save/overlap_gatk.tsv")
 ```
 
 ```{r napoMutTab2}
-# overlapG %>% 
-#   dplyr::select(Mutation, tumor, normal, REF, ALT, altCount_tumor, refCount_tumor, altCount_normal, refCount_normal, AF) %>% 
-#   kable(caption = "Overlap between candidate mutations and Napoleon's original mutations.", 
-#         col.names = c("Mutation", "Mutated", "Normal", "Ref", "Alt", 
-#                       "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount", "Allelic fraction")) 
+overlapG %>%
+  dplyr::select(Mutation, tumor, normal, tumor_altCount, tumor_refCount, normal_altCount, normal_refCount, tumor_AF) %>%
+  kable(caption = "Overlap between candidate mutations and Napoleon's original mutations.",
+        col.names = c("Mutation", "Mutated", "Normal",
+                      "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount", "Allelic fraction"))
 ```
 
 ```{r napoMutFig2, fig.cap="Overlap between candidate mutations and Napoleon's original mutations: allele frequency (A) and positions on the 3P genome (B)."}
-# g1 <- ggplot(overlapG, aes(AF)) +
-#   geom_histogram() +
-#   ggtitle("", paste("N =", nrow(overlapG))) +
-#   xlab("Allele frequency")
-# g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
-#   geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
-#   geom_point(aes(y = POS/10^6, col = AF), data = overlapG, size = 1) +
-#   ggrepel::geom_label_repel(aes(y = POS/10^6, label = Mutation), col = "red", 
-#                             data = dplyr::select(overlapG, CHROM, POS, Mutation) %>% unique()) +
-#   coord_flip() +
-#   ylab("Position (Mb)") +
-#   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
-#   viridis::scale_color_viridis(option = "inferno")
-# cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
+g1 <- ggplot(overlapG, aes(tumor_AF)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(overlapG))) +
+  xlab("Allele frequency")
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = tumor_AF), data = overlapG, size = 1) +
+  ggrepel::geom_label_repel(aes(y = POS/10^6, label = Mutation), col = "red",
+                            data = dplyr::select(overlapG, CHROM, POS, Mutation) %>% unique()) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis(option = "inferno")
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 ```
 
 ```{r overlapMetrics2, fig.cap="Evaluation of the overlap between candidate mutations and Napoleon's original mutations."}
-# overlapG %>% 
-#   group_by(Mutation) %>% 
-#   dplyr::select(Mutation, DP_tumor, DP_normal, altCount_tumor, altCount_normal) %>% 
-#   reshape2::melt(c("Mutation")) %>% 
-#   ggplot(aes(value)) +
-#   geom_histogram() +
-#   facet_wrap(~ variable, scales = "free") +
-#   geom_vline(aes(xintercept = value), size = 1.1, col = "black", linetype = "dashed",
-#              data = data.frame(
-#                value = c(30-0.5, 60*1.1+0.5, 30-0.5, 60*1.1+0.5, 10-0.5, 0+0.5),
-#                variable = c("DP_tumor", "DP_tumor", 
-#                             "DP_normal", "DP_normal", 
-#                             "altCount_tumor", "altCount_normal")
-#              )) 
+overlapG %>%
+  group_by(Mutation) %>%
+  dplyr::select(Mutation, tumor_DP, normal_DP, tumor_altCount, normal_altCount) %>%
+  reshape2::melt(c("Mutation")) %>%
+  ggplot(aes(value)) +
+  geom_histogram() +
+  facet_wrap(~ variable, scales = "free") +
+  geom_vline(aes(xintercept = value), size = 1.1, col = "black", linetype = "dashed",
+             data = data.frame(
+               value = c(30-0.5, 120+0.5, 30-0.5, 120+0.5, 10-0.5, 0+0.5),
+               variable = c("tumor_DP", "tumor_DP",
+                            "normal_DP", "normal_DP",
+                            "tumor_altCount", "normal_altCount")
+             ))
 ```
 
 ### Filtering
 
-<!-- We couldn't use the read depth for the normal sample and the quality score above not reported in `GATK`. -->
-<!-- We first filtered mutations with available parameters: -->
+We filtered mutations with following filters:
 
-<!-- * A read depth for the mutated sample between half and two times the mean coverage (`DP_tumor <= 60*1.1, DP_tumor >= 30`) -->
-<!-- * A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`) -->
-<!-- * A minimum of 10 alternate allele count in the mutated sample (`altCount_tumor >= 10`) -->
-<!-- * An allele frequency of mutations below 0.5 (`mutation_AF <= 0.5`) -->
+* A read depth for the tumor sample between half and two times the mean coverage (`tumor_DP <= 120, tumor_DP >= 30`)
+* A null number of alternate allele count in the normal sample (`normal_altCount == 0`)
+* A minimum of 10 alternate allele count in the mutated sample (`tumor_altCount >= 10`)
+* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
 
-<!-- But we obtained 1.9 million candidates! -->
-<!-- We thus looked for the overlap between `GATK` candidates and the suggested automatic filter of `Strelka2`, -->
-<!-- resulting in a robust dataset of 47 mutations (Fig \@ref(fig:mutRobustG)). -->
-<!-- Nevertheless, for comparisons we want automatic filtering based on simple metrics. -->
-<!-- I thus compared the distribution of the robust and raw mutations for different metrics alone and pairwise (Fig. \@ref(fig:mutMetricsG)). -->
-<!-- And unfortunately, it does not seem that the metrics offered by `GATK` are sufficient to find back robust mutations. -->
-<!-- They do show differences, e.g. for `MQRankSum`, but resulting in the loss of numerous robust mutations and still too much candidates. -->
+We obtained 510 611 candidates (Fig \@ref(fig:mutFilteredG)).
+We then looked for the overlap between `GATK` candidates and the suggested automatic filter of `Strelka2`,
+resulting in a robust dataset of 47 mutations (Fig \@ref(fig:mutRobustG)).
 
-<!-- For instance, we could compare 4 datasets overlaps and distribution in allelic frequency: -->
+```{r mutG}
+mutFilteredG <- gatkraw %>% 
+  filter(tumor_DP <= 120, tumor_DP >= 30) %>% 
+  filter(normal_altCount == 0) %>% 
+  filter(tumor_altCount >= 10) %>% 
+  filter(tumor_AF <= 0.5) %>% 
+  collect() 
+mutRobustG <- left_join(mutFilteredG,
+          dplyr::select(mutRobustS, CHROM, POS) %>%
+            mutate(Robust = 1)) %>%
+  mutate(Robust = as.factor(ifelse(is.na(Robust), 0, 1))) %>% 
+  filter(Robust == 1)
+```
 
-<!-- * mutations from Schmid-Siegert on the 12 first chromosomes from 3P -->
-<!-- * mutations from `GATK` with weak filtering -->
-<!-- * mutations from `Strelka2` with weak filtering -->
-<!-- * mutations from `Strelka2` with robust filtering -->
-
-```{r mutRawG}
-# mutRawG <- gatkraw %>% 
-#   mutate(AF = altCount_tumor/(altCount_tumor+refCount_tumor)) %>% 
-#   filter(DP_tumor <= 60*1.1, DP_tumor >= 30) %>% 
-#   filter(altCount_normal == 0) %>% 
-#   filter(altCount_tumor >= 10) %>% 
-#   filter(AF <= 0.5) %>% 
-#   collect() %>% 
-#   left_join(dplyr::select(mutRobust, CHROM, POS) %>% 
-#               mutate(Robust = 1)) %>% 
-#   mutate(Robust = as.factor(ifelse(is.na(Robust), 0, 1)))
-# mutRobustG <- filter(mutRawG, Robust == 1) 
+```{r mutFilteredG, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
+g1 <- ggplot(mutFilteredG, aes(tumor_AF)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mutFilteredG))) +
+  xlab("Allele frequency")
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = tumor_AF), data = filter(mutFilteredG, grepl("Chr", CHROM)), size = 1) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis(option = "inferno")
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 ```
 
 ```{r mutRobustG, fig.cap="Robust mutations allele frequency (A) and positions on the 3P genome (B)."}
-# g1 <- ggplot(mutRobustG, aes(AF)) +
-#   geom_histogram() +
-#   ggtitle("", paste("N =", nrow(mutRobustG))) +
-#   xlab("Allele frequency")
-# g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
-#   geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
-#   geom_point(aes(y = POS/10^6, col = AF), data = mutRobustG, size = 1) +
-#   coord_flip() +
-#   ylab("Position (Mb)") +
-#   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
-#   viridis::scale_color_viridis(option = "inferno")
-# cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
-```
-
-```{r mutMetrics2, fig.cap="Different metrics single and pair plots for raw and robust mutations."}
-# mutRawG %>% 
-#   dplyr::select(Robust, DP_tumor, altCount_tumor, QUAL, BaseQRankSum, FS, MQ, MQRankSum, QD, ReadPosRankSum, SOR, AF) %>% 
-#   arrange(desc(Robust)) %>% 
-#   head(10^4) %>% 
-#   reshape2::melt("Robust") %>% 
-#   ggplot(aes(value, col = Robust), fill = NA) +
-#   geom_density() +
-#   facet_wrap(~variable, scales = "free") 
+g1 <- ggplot(mutRobustG, aes(tumor_AF)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mutRobustG))) +
+  xlab("Allele frequency")
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = tumor_AF), data = mutRobustG, size = 1) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis(option = "inferno")
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 ```
 
 ## Conclusion
 
-<!-- I looked at 6 datasets overlaps and distribution in allelic frequency: -->
-
-<!-- * mutations from Schmid-Siegert on the 4 first chromosomes from 3P -->
-<!-- * mutations from `GATK` with **low** filtering on the 4 first chromosomes from 3P -->
-<!-- * mutations from `Strelka2` with **low** filtering on the 4 first chromosomes from 3P -->
-<!-- * mutations from `GATK` with **weak** filtering on the 4 first chromosomes from 3P -->
-<!-- * mutations from `Strelka2` with **weak** filtering on the 4 first chromosomes from 3P -->
-<!-- * mutations from `Strelka2` with **robust** filtering on the 4 first chromosomes from 3P -->
-
-<!-- The filtering are: -->
-
-<!-- * **Low** filtering: -->
-<!--     * A read depth for the mutated sample between 50% and 110% of the expected coverage -->
-<!--     * A null number of alternate allele count in the normal sample -->
-<!--     * A minimum of 5 alternate allele count in the mutated sample -->
-<!--     * An allele frequency of mutations below 0.5 -->
-<!-- * **Weak** filtering: -->
-<!--     * A read depth for the mutated sample between 50% and 110% of the expected coverage -->
-<!--     * A null number of alternate allele count in the normal sample -->
-<!--     * A minimum of 10 alternate allele count in the mutated sample -->
-<!--     * An allele frequency of mutations below 0.5 -->
-<!-- * **Robust** filtering: -->
-<!--     * A read depth for the two sample between 50% and 110% of the expected coverage (`normal_DP < 60*1.1, normal_DP >= 30, mutation_DP < 60*1.1, mutation_DP >= 30`) -->
-<!--     * A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`) -->
-<!--     * A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`) -->
-<!--     * An allele frequency of mutations below 0.5 (`mutation_AF <= 0.5`) -->
-<!--     * A quality score above 20 (`QSS > 20`) -->
-<!--     * The suggested automatic filter of `Strelka2` -->
-
 ```{r datasetsswiss}
-# schmid <- bind_rows(overlap, overlapG) %>%
-#   dplyr::select(CHROM, POS, normal_AF, AF) %>%
-#   mutate(AF = ifelse(is.na(AF), normal_AF, AF)) %>%
-#   dplyr::select(-normal_AF) %>%
-#   mutate(SNV = paste0(CHROM, "_", "Pos", POS)) %>%
-#   group_by(CHROM, POS, SNV) %>%
-#   summarise(AF = max(AF))
-# gatk_w <- gatkraw %>%
-#   mutate(AF = altCount_tumor/(altCount_tumor+refCount_tumor)) %>%
-#   filter(DP_tumor <= 60*1.1, DP_tumor >= 30) %>%
-#   filter(altCount_normal == 0) %>%
-#   filter(altCount_tumor >= 10) %>%
-#   filter(AF <= 0.5) %>%
-#   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-#   dplyr::select(CHROM, POS, SNV, AF) %>%
-#   collect()
-# strelka_w <- strelka2raw %>% 
-#   filter(mutation_DP <= 60*1.1, mutation_DP >= 30) %>% 
-#   filter(normal_altCountT1 == 0) %>% 
-#   filter(mutation_altCountT1 >= 10) %>% 
-#   filter(mutation_AF <= 0.5) %>% 
-#   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-#   rename(AF = mutation_AF) %>% 
-#   dplyr::select(CHROM, POS, SNV, AF) %>% 
-#   collect()
-# strelka_r <- strelka2raw %>% 
-#   filter(normal_DP <= 60*1.1, normal_DP >= 30) %>% 
-#   filter(mutation_DP <= 60*1.1, mutation_DP >= 30) %>% 
-#   filter(normal_altCountT1 == 0) %>% 
-#   filter(mutation_altCountT1 >= 10) %>% 
-#   filter(mutation_AF <= 0.5) %>% 
-#   filter(mutation_altCountT1 < 30) %>% 
-#   filter(QSS > 20) %>% 
-#   filter(FILTER == "PASS") %>% 
-#   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-#   rename(AF = mutation_AF) %>% 
-#   dplyr::select(CHROM, POS, SNV, AF) %>% 
-#   collect() 
-# datasets <- list(
-#   "Schmid" = schmid,
-#   "GATK" = gatk_w,
-#   "Strelka2" = strelka_w,
-#   "Robust" = strelka_r
-# )
 datasets <- list(
-  "Schmid" = overlapSfiltered %>% 
+  "Schmid" = overlapG %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = mutation_AF) %>%
+    rename(AF = tumor_AF) %>%
     dplyr::select(CHROM, POS, SNV, AF),
-  # "GATK" = gatk_w,
+  "GATK" = mutFilteredG %>% 
+    mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+    rename(AF = tumor_AF) %>%
+    dplyr::select(CHROM, POS, SNV, AF),
   "Strelka2" = mutFilteredS %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
     rename(AF = mutation_AF) %>%
@@ -406,26 +329,25 @@ datasets <- list(
     rename(AF = mutation_AF) %>%
     dplyr::select(CHROM, POS, SNV, AF)
 )
-# rm(schmid, gatk_w, strelka_w, strelka_r)
 ```
 
 ```{r datasetsswissTab}
-# lapply(datasets, nrow) %>% 
-#   bind_rows(.id = "dataset") %>% 
-#   reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>% 
-#   kable(caption = "Size of the different datasets.", format.args = list(big.mark = " ")) 
+lapply(datasets, nrow) %>%
+  bind_rows(.id = "dataset") %>%
+  reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>%
+  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " "))
 ```
 
 ```{r datasetsswissAF, fig.cap="Allele frequency for the different datasets."}
 bind_rows(datasets, .id = "dataset") %>%
   ggplot(aes(AF, col = dataset), fill = NA) +
-  geom_density() +
+  geom_density(size = 1.3) +
   scale_color_discrete("Dataset") +
-  xlab("Allelic frequency")
+  xlab("Allelic frequency") 
 ```
 
 ```{r datasetsswissVenn2}
-ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F)
+ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F) 
 ```
 
 ```{r datasetsswissVenn, eval=F}

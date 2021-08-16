@@ -1,0 +1,392 @@
+```{r setupmutationsfrench, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+# Mutations Bordeaux
+
+**The first run got wrong data (not enough reads), the results below are preliminary and will be updated soon.**
+
+This chapter describes the reanalyses of data from @Plomion2018 currently done in the [`bordeaux` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/bordeaux).
+
+```{r datamutationsbdx}
+snv <- read_tsv("data/mutations/bordeaux/3P_mutations.tsv")
+genome <- read_tsv("data/mutations/bordeaux/Qrob_PM1N.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6)
+```
+
+```{r, cache=FALSE}
+strelka2raw <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/bordeaux/strelka2_raw.sql") %>% tbl("mutations")
+mutect2raw <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/bordeaux/mutect2_raw.sql") %>% tbl("mutations")
+```
+
+## Original mutations on 3P
+
+I reported the original mutations (Tab. \@ref(tab:bdxTab)) from the [supplementary table 5](https://static-content.springer.com/esm/art%3A10.1038%2Fs41477-018-0172-3/MediaObjects/41477_2018_172_MOESM1_ESM.pdf) from @Plomion2018 and plotted them on the 3P genome (Fig. \@ref(fig:bdxFig)) after realignement from the haplome v2.3 to the public 3P genome.
+
+```{r bdxTab}
+kable(head(snv), caption = "SNVs in the 3P Oak. Rerported from @Plomion2018.") 
+```
+
+```{r bdxFig, fig.cap="Original mutations on the 3P genome."}
+ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
+  geom_point(aes(y = POS/10^6), col = "red", data = snv) +
+  ggrepel::geom_text_repel(aes(y = POS/10^6, label = round(POS/10^6)), col = "red", data = snv) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank()) 
+```
+
+## Coverage
+
+Coverage are around 160X, this is high but strangely lower than expected, besides all data have been used this time. (Fig. \@ref(fig:covbdx)).
+
+```{r covbdx, fig.cap="Coverage for Bordeaux's libraries on chromosomes 1 to 4."}
+cov <- list(L1 = "data/mutations/bordeaux/L1.10k.cov",
+            L2 = "data/mutations/bordeaux/L2.10k.cov",
+            L3 = "data/mutations/bordeaux/L3.10k.cov") %>% 
+  lapply(read_tsv, c("CHROM", "start", "stop", "coverage")) %>% 
+  bind_rows(.id = "branch") %>% 
+  rowwise() %>% 
+  mutate(POS = mean(c(start, stop))) %>% 
+  filter(grepl("Chr", CHROM))
+ggplot(filter(cov, CHROM %in% paste0("Qrob_Chr0", 1:4)), aes(POS/10^6, coverage)) +
+  geom_line(col = "grey") +
+  facet_grid(branch ~ CHROM, scales = "free_x") +
+  ylim(0, 400) +
+  xlab("Position (Mb)") +
+  geom_hline(aes(yintercept = coverage), col = "red",
+             data = group_by(cov, CHROM, branch) %>% 
+               filter(CHROM %in% paste0("Qrob_Chr0", 1:4)) %>% 
+               summarise(coverage = median(coverage))) 
+```
+
+## `Strelka2`
+
+```{r, eval=F}
+strelka2raw %>% 
+  select(CHROM, POS) %>% 
+  collect() %>% 
+  unique() %>% 
+  nrow() 
+# 3 056 425
+```
+
+`Strelka2` produced 3 millions of candidate mutations with unique position across the 3 branches.
+
+### Overlap with original mutations
+
+We found back all the 60 expected mutations (100%) (Tab. \@ref(tab:3PMutTabS)).
+
+```{r 3PMutS}
+# overlapSB <- lapply(1:nrow(snv), function(i)
+#   strelka2raw %>%
+#     filter(CHROM == local(snv[i,]$CHROM)) %>%
+#     filter(POS == local(snv[i,]$POS)) %>%
+#     collect()
+# ) %>% bind_rows()
+# write_tsv(overlapSB, file = "save/overlap_strelka2_bdx.tsv")
+overlapSB <-  read_tsv(file = "save/overlap_strelka2_bdx.tsv")
+overlapSBfiltered <- snv %>% 
+  dplyr::select(CHROM, POS, origin) %>% 
+  mutate(presence = recode(origin,
+                           "3P – between XL1 and XL2" = "L2vsL1_L3vsL1",
+                           "3P–between XL1 and XL2" = "L2vsL1_L3vsL1",
+                           "3P – between XL2 and XL3" = "L3vsL1_L3vsL2",
+                           "3P – between XL2 and L3" = "L3vsL1_L3vsL2",
+                           "3P – L1 branch" = "L1vsL2_L1vsL3",
+                           "3P – L2 branch" = "L2vsL1_L2vsL3")) %>% 
+  separate_rows(presence) %>% 
+  separate(presence, c("tumor", "normal"), "vs") %>% 
+  left_join(dplyr::select(overlapSB, CHROM, POS, tumor, normal, mutation_AF)) %>% 
+  mutate(mutation_AF = ifelse(mutation_AF > 0.5, 1 - mutation_AF, mutation_AF)) %>% 
+  group_by(CHROM, POS, origin) %>% 
+  summarise(mutation_AF = median(mutation_AF, na.rm = T)) %>% 
+  filter(!is.nan(mutation_AF))
+```
+
+```{r 3PMutTabS}
+overlapSB %>% 
+  dplyr::select(CHROM, POS, tumor, normal, REF, ALT, mutation_altCountT1, mutation_refCountT1,
+                normal_altCountT1, normal_refCountT1, mutation_AF) %>% 
+  head() %>% 
+  kable(caption = "Overlap between candidate mutations and original mutations.", 
+        col.names = c("Chromosome", "Position", "Mutated", "Normal", "Ref", "Alt", 
+                      "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount", "Allelic fraction"))
+```
+
+### Filtering
+
+We filtered mutations with the original and a robust filters, adjusting the coverage to the coverage obtained:
+
+Original:
+
+* A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 320, normal_DP >= 80, mutation_DP <= 320, mutation_DP >= 80`)
+* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
+* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
+* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
+* A coherent temporal pattern ("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")
+
+Robust:
+
+* A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 320, normal_DP >= 80, mutation_DP <= 320, mutation_DP >= 80`)
+* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
+* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
+* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
+* `Strelka 2` automatic filtering (`Filter == PASS`)
+* A coherent temporal pattern ("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")
+
+We obtained 830 candidates  (Fig \@ref(fig:mutFilteredSB)) for the original filter,
+And in a robust dataset of 124 mutations (Fig \@ref(fig:mutRobustSB)).
+
+```{r mutStrelka2Bdx, eval=F}
+mcov <- 160
+strelka2raw %>% 
+  filter(normal_DP <= mcov*2, normal_DP >= mcov/2) %>%
+  filter(mutation_DP <= mcov*2, mutation_DP >= mcov/2) %>% 
+  filter(normal_altCountT1 == 0) %>% 
+  filter(mutation_altCountT1 >= 10) %>% 
+  filter(mutation_AF <= 0.5) %>% 
+  mutate(comparison = paste0(tumor, "vs", normal)) %>% 
+  collect() %>% 
+  group_by(CHROM, POS) %>% 
+  mutate(presence = paste(sort(comparison), collapse = "_")) %>% 
+  mutate(sector = recode(presence,
+                         "L2vsL1_L3vsL1" = "XL1-XL2",
+                         "L3vsL1_L3vsL2" = "XL2-L3",
+                         "L1vsL2_L1vsL3" = "XL1-L1",
+                         "L2vsL1_L2vsL3" = "XL2-L2"
+                         )) %>% 
+  mutate(sector = ifelse(!(sector %in% c("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")), NA, sector)) %>% 
+  filter(!is.na(sector)) %>%
+  group_by(CHROM, POS, sector) %>% 
+  summarise_at("mutation_AF", mean) %>% 
+  write_tsv(file = "save/strelka2_bdx_filtered.tsv")
+strelka2raw %>% 
+  filter(normal_DP <= mcov*2, normal_DP >= mcov/2) %>%
+  filter(mutation_DP <= mcov*2, mutation_DP >= mcov/2) %>% 
+  filter(normal_altCountT1 == 0) %>%
+  filter(mutation_altCountT1 >= 10) %>%
+  filter(mutation_AF <= 0.5) %>%
+  filter(FILTER == "PASS") %>% 
+  mutate(comparison = paste0(tumor, "vs", normal)) %>% 
+  collect() %>% 
+  group_by(CHROM, POS) %>% 
+  mutate(presence = paste(sort(comparison), collapse = "_")) %>% 
+  mutate(sector = recode(presence,
+                         "L2vsL1_L3vsL1" = "XL1-XL2",
+                         "L3vsL1_L3vsL2" = "XL2-L3",
+                         "L1vsL2_L1vsL3" = "XL1-L1",
+                         "L2vsL1_L2vsL3" = "XL2-L2"
+                         )) %>% 
+  mutate(sector = ifelse(!(sector %in% c("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")), NA, sector)) %>% 
+  filter(!is.na(sector)) %>% 
+  group_by(CHROM, POS, sector) %>% 
+  summarise_at("mutation_AF", mean) %>% 
+  write_tsv(file = "save/strelka2_bdx_robust.tsv")
+```
+
+```{r mutFilteredSB, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
+strelka2filtered <- read_tsv("save/strelka2_bdx_filtered.tsv")
+g1 <- ggplot(strelka2filtered, aes(mutation_AF, fill = sector)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(strelka2filtered))) +
+  xlab("Allele frequency") +
+  scale_fill_manual(values = c("darkblue", "plum", "darkgreen", "yellow2"))
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = sector), size = 1,
+             data = filter(strelka2filtered, grepl("Chr", CHROM))) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  scale_color_manual(guide = "none", values = c("darkblue", "plum", "darkgreen", "yellow2"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))  
+```
+
+```{r mutRobustSB, fig.cap="Robust mutations allele frequency (A) and positions on the 3P genome (B)."}
+strelka2robust <- read_tsv("save/strelka2_bdx_robust.tsv")
+g1 <- ggplot(strelka2robust, aes(mutation_AF, fill = sector)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(strelka2robust))) +
+  xlab("Allele frequency") +
+  scale_fill_manual(values = c("darkblue", "plum", "darkgreen", "yellow2"))
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = sector), size = 1,
+             data = filter(strelka2robust, grepl("Chr", CHROM))) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  scale_color_manual(guide = "none", values = c("darkblue", "plum", "darkgreen", "yellow2"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))  
+```
+
+```{r eval=F}
+strelka2robust %>% 
+  filter(sector == "XL1-XL2") %>% 
+  filter(mutation_AF < 0.2)
+```
+
+## `Mutect2`
+
+```{r, eval=F}
+mutect2raw %>% 
+  select(CHROM, POS) %>% 
+  collect() %>% 
+  unique() %>% 
+  nrow()
+```
+
+`Mutect2` produced 4.6 millions of candidate mutations with unique position across the 3 branches.
+
+### Overlap with original mutations
+
+We tried to find back original mutations to have a look to their metrics.
+We found back 57 out of the 60 expected mutations (95%) (Tab. \@ref(tab:3PMutTabM).
+which are exactly interestingly the same as `Strelka2`.
+
+```{r 3PMutM}
+# overlapSM <- lapply(1:nrow(snv), function(i)
+#   mutect2raw %>%
+#     filter(CHROM == local(snv[i,]$CHROM)) %>%
+#     filter(POS == local(snv[i,]$POS)) %>%
+#     collect()
+# ) %>% bind_rows()
+# write_tsv(overlapSM, file = "save/overlap_mutect2_bdx.tsv")
+overlapSM <- read_tsv("save/overlap_mutect2_bdx.tsv")
+overlapSMfiltered <- snv %>% 
+  dplyr::select(CHROM, POS, origin) %>% 
+  mutate(presence = recode(origin,
+                           "3P – between XL1 and XL2" = "L2vsL1_L3vsL1",
+                           "3P–between XL1 and XL2" = "L2vsL1_L3vsL1",
+                           "3P – between XL2 and XL3" = "L3vsL1_L3vsL2",
+                           "3P – between XL2 and L3" = "L3vsL1_L3vsL2",
+                           "3P – L1 branch" = "L1vsL2_L1vsL3",
+                           "3P – L2 branch" = "L2vsL1_L2vsL3")) %>% 
+  separate_rows(presence) %>% 
+  separate(presence, c("tumor", "normal"), "vs") %>% 
+  left_join(dplyr::select(overlapSM, CHROM, POS, tumor, normal, tumor_AF)) %>% 
+  mutate(mutation_AF = ifelse(tumor_AF > 0.5, 1 - tumor_AF, tumor_AF)) %>% 
+  group_by(CHROM, POS, origin) %>% 
+  summarise(tumor_AF = median(tumor_AF, na.rm = T)) %>% 
+  filter(!is.na(tumor_AF))
+```
+
+```{r 3PMutTabM}
+overlapSM %>% 
+  dplyr::select(CHROM, POS, tumor, normal, REF, ALT, tumor_altCount, tumor_refCount,
+                normal_altCount, normal_refCount, tumor_AF) %>% 
+  head() %>% 
+  kable(caption = "Overlap between candidate mutations and original mutations.", 
+        col.names = c("Chromosome", "Position", "Mutated", "Normal", "Ref", "Alt", 
+                      "Mutated\nAltCount", "Mutated\nRefCount", "Normal\nAltCount", "Normal\nRefCount", "Allelic fraction"))
+```
+
+### Filtering
+
+We filtered mutations with the original filter, **adjusting the coverage to preliminary low coverage obtained**:
+
+Original:
+
+* A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 320, normal_DP >= 80, mutation_DP <= 320, mutation_DP >= 80`)
+* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
+* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
+* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
+* A coherent temporal pattern ("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")
+
+We obtained 948 candidates  (Fig \@ref(fig:mutFilteredFB)) for the original filter.
+
+```{r mutMutect2Bdx, eval=F}
+mcov <- 160
+mutect2raw %>% 
+  filter(normal_DP <= mcov*2, normal_DP >= mcov/2) %>% 
+  filter(tumor_DP <= mcov*2, tumor_DP >= mcov/2) %>% 
+  filter(normal_altCount == 0) %>% 
+  filter(tumor_altCount >= 10) %>% 
+  filter(tumor_AF <= 0.5) %>% 
+  mutate(comparison = paste0(tumor, "vs", normal)) %>% 
+  collect() %>% 
+  group_by(CHROM, POS) %>% 
+  mutate(presence = paste(sort(comparison), collapse = "_")) %>% 
+  mutate(sector = recode(presence,
+                         "L2vsL1_L3vsL1" = "XL1-XL2",
+                         "L3vsL1_L3vsL2" = "XL2-L3",
+                         "L1vsL2_L1vsL3" = "XL1-L1",
+                         "L2vsL1_L2vsL3" = "XL2-L2"
+                         )) %>% 
+  mutate(sector = ifelse(!(sector %in% c("XL1-XL2", "XL2-L3", "XL1-L1", "XL2-L2")), NA, sector)) %>% 
+  filter(!is.na(sector)) %>% 
+  group_by(CHROM, POS, sector) %>% 
+  summarise_at("tumor_AF", mean) %>% 
+  write_tsv(file = "save/mutect2_bdx_filtered.tsv")
+```
+
+```{r mutFilteredFB, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
+mutect2filtered <- read_tsv("save/mutect2_bdx_filtered.tsv")
+g1 <- ggplot(mutect2filtered, aes(tumor_AF, fill = sector)) +
+  geom_histogram() +
+  ggtitle("", paste("N =", nrow(mutect2filtered))) +
+  xlab("Allele frequency") +
+  scale_fill_manual(values = c("darkblue", "plum", "darkgreen", "yellow2"))
+g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
+  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = sector), size = 1,
+             data = filter(mutect2filtered, grepl("Chr", CHROM))) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  scale_color_manual(guide = "none", values = c("darkblue", "plum", "darkgreen", "yellow2"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))  
+```
+
+## Conclusion
+
+```{r datasetsbdx}
+datasets <- list(
+  "Plomion" = overlapSBfiltered %>% 
+    mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+    rename(AF = mutation_AF) %>%
+    dplyr::select(CHROM, POS, SNV, AF),
+  "Mutect2" = mutect2filtered %>% 
+    mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+    rename(AF = tumor_AF) %>%
+    dplyr::select(CHROM, POS, SNV, AF),
+  "Strelka2" = strelka2filtered %>% 
+    mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+    rename(AF = mutation_AF) %>%
+    dplyr::select(CHROM, POS, SNV, AF),
+  "Robust" = strelka2robust %>% 
+    mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+    rename(AF = mutation_AF) %>%
+    dplyr::select(CHROM, POS, SNV, AF)
+)   
+```
+
+```{r datasetsbdxTab}
+lapply(datasets, nrow) %>%
+  bind_rows(.id = "dataset") %>%
+  reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>%
+  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " "))   
+```
+
+```{r datasetsbdxAF, fig.cap="Allele frequency for the different datasets."}
+bind_rows(datasets, .id = "dataset") %>%
+  ggplot(aes(AF, col = dataset), fill = NA) +
+  geom_density(size = 1.3) +
+  scale_color_discrete("Dataset") +
+  xlab("Allelic frequency")  
+```
+
+```{r datasetsbdxVenn2}
+ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F)
+```
