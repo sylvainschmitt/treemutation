@@ -48,6 +48,22 @@ ggplot(genome, aes(x = CHROM, xend = CHROM)) +
         axis.ticks.y = element_blank())
 ```
 
+```{r covswiss2, eval=F}
+cov <- list(lower = "data/mutations/swiss/lower.quantized.bed",
+     upper = "data/mutations/swiss/upper.quantized.bed") %>% 
+  lapply(vroom::vroom, col_names = c("chrom", "start", "end", "coverage")) %>% 
+  bind_rows(.id = "branch") %>% 
+  mutate(length = end - start) %>% 
+  group_by(branch, coverage) %>% 
+  summarise(length = sum(length)) %>% 
+  group_by(branch) %>% 
+  mutate(total = sum(length)) %>% 
+  ungroup() %>% 
+  mutate(pct = length/total)
+cov %>% 
+  filter(coverage == "30:120")
+```
+
 ## `Strelka2`
 
 `Strelka2` produced `r round(collect(tally(strelka2raw))$n/10^6, 1)` millions of candidate mutations.
@@ -150,7 +166,7 @@ mutFilteredS <- strelka2raw %>%
 mutRobustS <- filter(mutFilteredS, FILTER == "PASS") 
 ```
 
-```{r mutFilteredS, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
+```{r mutFilteredS, fig.cap="Mutations retained after original filtering: allele frequency (A) and positions on the 3P genome (B)."}
 g1 <- ggplot(mutFilteredS, aes(mutation_AF)) +
   geom_histogram() +
   ggtitle("", paste("N =", nrow(mutFilteredS))) +
@@ -165,7 +181,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
 cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
 ```
 
-```{r mutRobustS, fig.cap="Robust mutations allele frequency (A) and positions on the 3P genome (B)."}
+```{r mutRobustS, fig.cap="Mutations retained after robust filtering: allele frequency (A) and positions on the 3P genome (B)."}
 g1 <- ggplot(mutRobustS, aes(mutation_AF)) +
   geom_histogram() +
   ggtitle("", paste("N =", nrow(mutRobustS))) +
@@ -278,7 +294,7 @@ mutRobustG <- left_join(mutFilteredG,
   filter(Robust == 1)
 ```
 
-```{r mutFilteredG, fig.cap="Filtered mutations allele frequency (A) and positions on the 3P genome (B)."}
+```{r mutFilteredG, fig.cap="Mutations retained after original filtering: allele frequency (A) and positions on the 3P genome (B)."}
 g1 <- ggplot(mutFilteredG, aes(tumor_AF)) +
   geom_histogram() +
   ggtitle("", paste("N =", nrow(mutFilteredG))) +
@@ -293,7 +309,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
 cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 ```
 
-```{r mutRobustG, fig.cap="Robust mutations allele frequency (A) and positions on the 3P genome (B)."}
+```{r mutRobustG, fig.cap="Mutations retained after robust filtering: allele frequency (A) and positions on the 3P genome (B)."}
 g1 <- ggplot(mutRobustG, aes(tumor_AF)) +
   geom_histogram() +
   ggtitle("", paste("N =", nrow(mutRobustG))) +
@@ -312,10 +328,16 @@ cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 
 ```{r datasetsswiss}
 datasets <- list(
-  "Schmid" = overlapG %>% 
+  # "Schmid" = overlapG %>% 
+  #   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
+  #   rename(AF = tumor_AF) %>%
+  #   dplyr::select(CHROM, POS, SNV, AF),
+  "Schmid" = overlapSfiltered %>% 
+    ungroup() %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = tumor_AF) %>%
-    dplyr::select(CHROM, POS, SNV, AF),
+    rename(AF = mutation_AF) %>%
+    mutate(type = paste0(REF, "->", ALT)) %>% 
+    dplyr::select(CHROM, POS, SNV, AF, type),
   "GATK" = mutFilteredG %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
     rename(AF = tumor_AF) %>%
@@ -323,11 +345,13 @@ datasets <- list(
   "Strelka2" = mutFilteredS %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
     rename(AF = mutation_AF) %>%
-    dplyr::select(CHROM, POS, SNV, AF),
+    mutate(type = paste0(REF, "->", ALT)) %>% 
+    dplyr::select(CHROM, POS, SNV, AF, type),
   "Robust" = mutRobustS %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
     rename(AF = mutation_AF) %>%
-    dplyr::select(CHROM, POS, SNV, AF)
+     mutate(type = paste0(REF, "->", ALT)) %>% 
+    dplyr::select(CHROM, POS, SNV, AF, type)
 )
 ```
 
@@ -335,6 +359,7 @@ datasets <- list(
 lapply(datasets, nrow) %>%
   bind_rows(.id = "dataset") %>%
   reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>%
+  mutate(`Estimated total` = round(`Number of candidates`*100/72)) %>% 
   kable(caption = "Size of the different datasets.", format.args = list(big.mark = " "))
 ```
 
@@ -350,21 +375,22 @@ bind_rows(datasets, .id = "dataset") %>%
 ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F) 
 ```
 
-```{r datasetsswissVenn, eval=F}
-# overlaps <- lapply(datasets, select, SNV, AF) %>% 
-#   bind_rows(.id = "dataset") %>% 
-#   ungroup() %>% 
-#   select(dataset, SNV) %>% 
-#   mutate(value = "1") %>% 
-#   reshape2::dcast(SNV ~ dataset) %>% 
-#   mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
-#   select(-SNV) %>% 
-#   mutate_all(as.numeric) %>% 
-#   as.matrix() %>% 
-#   crossprod() %>% 
-#   as.data.frame() %>% 
-#   rownames_to_column("dataset")
-# write_tsv(overlaps, file = "save/overlaps.tsv")
-# read_tsv("save/overlaps.tsv") %>% 
-#   kable(caption = "Overlaps among the different datasets.", format.args = list(big.mark = " "))
+
+```{r}
+bind_rows(datasets, .id = "dataset") %>% 
+  na.omit() %>% 
+  group_by(dataset, type) %>% 
+  summarise(N = n()) %>% 
+  group_by(dataset) %>% 
+  mutate(P = N / sum(N) * 100) %>% 
+  ggplot(aes(type, P, fill = dataset)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  ylab("Percentage") + xlab(" ")
+```
+
+
+```{r fig4, eval=F}
+bind_rows(datasets, .id = "dataset") %>%
+  write_tsv("save/candidates_swiss.tsv")
 ```

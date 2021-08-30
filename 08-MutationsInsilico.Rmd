@@ -52,6 +52,7 @@ stats %>%
 
 ```{r mutissf2, fig.cap="Best performing mutation detection tools depending on allelic fraction and coverage. The best performing tools were defined on the best recall rate first and best precision rate second for precision rates above 0.9. The labels in white indicate the recall rate (R) and the precision rate (P) for the best performing tools."}
 stats %>%
+  mutate(Precision = round(TP/(TP+FP), 4), Recall = round(TP/(TP+FN), 4)) %>% 
   filter(Precision > 0.9) %>% 
   group_by(AF, C) %>% 
   filter(Recall == max(Recall)) %>% 
@@ -60,13 +61,12 @@ stats %>%
   summarise(caller = paste(unique(caller), sep = ", ", collapse = ", ")) %>% 
   ggplot(aes(AF, C)) +
   geom_tile(aes(fill = caller, alpha = Recall)) +
-  geom_text(aes(label = round(Recall, 2)), col = "black", size	= 3) +
-  scale_fill_brewer("", palette = "Paired") +
+  geom_text(aes(label = round(Recall, 3)), col = "black", size	= 3) +
+  scale_fill_brewer("", palette = "Accent") +
   theme(legend.position = "bottom") +
   xlab("Allele Fraction") + ylab("Coverage") +
   theme(strip.text.y = element_text(angle = 0),
         legend.position = "bottom") +
-  guides(fill = guide_legend(nrow = 4)) +
   scale_alpha_continuous(guide = "none")
 ```
 
@@ -90,9 +90,9 @@ stats %>%
 
 ```{r mutissf4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
 read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
-  filter(C %in% c(25, 75, 150)) %>% 
+  filter(C %in% c(25, 75, 150, 200)) %>% 
   mutate(C = paste0(C, "X")) %>% 
-  mutate(C = factor(C, levels = c("25X", "75X", "150X"))) %>% 
+  mutate(C = factor(C, levels = c("25X", "75X", "150X", "200X"))) %>% 
   dplyr::select(caller, C, AF, Recall, Precision) %>% 
   reshape2::melt(c("caller", "C", "AF")) %>% 
   group_by(caller, C, AF, variable) %>% 
@@ -108,4 +108,252 @@ read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   scale_color_brewer("", palette = "Paired") +
   scale_fill_brewer("", palette = "Paired") +
   theme(legend.position = "bottom")
+```
+
+```{r mutissf5, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
+rev_sqrt_trans <- function() {
+    scales::trans_new(
+        name = "rev_sqrt", 
+        transform = function(x) -sqrt(1-x), 
+        inverse = function(x) 1-x^2);
+}
+data <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+   mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "50X", "75X", "100X",
+                                  "125X", "150X", "175X", "200X"))) %>% 
+  group_by(caller, C, AF) %>% 
+  na.omit() %>% 
+  summarize(m = mean(Recall), q5 = quantile(Recall, 0.05), q95 = quantile(Recall, 0.95), p = mean(Precision))
+g <- data %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m, shape = p > 0.9), size = 2) +
+  facet_wrap(~ C, ncol = 4) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual(guide = "none", values = RColorBrewer::brewer.pal(7, "Accent")) +
+  xlab("Allele fraction") + ylab("Recall") +
+  scale_shape_manual(guide = "none", values = c(1, 16)) 
+
+g1 <- filter(data, caller %in% c("freebayes", "GATK", "VarScan")) %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_point(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  facet_wrap(~ C, ncol = 4) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_size_continuous(range = c(0.1, 1)) +
+  scale_color_manual("Generic callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
+  theme(legend.position = "bottom") +
+  xlab("Allele fraction") + ylab("Recall")
+l1 <- cowplot::get_legend(g1)
+
+g2 <- filter(data, !(caller %in% c("freebayes", "GATK", "VarScan"))) %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_point(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  facet_wrap(~ C, ncol = 4) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_size_continuous(range = c(0.1, 1)) +
+  scale_color_manual("Mutation-specific callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
+  theme(legend.position = "bottom") +
+  xlab("Allele fraction") + ylab("Recall")
+l2 <- cowplot::get_legend(g2)
+
+cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(8,1,1))
+```
+
+```{r}
+library(gganimate)
+rev_sqrt_trans <- function() {
+    scales::trans_new(
+        name = "rev_sqrt", 
+        transform = function(x) -sqrt(1-x), 
+        inverse = function(x) 1-x^2);
+}
+g <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+   mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "50X", "75X", "100X",
+                                  "125X", "150X", "175X", "200X"))) %>% 
+  dplyr::select(caller, C, AF, Recall, Precision) %>% 
+  reshape2::melt(c("caller", "C", "AF")) %>% 
+  group_by(caller, C, AF, variable) %>% 
+  na.omit() %>% 
+  summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95)) %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_point(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  facet_wrap(~ variable, nrow = 1) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_size_continuous(range = c(0.1, 1)) +
+  scale_color_manual("", values = RColorBrewer::brewer.pal(7, "Accent")) +
+  xlab("Allele fraction") + ylab("Rate") +
+  transition_manual(C) +
+  labs(title = 'Coverage: {current_frame}') +
+  theme(legend.position = "bottom")
+anim_save("save/insilico.gif", g)
+```
+
+
+```{r mutissf5.2, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
+include_graphics("save/insilico.gif")
+```
+
+```{r mutissf5.3, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 7, fig.width = 7}
+rev_sqrt_trans <- function() {
+    scales::trans_new(
+        name = "rev_sqrt", 
+        transform = function(x) -sqrt(1-x), 
+        inverse = function(x) 1-x^2);
+}
+data <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+   mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "50X", "75X", "100X",
+                                  "125X", "150X", "175X", "200X"))) %>% 
+  filter(C %in% c("25X", "75X", "200X")) %>% 
+  group_by(caller, C, AF) %>% 
+  na.omit() %>% 
+  dplyr::select(caller, AF, C, Precision, Recall) %>% 
+  reshape2::melt(c("caller", "AF", "C")) %>% 
+  mutate(variable = factor(variable, levels = c("Recall", "Precision"))) %>% 
+  group_by(caller, AF, C, variable) %>% 
+  summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+g <- data %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual(guide = "none", values = RColorBrewer::brewer.pal(7, "Accent")) +
+  xlab("Allele fraction") + ylab("Rate")
+
+g1 <- filter(data, caller %in% c("freebayes", "GATK", "VarScan")) %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual("Generic callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
+  xlab("Allele fraction") + ylab("Rate") +
+  theme(legend.position = "bottom")
+l1 <- cowplot::get_legend(g1)
+
+g2 <- filter(data, !(caller %in% c("freebayes", "GATK", "VarScan"))) %>% 
+   ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual("Mutation-specific callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
+  xlab("Allele fraction") + ylab("Rate") +
+  theme(legend.position = "bottom")
+l2 <- cowplot::get_legend(g2)
+
+cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(8,1,1))
+```
+
+```{r mutissf5.4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 10, fig.width = 7}
+rev_sqrt_trans <- function() {
+    scales::trans_new(
+        name = "rev_sqrt", 
+        transform = function(x) -sqrt(1-x), 
+        inverse = function(x) 1-x^2);
+}
+data <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+   mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "50X", "75X", "100X",
+                                  "125X", "150X", "175X", "200X"))) %>% 
+  group_by(caller, C, AF) %>% 
+  na.omit() %>% 
+  dplyr::select(caller, AF, C, Precision, Recall) %>% 
+  reshape2::melt(c("caller", "AF", "C")) %>% 
+  mutate(variable = factor(variable, levels = c("Recall", "Precision"))) %>% 
+  group_by(caller, AF, C, variable) %>% 
+  summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+g <- data %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual(guide = "none", values = RColorBrewer::brewer.pal(7, "Accent")) +
+  xlab("Allele fraction") + ylab("Rate")
+
+g1 <- filter(data, caller %in% c("freebayes", "GATK", "VarScan")) %>% 
+  ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual("Generic callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
+  xlab("Allele fraction") + ylab("Rate") +
+  theme(legend.position = "bottom")
+l1 <- cowplot::get_legend(g1)
+
+g2 <- filter(data, !(caller %in% c("freebayes", "GATK", "VarScan"))) %>% 
+   ggplot(aes(x = AF, col = caller)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_grid(C ~ variable) + 
+  scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
+  scale_color_manual("Mutation-specific callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
+  xlab("Allele fraction") + ylab("Rate") +
+  theme(legend.position = "bottom")
+l2 <- cowplot::get_legend(g2)
+
+cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(10,1,1))
 ```
