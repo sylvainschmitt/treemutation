@@ -250,7 +250,8 @@ data <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   reshape2::melt(c("caller", "AF", "C")) %>% 
   mutate(variable = factor(variable, levels = c("Recall", "Precision"))) %>% 
   group_by(caller, AF, C, variable) %>% 
-  summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+  # summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+  summarize(m = mean(value), q5 = mean(value)-sd(value), q95 = mean(value)+sd(value))
 g <- data %>% 
   ggplot(aes(x = AF, col = caller)) +
   geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
@@ -317,7 +318,8 @@ data <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   reshape2::melt(c("caller", "AF", "C")) %>% 
   mutate(variable = factor(variable, levels = c("Recall", "Precision"))) %>% 
   group_by(caller, AF, C, variable) %>% 
-  summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+  # summarize(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95))
+  summarize(m = mean(value), q5 = mean(value)-sd(value), q95 = mean(value)+sd(value))
 g <- data %>% 
   ggplot(aes(x = AF, col = caller)) +
   geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
@@ -357,3 +359,46 @@ l2 <- cowplot::get_legend(g2)
 
 cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(10,1,1))
 ```
+
+```{r, eval=F}
+read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect 2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka 2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  group_by(caller) %>% 
+  summarise(Rm = mean(Recall, na.rm = T), Rs = sd(Recall, na.rm = T),
+            Pm = mean(Precision, na.rm = T), Ps = sd(Precision, na.rm = T)) %>% 
+  mutate(Recall = paste0(round(Rm, 2), " (", round(Rs, 2), ")" ), 
+         Precision = paste0(round(Pm, 2), " (", round(Ps, 2), ")" )) %>% 
+  dplyr::rename(Caller = caller) %>% 
+  dplyr::select(Caller, Recall, Precision) %>% 
+  write_tsv("save/insilico_mean.tsv")
+```
+
+```{r, eval=F}
+read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect 2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka 2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  group_by(caller, R, AF, C) %>% 
+  summarise(Rm = mean(Recall, na.rm = T), Rs = sd(Recall, na.rm = T),
+            Pm = mean(Precision, na.rm = T), Ps = sd(Precision, na.rm = T)) %>% 
+  mutate(Recall = paste0(round(Rm, 2), " (", round(Rs, 2), ")" ), 
+         Precision = paste0(round(Pm, 2), " (", round(Ps, 2), ")" )) %>% 
+  dplyr::rename(Caller = caller, `Allelic Frequency` = AF, Coverage = C) %>% 
+  dplyr::select(Caller, `Allelic Frequency`, Coverage, Recall, Precision) %>% 
+  write_tsv("save/insilico_all.tsv")
+```
+

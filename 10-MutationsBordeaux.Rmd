@@ -419,7 +419,7 @@ bind_rows(datasets, .id = "dataset") %>%
   write_tsv("save/candidates_bdx.tsv")
 ```
 
-```{r fig4bdx, eval=F}
+```{r fig4bdx, eval=T}
 lapply(list(swiss = "save/candidates_swiss.tsv",
             bordeaux = "save/candidates_bdx.tsv"), read_tsv) %>% 
   bind_rows(.id = "study") %>% 
@@ -434,11 +434,11 @@ lapply(list(swiss = "save/candidates_swiss.tsv",
              data.frame(study = rep(c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"), each = 4),
                         dataset = c("Original studies", "GATK", "Strelka2 All", "Strelka2 Robust",
                                     "Original studies", "Mutect2", "Strelka2 All", "Strelka2 Robust"),
-                        label = c("N=12", "N=510 000\n(709 000)", "N=223\n(310)", "N=87\n(121)",
+                        label = c("N=12", "N=510 611\n(709 182)", "N=223\n(310)", "N=87\n(121)",
                                   "N=60", "N=464\n(552)", "N=460\n(548)", "N=108\n(129)"),
-                        AF = c(0.3, 0.4, 0.05, 0.2,
+                        AF = c(0.32, 0.4, 0.05, 0.17,
                                0.35, 0.15, 0.18, 0.2),
-                        y = c(7.2, 3, 7, 7,
+                        y = c(10, 5, 8, 9,
                               4.5, 10, 8, 5)) %>%
                mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
                                                            "Strelka2 All", "Strelka2 Robust")))) +
@@ -446,6 +446,37 @@ lapply(list(swiss = "save/candidates_swiss.tsv",
   scale_color_discrete("") +
   xlab("Allelic frequency")  + ylab("Frequency") +
   facet_wrap(~study, scales = "free_y", nrow = 1) +
+  theme(legend.position = "bottom")
+```
+
+```{r fig4SI, eval=T}
+lapply(list(swiss = "save/candidates_swiss.tsv",
+            bordeaux = "save/candidates_bdx.tsv"), read_tsv) %>% 
+  bind_rows(.id = "study") %>% 
+  mutate(study = recode(study, "bordeaux" = "Plomion et al. (2018)", "swiss" = "Schmid-Siegert et al., (2017)")) %>% 
+  mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
+  mutate(dataset = recode(dataset, "Plomion" = "Original studies", "Schmid" = "Original studies",
+                          "Robust" = "Strelka2 Robust", "Strelka2" = "Strelka2 All")) %>% 
+  mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
+                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
+  filter(!(dataset %in% c("GATK", "Mutect2"))) %>% 
+  ggplot(aes(AF, col = study), fill = NA) +
+    # geom_label(aes(y = y, study = study, label = label),
+    #          data.frame(study = rep(c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"), each = 4),
+    #                     dataset = c("Original studies", "GATK", "Strelka2 All", "Strelka2 Robust",
+    #                                 "Original studies", "Mutect2", "Strelka2 All", "Strelka2 Robust"),
+    #                     label = c("N=12", "N=510 611\n(709 182)", "N=223\n(310)", "N=87\n(121)",
+    #                               "N=60", "N=464\n(552)", "N=460\n(548)", "N=108\n(129)"),
+    #                     AF = c(0.32, 0.4, 0.05, 0.17,
+    #                            0.35, 0.15, 0.18, 0.2),
+    #                     y = c(10, 5, 8, 9,
+    #                           4.5, 10, 8, 5)) %>%
+    #            mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
+    #                                                        "Strelka2 All", "Strelka2 Robust")))) +
+  geom_density(size = 1.3) +
+  scale_color_discrete("") +
+  xlab("Allelic frequency")  + ylab("Frequency") +
+  facet_wrap(~dataset, scales = "free_y", nrow = 1) +
   theme(legend.position = "bottom")
 ```
 
@@ -496,7 +527,6 @@ mutationsI <- new(
 )
 genes <- genomeIntervals::readGff3("data/mutations/bordeaux/Qrob_PM1N_genes_20161004.gff")
 te <- genomeIntervals::readGff3("data/mutations/bordeaux/Qrob_PM1N_refTEs.gff")
-unique(genes$type)
 
 mutations$mRNA <- as.numeric(unlist(lapply(interval_overlap(mutationsI, genes[genes$type == "mRNA"]),
                                            function(x) !length(x) == 0)))
@@ -509,14 +539,32 @@ mutations$three_prime_UTR <- as.numeric(unlist(lapply(interval_overlap(mutations
 
 mutations$te <- as.numeric(unlist(lapply(interval_overlap(mutationsI, te), function(x) !length(x) == 0)))
 write_tsv(mutations, "save/candidates_all.tsv")
+
+genome <- data.frame(
+  annotation = c("mRNA", "CDS", "five_prime_UTR", "three_prime_UTR", "TE"),
+  width = c(sum(width(interval_union( genes[genes$type == "mRNA"]))),
+            sum(width(interval_union( genes[genes$type == "CDS"]))),
+            sum(width(interval_union( genes[genes$type == "five_prime_UTR"]))),
+            sum(width(interval_union( genes[genes$type == "three_prime_UTR"]))),
+            sum(width(interval_union( te)))))
+genome$total <- sum(width(Biostrings::readDNAStringSet("data/mutations/bordeaux/Qrob_PM1N.fa")))
+genome <- bind_rows(genome,
+          data.frame(annotation = "Anonymous", width = genome$total[1] - sum(genome$width), total = genome$total[1]))
+genome %>% 
+  mutate(P = width / total * 100) %>% 
+    mutate(annotation = recode(type, 
+                             "mRNA" = "gene: mRNA", 
+                             "CDS" = "gene: CDS",
+                             "five_prime_UTR" = "gene: 5' UTR",
+                             "three_prime_UTR" = "gene: 3' UTR",
+                             "TE" = "intergenic: TE",
+                             "Anonymous" = "intergenic: Anonymous")) %>% 
+  write_tsv("save/genome_prop.tsv")
 ```
 
-```{r}
+```{r, fig.width=6, fig.height=6}
 read_tsv("save/candidates_all.tsv") %>% 
   mutate(study = recode(study, "bordeaux" = "Plomion et al. (2018)", "swiss" = "Schmid-Siegert et al., (2017)")) %>% 
-  mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
-  mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
-                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
   mutate(annotation = paste0(mRNA, CDS, five_prime_UTR, three_prime_UTR, te)) %>% 
   mutate(annotation = recode(annotation, 
                              "10000" = "gene: mRNA", 
@@ -537,11 +585,19 @@ read_tsv("save/candidates_all.tsv") %>%
   group_by(study, dataset) %>% 
   mutate(P = N / sum(N) * 100) %>% 
   na.omit() %>% 
+  bind_rows(read_tsv("save/genome_prop.tsv") %>% 
+              mutate(dataset = "Genome") %>% 
+              mutate(study = list(c("Plomion et al. (2018)", "Schmid-Siegert et al., (2017)"))) %>% 
+              unnest(study)
+  ) %>% 
+  mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
+  mutate(dataset = factor(dataset, levels = c("Genome", "Original studies", "GATK", "Mutect2",
+                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
   ggplot(aes(annotation, P, fill = dataset)) +
   geom_col(position = "dodge") +
   ylab("Percentage") + xlab(" ") +
   facet_wrap(~study, nrow = 1) + 
-  scale_fill_discrete("") +
+  scale_fill_manual("", values = c("black", scales::hue_pal()(5))) +
   theme(legend.position = "bottom") +
   coord_flip()
 ```
@@ -561,7 +617,7 @@ write_tsv(mutations, "save/candidates_all.tsv")
 
 
 ```{r, fig.height=8, fig.width=8}
-data <- read_tsv("save/candidates_all.tsv") %>% 
+data0 <- read_tsv("save/candidates_all.tsv") %>% 
     mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
   mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
                                               "Strelka2 All", "Strelka2 Robust"))) %>% 
@@ -580,6 +636,7 @@ data <- read_tsv("save/candidates_all.tsv") %>%
                          "A->C" = "-",
                          "T->G" = "+"
                        )) %>% 
+  mutate(base = type) %>% 
   mutate(type = recode(type, 
                        "G->T" = "C->A",
                        "G->C" = "C->G",
@@ -591,22 +648,14 @@ data <- read_tsv("save/candidates_all.tsv") %>%
   mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>% 
   mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>% 
   mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>% 
-  mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r))
+data <- data0 %>% 
   group_by(POS5f, POS3f, study, dataset, type) %>% 
   summarise(N = n()) %>% 
   group_by(study, dataset) %>% 
   mutate(P = N / sum(N) * 100) %>% 
   mutate(POS3f = factor(POS3f, levels = c("A", "C", "G", "T"))) %>% 
   mutate(POS5f = factor(POS5f, levels = c("T", "G", "C", "A")))
-
-# ggplot(data, aes(POS3f, POS5f, fill = P)) +
-#   geom_tile() +
-#   facet_grid(dataset ~ type) +
-#   viridis::scale_fill_viridis("Percentage", direction = -1, option = "A") +
-#   theme(legend.position = "bottom") + xlab("3'") + ylab("5'") +
-#   theme(strip.text.y.right = element_text(angle = 0)) +
-#   coord_equal()
-
 g <- data %>% 
   group_by(study) %>% 
   do(g = ggplot(., aes(POS3f, POS5f, fill = P)) +
@@ -618,3 +667,139 @@ g <- data %>%
        ggtitle(unique(.$study)))
 cowplot::plot_grid(plotlist = g$g, nrow = 2)
 ```
+
+```{r, eval=F, fig.height=2}
+filter(data0, dataset == "Original studies", SNV == "Qrob_Chr05_Pos56685984") %>% 
+  separate_rows(base) %>% 
+  mutate(baser = recode(base, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>% 
+  dplyr::select(SNV, POS5, base, POS3, POS5f, baser, POS3f) %>% 
+  mutate(type = c("reference", "mutated")) %>% 
+  reshape2::melt(c("SNV", "type")) %>% 
+  mutate(strand = ifelse(variable %in% c("POS5", "base", "POS3"), "forward", "reverse")) %>% 
+  mutate(POS = recode(variable, "POS5f" = "POS5", "POS3f" = "POS3" , "baser" = "base")) %>% 
+  mutate(POS = recode(POS, "POS5" = "5'", "POS3" = "3'")) %>% 
+  mutate(POS = factor(POS, levels = c("5'", "base", "3'"))) %>% 
+  rename(nucleotide = "value") %>% 
+  ggplot(aes(POS, "nucleotide")) +
+  geom_label(aes(label = nucleotide, col = nucleotide)) +
+  facet_grid(strand ~ type) + 
+  theme(axis.title = element_blank(), axis.line.y = element_blank()) +
+  scale_color_discrete(guide = "none")
+```
+
+```{r,  fig.height=7, fig.width=13}
+g0 <- lapply(list(swiss = "save/candidates_swiss.tsv",
+            bordeaux = "save/candidates_bdx.tsv"), read_tsv) %>% 
+  bind_rows(.id = "study") %>% 
+  mutate(study = recode(study, "bordeaux" = "Plomion et al. (2018)", "swiss" = "Schmid-Siegert et al., (2017)")) %>% 
+  mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
+  mutate(dataset = recode(dataset, "Plomion" = "Original studies", "Schmid" = "Original studies",
+                          "Robust" = "Strelka2 Robust", "Strelka2" = "Strelka2 All")) %>% 
+  mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
+                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
+  ggplot(aes(AF, col = dataset), fill = NA) +
+    geom_label(aes(y = y, col = dataset, label = label),
+             data.frame(study = rep(c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"), each = 4),
+                        dataset = c("Original studies", "GATK", "Strelka2 All", "Strelka2 Robust",
+                                    "Original studies", "Mutect2", "Strelka2 All", "Strelka2 Robust"),
+                        label = c("N=12", "N=510 611\n(709 182)", "N=223\n(310)", "N=87\n(121)",
+                                  "N=60", "N=464\n(552)", "N=460\n(548)", "N=108\n(129)"),
+                        AF = c(0.32, 0.4, 0.05, 0.17,
+                               0.35, 0.15, 0.18, 0.2),
+                        y = c(10, 5, 8, 9,
+                              4.5, 10, 8, 5)) %>%
+               mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
+                                                           "Strelka2 All", "Strelka2 Robust")))) +
+  geom_density(size = 1.3) +
+  scale_color_discrete("") +
+  xlab("Allelic frequency")  + ylab("Frequency") +
+  facet_wrap(~study, scales = "free_y", nrow = 1) +
+  theme(legend.position = "bottom")
+g1 <- read_tsv("save/candidates_all.tsv") %>% 
+  mutate(study = recode(study, "bordeaux" = "Plomion et al. (2018)", "swiss" = "Schmid-Siegert et al., (2017)")) %>% 
+  mutate(annotation = paste0(mRNA, CDS, five_prime_UTR, three_prime_UTR, te)) %>% 
+  mutate(annotation = recode(annotation, 
+                             "10000" = "gene: mRNA", 
+                             "10001" = "gene: mRNA", 
+                             "01000" = "gene: CDS",
+                             "11000" = "gene: CDS",
+                             "11001" = "gene: CDS",
+                             "00100" = "gene: 5' UTR",
+                             "10100" = "gene: 5' UTR",
+                             "10101" = "gene: 5' UTR",
+                             "00010" = "gene: 3' UTR",
+                             "10010" = "gene: 3' UTR",
+                             "10011" = "gene: 3' UTR",
+                             "00001" = "intergenic: TE",
+                             "00000" = "intergenic: Anonymous")) %>% 
+  group_by(study, dataset, annotation) %>% 
+  summarise(N = n()) %>% 
+  group_by(study, dataset) %>% 
+  mutate(P = N / sum(N) * 100) %>% 
+  na.omit() %>% 
+  bind_rows(read_tsv("save/genome_prop.tsv") %>% 
+              mutate(dataset = "Genome") %>% 
+              mutate(study = list(c("Plomion et al. (2018)", "Schmid-Siegert et al., (2017)"))) %>% 
+              unnest(study)
+  ) %>% 
+  mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
+  mutate(dataset = factor(dataset, levels = c("Genome", "Original studies", "GATK", "Mutect2",
+                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
+  ggplot(aes(annotation, P, fill = dataset)) +
+  geom_col(position = "dodge") +
+  ylab("Percentage") + xlab(" ") +
+  facet_wrap(~study, nrow = 1) + 
+  scale_fill_manual("", values = c("black", scales::hue_pal()(5))) +
+  theme(legend.position = "bottom") +
+  coord_flip()
+data0 <- read_tsv("save/candidates_all.tsv") %>% 
+    mutate(study = factor(study, levels = c("Schmid-Siegert et al., (2017)", "Plomion et al. (2018)"))) %>% 
+  mutate(dataset = factor(dataset, levels = c("Original studies", "GATK", "Mutect2",
+                                              "Strelka2 All", "Strelka2 Robust"))) %>% 
+  na.omit() %>% 
+  mutate(strand = recode(type,
+                         "G->T" = "-",
+                         "C->A" = "+",
+                         "G->C" = "-",
+                         "C->G" = "+",
+                         "G->A" = "-",
+                         "C->T" = "+",
+                         "A->T" = "-",
+                         "T->A" = "+",
+                         "A->G" = "-",
+                         "T->C" = "+",
+                         "A->C" = "-",
+                         "T->G" = "+"
+                       )) %>% 
+  mutate(base = type) %>% 
+  mutate(type = recode(type, 
+                       "G->T" = "C->A",
+                       "G->C" = "C->G",
+                       "G->A" = "C->T",
+                       "A->T" = "T->A",
+                       "A->G" = "T->C",
+                       "A->C" = "T->G"
+  )) %>% 
+  mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>% 
+  mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>% 
+  mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>% 
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r))
+data <- data0 %>% 
+  group_by(POS5f, POS3f, study, dataset, type) %>% 
+  summarise(N = n()) %>% 
+  group_by(study, dataset) %>% 
+  mutate(P = N / sum(N) * 100) %>% 
+  mutate(POS3f = factor(POS3f, levels = c("A", "C", "G", "T"))) %>% 
+  mutate(POS5f = factor(POS5f, levels = c("T", "G", "C", "A")))
+g <- data %>% 
+  group_by(study) %>% 
+  do(g = ggplot(., aes(POS3f, POS5f, fill = P)) +
+       geom_tile() +
+       facet_grid(dataset ~ type) +
+       viridis::scale_fill_viridis("%", direction = -1, option = "A") +
+       xlab("3'") + ylab("5'") +
+       theme(strip.text.y.right = element_text(angle = 0)) +
+       ggtitle(unique(.$study)))
+cowplot::plot_grid(plotlist = list(g0, g1, g$g[[1]], g$g[[2]]), nrow = 2, labels = LETTERS[1:4])
+```
+
