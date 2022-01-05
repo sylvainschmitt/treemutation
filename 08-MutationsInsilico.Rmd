@@ -72,6 +72,15 @@ stats %>%
 
 ```{r mutissf3, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage. Tools to detect mutations include freebayes (red), MuSE (light green), Somatic Sniper (light blue), VarScan (pink), GATK (orange), Mutect2 (dark green), and Strelka2 (purple)."}
 stats %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
   reshape2::melt(c("caller", "FN", "FP", "TP", "Precision", "Recall"),
                  variable.name = "parameter", value.name = "parameter.value") %>% 
   reshape2::melt(c("caller", "parameter", "parameter.value"),
@@ -90,18 +99,28 @@ stats %>%
 
 ```{r mutissf4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
 read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
-  filter(C %in% c(25, 75, 150, 200)) %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  filter(C %in% c(25, 75, 150)) %>% 
   mutate(C = paste0(C, "X")) %>% 
-  mutate(C = factor(C, levels = c("25X", "75X", "150X", "200X"))) %>% 
+  mutate(C = factor(C, levels = c("25X", "75X", "150X"))) %>% 
   dplyr::select(caller, C, AF, Recall, Precision) %>% 
   reshape2::melt(c("caller", "C", "AF")) %>% 
   group_by(caller, C, AF, variable) %>% 
   na.omit() %>% 
-  mutate(m = mean(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95)) %>% 
+  summarise(m = median(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95)) %>% 
+  # filter(C == "25X", AF == 0.35, caller == "Mutect2", variable == "Precision")
   ggplot(aes(x = AF, col = caller, fill = caller)) +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha = 0.3, col = NA) +
   geom_line(aes(y = m)) +
-  geom_point(aes(y = value), alpha = 0.5) +
+  geom_point(aes(y = m), alpha = 0.5) +
   facet_grid(C ~ variable) +
   xlab("Allele frequency") +
   ylab("") +
@@ -401,4 +420,35 @@ read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   dplyr::select(Caller, `Allelic Frequency`, Coverage, Recall, Precision) %>% 
   write_tsv("save/insilico_all.tsv")
 ```
-
+```{r , eval=F}
+read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+   mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "50X", "75X", "100X",
+                                  "125X", "150X", "175X", "200X"))) %>% 
+  group_by(caller, C, AF) %>% 
+  na.omit() %>% 
+  dplyr::select(caller, AF, C, Precision, Recall) %>% 
+  reshape2::melt(c("caller", "AF", "C")) %>% 
+  mutate(variable = factor(variable, levels = c("Recall", "Precision"))) %>% 
+  group_by(caller, AF, C, variable) %>% 
+  summarize(m = mean(value), q5 = mean(value)-sd(value), q95 = mean(value)+sd(value)) %>% 
+  filter(caller == "Strelka2", C %in% c("75X", "150X")) %>% 
+  mutate(AF = ifelse(C == "75X", AF/2, AF)) %>% 
+  ggplot(aes(x = AF, col = C)) +
+  geom_hline(yintercept = 0.99, linetype = "dashed", col = "lightgrey") +
+  geom_line(aes(y = m)) +
+  geom_segment(aes(y = q5, yend = q95, xend = AF)) +
+  geom_point(aes(y = m), size = 2) +
+  facet_wrap(~ variable) + 
+  scale_color_manual(values = RColorBrewer::brewer.pal(7, "Accent")) +
+  xlab("Allele fraction") + ylab("Rate")
+```
