@@ -4,3 +4,4 @@ _bookdown_files
 .Rhistory
 .RData
 data
+save/*.png

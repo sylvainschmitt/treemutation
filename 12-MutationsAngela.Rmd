@@ -5,15 +5,12 @@ library(kableExtra)
 if(knitr:::is_html_output()) options(knitr.table.format = "html") 
 if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
+library(circlize)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
   cache = T, cache.lazy = F)
 ```
-
-# Mutations Angela
-
-This chapter describes the analyses of Angela mutations currently done in the the [`angela` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/angela).
 
 ```{r renameAngela, eval=F, echo=F}
 sampleRef <- read_delim("data/mutations/angela/sampleRef.txt", delim = " ", 
@@ -56,29 +53,143 @@ read_tsv("data/mutations/angela/samples.tsv") %>%
   write_tsv("data/mutations/angela/dummy.sh", col_names = F)
 ```
 
+# Mutations Angela
+
+This chapter describes the analyses of Angela mutations currently done in the the [`angela` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/angela).
+
+## Processing
+
+**Results below are preliminary.**
+
+To produce robust results we will proceed as follow:
+
+* Compute BUSCO and coverage of DS2 on HS1 & HS2
+* Choose the best reference
+* Align if needed again the libraries on the best reference excluding T1
+* Detect all heterozygous sites by joint-genotyping allowing a maximum of 1 missing library
+* Detect all raw mutations in T2, T3, T4 with all cross comparisons
+* Detect all raw mutations in all leaves compared to T2
+* Remove all heterozygous sites from raw mutations
+* Remove all raw cambium mutations from leaf raw mutations without heterozygous sites
+* Test independently each filter on each cambium and leaf library
+* Obtain a rboust dataset
+* Explore sahred mutations across leaves, tips and branches
+
 ## Quality check
 
-The result of multiQC is available [here](data/mutations/angela/multiqc_report.html).
-Globally everything is good but I think this is expected as the Genoscope is already cleaning the reads.
+The results of multiQC are available for the haplotypes HS1 [here](data/mutations/angela/multiqc_report_HS1.html) and HS2 [here](data/mutations/angela/multiqc_report_HS2.html).
 
 ## Genome
 
 ```{r AngelaGenomeData}
-genome <- read_tsv("data/mutations/angela/Dgu_HS1_HYBRID_SCAFFOLD.fa.fai", 
-         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
-  dplyr::select(CHROM, length) %>% 
-  mutate(start = 0, stop = length/10^6) %>% 
-  mutate(scf = as.factor(as.numeric(gsub("Super-Scaffold_", "", CHROM))))
-```
-```{r AngelaGenomFig, fig.cap="Angela genome for anchored super-scaffolds with a length >1Mb."}
-ggplot(filter(genome, length > 1*10^6), aes(x = CHROM, xend = CHROM)) +
-  geom_segment(aes(y = start, yend = stop), size = 3, col = "grey") +
-  coord_flip() +
-  ylab("Position (Mb)") +
-  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
-        axis.ticks.y = element_blank(), strip.text = element_blank())
+hs1 <- read_tsv("data/mutations/angela/Dgu_HS1_HYBRID_SCAFFOLD.fa.fai", 
+         col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(name, length) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", name)) %>% 
+  mutate(start = 0, end = length) %>% 
+  dplyr::select(-length) %>%  
+  mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
+hs2 <- read_tsv("data/mutations/angela/Dgu_HS2_HYBRID_SCAFFOLD.fa.fai", 
+         col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(name, length) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", name)) %>% 
+  mutate(start = 0, end = length) %>% 
+  dplyr::select(-length) %>%  
+  mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
+gc_hs1 <- vroom::vroom("data/mutations/angela/Dgu_HS1_HYBRID_SCAFFOLD.gc", skip = 1,
+             col_names = c("chrom", "start", "stop", "AT", "GC", "A", "C", "G", "T", "N", "other", "length")) %>% 
+  mutate(pos = start + 500) %>% 
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+gc_hs2 <- vroom::vroom("data/mutations/angela/Dgu_HS2_HYBRID_SCAFFOLD.gc", skip = 1,
+             col_names = c("chrom", "start", "stop", "AT", "GC", "A", "C", "G", "T", "N", "other", "length")) %>% 
+  mutate(pos = start + 500) %>% 
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+cov_hs1 <- vroom::vroom("data/mutations/angela/DS2_HS1.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+cov_hs2 <- vroom::vroom("data/mutations/angela/DS2_HS2.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+busco_hs1 <- read_tsv("data/mutations/angela/short_summary.specific.viridiplantae_odb10.Dgu_HS1_HYBRID_SCAFFOLD_busco.txt",
+         skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
+  dplyr::select(-X1)
+busco_hs2 <- read_tsv("data/mutations/angela/short_summary.specific.viridiplantae_odb10.Dgu_HS2_HYBRID_SCAFFOLD_busco.txt",
+         skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
+  dplyr::select(-X1)
 ```
 
+```{r AngelaGenomFig, fig.cap="Anchored scaffolds size-distribution for haplotypes HS1 and HS2 in Angela's genome."}
+cowplot::plot_grid(
+  plotlist = 
+    lapply(list(HS1 = hs1, HS2 = hs2), function(genome)
+      ggplot(genome, aes(reorder(name, end), end/10^6, fill = end > 2*10^6)) +
+        geom_col() +
+        coord_flip() +
+        ylab("Length (mb)") + 
+        xlab("Anchored super-scaffold") + 
+        scale_fill_discrete(">2Mb")),
+  labels = c("HS1", "HS2")
+)
+```
+
+```{r AngelaBusco, fig.cap="BUSCO results for haplotypes HS1 and HS2."}
+list(HS1 = busco_hs1, HS2 = busco_hs2) %>% 
+  bind_rows(.id = "haploytpe") %>% 
+  mutate(Type = factor(Type, levels= c("Complete and single-copy BUSCOs (S)",
+                                       'Complete and duplicated BUSCOs (D)',
+                                       "Fragmented BUSCOs (F)",
+                                       "Missing BUSCOs (M)"))) %>% 
+  ggplot(aes(haploytpe, N, fill = Type)) +
+  geom_col() +
+  geom_text(aes(y = N, label = N), col = "white", position = position_stack(vjust = .5)) +
+  scale_y_sqrt() +
+  theme(axis.title.x = element_blank())
+```
+
+```{r circosHS1, eval=F}
+hs1_f <- filter(hs1, end > 2*10^6)
+gc_hs1_f <- filter(gc_hs1, chrom %in% hs1_f$name)
+cov_hs1_f <- filter(cov_hs1, chrom %in% hs1_f$name) %>% 
+  mutate(coverage = ifelse(coverage > 500, 500, coverage))
+hs2_f <- filter(hs2, end > 2*10^6)
+gc_hs2_f <- filter(gc_hs2, chrom %in% hs2_f$name)
+cov_hs2_f <- filter(cov_hs2, chrom %in% hs2_f$name) %>% 
+  mutate(coverage = ifelse(coverage > 500, 500, coverage))
+png("save/AngelaCircosHS1CovGC.png", width = 1000, height = 1000)
+circos.initializeWithIdeogram(as.data.frame(hs1_f))
+circos.genomicTrack(cov_hs1_f, 
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "blue", ...)
+})
+
+circos.genomicTrack(select(gc_hs1_f, chrom, start, stop, GC), 
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "red", ...)
+})
+text(0, 0, "HS1", cex = 1.5)
+legend("bottomleft", pch = 16, col = c("blue", "red"), legend = c("coverage", "GC"), bty = "n")
+dev.off()
+png("save/AngelaCircosHS2CovGC.png", width = 1000, height = 1000)
+circos.initializeWithIdeogram(as.data.frame(hs2_f))
+circos.genomicTrack(cov_hs2_f,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "blue", ...)
+})
+
+circos.genomicTrack(select(gc_hs2, chrom, start, stop, GC),
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "red", ...)
+})
+text(0, 0, "HS2", cex = 1.5)
+legend("bottomleft", pch = 16, col = c("blue", "red"), legend = c("coverage", "GC"), bty = "n")
+dev.off()
+```
+
+```{r circosHS1g, fig.cap="Genome coverage and GC-content on a 10-kb windows for the HS1 haplotype (scaffolds > 2-Mb)."}
+include_graphics("save/AngelaCircosHS1CovGC.png")
+```
+
+```{r circosHS2g, fig.cap="Genome coverage and GC-content on a 10-kb windows for the HS2 haplotype (scaffolds > 2-Mb)."}
+include_graphics("save/AngelaCircosHS2CovGC.png")
+```
 
 ## Trunk
 
@@ -254,6 +365,7 @@ tip_mutations <- leaf_mutations %>%
   mutate(tumor = paste0(branch, tip)) %>% 
   group_by(SNV, CHROM, POS, REF, ALT, tumor, branch, tip) %>% 
   summarise(mutation_AF = mean(mutation_AF))
+write_tsv(tip_mutations, "data/mutations/angela/tip_mutations.tsv")
 ```
 
 ```{r nmutTipFiltTab}

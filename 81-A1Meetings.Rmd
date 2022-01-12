@@ -101,3 +101,23 @@
 ### Angela
 
 * 
+
+## 21/01/2022 Mid-project meeting
+
+### Notes
+
+* UVs can have a different signal than direct light exposure measured by Accupar or currently modeled with lidar data (up to 20-30% uncertainty according to G. Vincent)
+* lidar gave a hieght of 50.6m against 51.25 with tree climbing. This erros below the meter is very encouraging.
+* *Herrera CM 2019* on the phenotypic variability within individual trees or plants
+* Screwdriver can be good to initiate the auger (O. Martin)
+
+### Follow-up
+
+* **Branch dating**
+    * discuss with Patrick and perhaps Romain methodology, sampling points, tools etc
+    * plan a mission with climbers
+    * send samples to Patrick
+* **Direct light measurement**: not primordial to do aside from a mission if time
+* **Mutation detection**: continue with the plan
+* **Offspring genotyping**: meet with geneticists to discuss samples and techniques, dimensions of the assay.
+* **Data management**: discuss archiving with everybody, e.g. NCBI for raw genomic data, Zenodo for cleaned genomic data, GitHub for codes, what for the others (lidar) ?

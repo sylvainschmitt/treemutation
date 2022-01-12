@@ -1,3 +1,8 @@
+treemutation 1.0.0.9020
+* Angela haplotypes comparisons
+* Angela mutations history tests on preliminary mutations
+* mid-project meeting
+
 treemutation 1.0.0.9019
 * Angela mutations preliminary results
 
