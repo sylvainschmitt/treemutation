@@ -63,17 +63,14 @@ This chapter describes the analyses of Angela mutations currently done in the th
 
 To produce robust results we will proceed as follow:
 
-* Compute BUSCO and coverage of DS2 on HS1 & HS2
-* Choose the best reference
-* Align if needed again the libraries on the best reference excluding T1
 * Detect all heterozygous sites by joint-genotyping allowing a maximum of 1 missing library
 * Detect all raw mutations in T2, T3, T4 with all cross comparisons
 * Detect all raw mutations in all leaves compared to T2
 * Remove all heterozygous sites from raw mutations
 * Remove all raw cambium mutations from leaf raw mutations without heterozygous sites
 * Test independently each filter on each cambium and leaf library
-* Obtain a rboust dataset
-* Explore sahred mutations across leaves, tips and branches
+* Obtain a robust dataset
+* Explore shared mutations across leaves, tips and branches
 
 ## Quality check
 

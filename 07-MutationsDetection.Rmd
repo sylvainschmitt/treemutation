@@ -22,6 +22,7 @@ This chapter briefly introduced the next chapters on the detection of mutations:
 * Using virtual data for Angela
 * Using Angela sequences
 * Using sequences from the *Sextonia rubra*
+* Using sequences from the ["Faux de Verzy"](https://en.wikipedia.org/wiki/Faux_de_Verzy)
 
 The three first analyses resulted in the manuscript in preparation:
 
@@ -60,17 +61,25 @@ include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutatio
 
 We generated fake data corresponding to Angela architecture and sampling design, and tested our workflow ability to detect them back.
 
-## Angela sequences
+## Angela
 
-Mutations from Angela sequences.
+Genome, heterozygous sites, cambial mutations and leaf mutations from sequences of Angela.
+
+```{r detectMutationsAngela, fig.cap="Detect mutations workflow for Angela."}
+include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/angela/dag/dag.minimal.svg")
+```
 
 ## *Sextonia rubra*
 
-Mutations from sequences of the sequenced *Sextonia rubra*.
+*Waiting for data.*
 
-## *Genus species*
+## Hetre
 
-Mutations from sequences of the sequenced *Genus species*.
+Mutations from sequences of the ["Faux de Verzy"](https://en.wikipedia.org/wiki/Faux_de_Verzy).
+
+```{r detectMutationsVerzy, fig.cap="Detect mutations workflow for Angela."}
+include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/hetre/dag/dag.svg")
+```
 
 ## Project description
 
