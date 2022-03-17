@@ -25,154 +25,187 @@ The results of `multiQC` are available [here](/data/mutations/hetre/multiqc_repo
 ## Genome
 
 ```{r hetreGenomeData}
-genome <- read_tsv("data/mutations/hetre/Fagus_sylvatica_v3.fa.fai", 
-         col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
-  dplyr::select(name, length) %>% 
-  mutate(name = gsub("Fsylvatica_scaffold_", "", name)) %>% 
+genomes <- list(
+  "Ciron" = "data/mutations/hetre/Fagus_sylvatica_v3.fa.fai",
+  "Mutant" = "data/mutations/hetre/Fagus_sylvatica_mutant_v0.fa.fai",
+  "Revertant" = "data/mutations/hetre/Fagus_sylvatica_revertant_v0.fa.fai"
+) %>% lapply(read_tsv, col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  bind_rows(.id = "genome") %>% 
+  dplyr::select(genome, name, length) %>% 
   mutate(start = 0, end = length) %>% 
   dplyr::select(-length) %>%  
   mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
-coverage <- list("mutant" = "data/mutations/hetre/mutant.regions.bed", 
-     "revertant" = "data/mutations/hetre/revertant.regions.bed") %>% 
+coverages <- list(
+  "mutant_Mutant" = "data/mutations/hetre/mutant_on_Fagus_sylvatica_mutant_v0.regions.bed", 
+  "mutant_Revertant" = "data/mutations/hetre/mutant_on_Fagus_sylvatica_revertant_v0.regions.bed", 
+  "mutant_Ciron" = "data/mutations/hetre/mutant_on_Fagus_sylvatica_v3.regions.bed",
+  "revertant_Mutant" = "data/mutations/hetre/revertant_on_Fagus_sylvatica_mutant_v0.regions.bed", 
+  "revertant_Revertant" = "data/mutations/hetre/revertant_on_Fagus_sylvatica_revertant_v0.regions.bed", 
+  "revertant_Ciron" = "data/mutations/hetre/revertant_on_Fagus_sylvatica_v3.regions.bed"
+  ) %>% 
   lapply(vroom::vroom, col_names = c("chrom", "start", "stop", "coverage")) %>% 
   bind_rows(.id = "library") %>% 
-  mutate(chrom = gsub("Fsylvatica_scaffold_", "", chrom))
+  separate(library, c("library", "genome"))
 ```
 
 ```{r hetreGenomFig, fig.cap="Fagus sylvatica scaffolds ordered by size."}
-ggplot(genome, aes(reorder(name, end), end/10^6, fill = end > 10*10^6)) +
+ggplot(genomes, aes(reorder(name, end), end/10^6, fill = end > 10*10^6)) +
   geom_col() +
   coord_flip() +
   ylab("Length (mb)") + 
   xlab("Fagus sylvatica scaffolds ordered by size") +
-  scale_fill_discrete(">2Mb") +
+  scale_fill_discrete(">10Mb") +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
-  ggtitle(paste(nrow(genome), "scaffolds"), paste(nrow(filter(genome, end > 2*10^6)), "scaffolds >10Mb"))
+  facet_wrap(~ genome, scales = "free")
 ```
 
 ```{r}
-ggplot(coverage, aes(coverage)) +
+ggplot(coverages, aes(coverage)) +
   geom_histogram(fill = "lightgrey") +
   xlim(0, 200) +
-  facet_wrap(~ library) +
+  facet_grid(genome ~ library) +
   xlab("Mean coverage on a 10kb window") +
   geom_vline(aes(xintercept = coverage), col = "red", size = 1.2,
-             data = group_by(coverage, library) %>% 
-               summarise(coverage = mean(coverage))) +
+             data = group_by(coverages, genome, library) %>% 
+               summarise(coverage = median(coverage))) +
   geom_text(aes(label = paste0(round(coverage), "X"),
                 x = coverage - 15), y = 10000, col = "red",
-             data = group_by(coverage, library) %>% 
-               summarise(coverage = mean(coverage)))
+             data = group_by(coverages, genome, library) %>% 
+               summarise(coverage = median(coverage))) 
 ```
 
 
-```{r circosHetre, eval=F}
-png("save/hetreCircosCov.png", width = 1000, height = 1000)
-circos.initializeWithIdeogram(as.data.frame(filter(genome, end > 10*10^6)))
-circos.genomicTrack(filter(coverage, library == "mutant", 
-                           chrom %in% unique(filter(genome, end > 10*10^6)$name)) %>% 
-                      mutate(coverage = ifelse(coverage > 200, 200, coverage)) %>% 
-                      dplyr::select(-library) %>% 
-                      as.data.frame(), 
-                    panel.fun = function(region, value, ...) {
-                      circos.genomicLines(region, value, col = "red", ...)
-                    })
-circos.genomicTrack(filter(coverage, library == "revertant", 
-                           chrom %in% unique(filter(genome, end > 10*10^6)$name)) %>% 
-                      mutate(coverage = ifelse(coverage > 200, 200, coverage)) %>% 
-                      dplyr::select(-library) %>% 
-                      as.data.frame(), 
-                    panel.fun = function(region, value, ...) {
-                      circos.genomicLines(region, value, col = "blue", ...)
-                    })
-legend("bottomleft", pch = 16, col = c("blue", "red"), legend = c("revertant", "mutant"), bty = "n")
-dev.off()
+```{r g_name, eval=F}
+circoscov <- function(g_name, coverage, depth, file){
+  png(file, width = 1000, height = 1000)
+  subgenome <- filter(genomes, genome == g_name, end > coverage*10^6) %>% dplyr::select(-genome)
+  circos.initializeWithIdeogram(as.data.frame(subgenome))
+  circos.genomicTrack(filter(coverages, genome == g_name, library == "mutant", chrom %in% subgenome$name) %>% 
+                        mutate(coverage = ifelse(coverage > depth, depth, coverage)) %>% 
+                        dplyr::select(-library, -genome) %>% 
+                        as.data.frame(), 
+                      panel.fun = function(region, value, ...) {
+                        circos.genomicLines(region, value, col = "red", ...)
+                      })
+  circos.genomicTrack(filter(coverages, genome == g_name, library == "revertant", chrom %in% subgenome$name) %>% 
+                        mutate(coverage = ifelse(coverage > depth, depth, coverage)) %>% 
+                        dplyr::select(-library, -genome) %>% 
+                        as.data.frame(), 
+                      panel.fun = function(region, value, ...) {
+                        circos.genomicLines(region, value, col = "blue", ...)
+                      })
+  legend("bottomleft", pch = 16, col = c("blue", "red"), legend = c("revertant", "mutant"), bty = "n")
+  text(0, 0, g_name, cex = 1.5)
+  dev.off()
+}
+circoscov("Ciron", 10, 200, "save/hetreCircosCovCiron.png")
+circoscov("Revertant", 5, 200, "save/hetreCircosCovRevertant.png")
+circoscov("Mutant", 5, 200, "save/hetreCircosCovMutant.png")
 ```
 
-```{r circosHetreg, fig.cap="Genome coverage on a 10-kb windows for mutant and revertant (scaffolds > 10-Mb)."}
-include_graphics("save/hetreCircosCov.png")
+```{r circosHetreCiron, fig.cap="Genome coverage on a 10-kb windows for mutant and revertant (scaffolds > 10-Mb) on the Ciron's genome."}
+include_graphics("save/hetreCircosCovCiron.png")
+```
+
+```{r circosHetreRevertant, fig.cap="Genome coverage on a 10-kb windows for mutant and revertant (scaffolds > 5-Mb) on the Revertant's genome."}
+include_graphics("save/hetreCircosCovRevertant.png")
+```
+
+```{r circosHetreMutant, fig.cap="Genome coverage on a 10-kb windows for mutant and revertant (scaffolds > 5-Mb) on the Mutant's genome."}
+include_graphics("save/hetreCircosCovMutant.png")
 ```
 
 ## Mutations
 
-```{r hetredb, cache=FALSE}
-mutant <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/hetre/mutant_vs_revertant.raw.sql") %>% tbl("mutations")
-revertant <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/hetre/revertant_vs_mutant.raw.sql") %>% tbl("mutations")
-```
-
-```{r hetrerawstats, eval=F}
-tally(mutant)
-tally(revertant)
-lapply(list(mutant = mutant, revertant = revertant),
-       function(tab)
-         mutate(tab, SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-         dplyr::select(CHROM, POS, SNV) %>% 
-         collect() %>% 
-         unique()) %>% bind_rows(.id = "library") %>% 
-  lazy_dt() %>% 
-  group_by(CHROM, POS) %>% 
-  filter(n() > 1) %>% 
-  dplyr::select(CHROM, POS, SNV) %>% 
-  unique()
-```
-
-We detected 1 143 611 raw candidate mutations in the mutant and 1 293 760 in the revertant, with only 372 219 in common.
-
 We used the following filters:
 
-* **Raw**
-    * The mutation is detected in both directions of the comparison mutant versus revertant
-    * A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
 * **Base**
-   * All filters from raw
+   * The mutation is detected in the revertant
+   * A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
    * A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 150, normal_DP >= 25.5, mutation_DP <= 150, mutation_DP >= 25.5`)
    * A minimum of 5 alternate allele count in the mutated sample (`mutation_altCountT1 >= 5`), corresponding to a minimum allele frequency of 0.1 for a mean coverage of 50X
+   * A maximum allelic frequency of 0.5 (`mutation_AF <= 0.5`)
 * **Robust**
    * All filters from base
    * `Strelka 2` automatic filtering (`Filter == "PASS"`)
    
+
 ```{r hetrerawfilter}
-raw <- lapply(list(mutant = mutant, revertant = revertant),
-       function(tab)
-         mutate(tab, SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>% 
-         filter(POS < 16468) %>%
-         collect() %>% 
-         unique()) %>% bind_rows(.id = "library") %>% 
-  lazy_dt() %>% 
-  group_by(CHROM, POS) %>% 
-  filter(n() > 1) %>% 
-  filter(normal_altCountT1 == min(normal_altCountT1)) %>% 
-  filter(normal_altCountT1 == 0)
-raw <- as_tibble(raw)
-base <- filter(raw, 
-               normal_DP <= 150, 
-               normal_DP >= 25.5, 
-               mutation_DP <= 150, 
-               mutation_DP >= 25.5, 
-               mutation_altCountT1 >= 5)
-robust <- base[base$FILTER == "PASS",] 
+mutations <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/hetre/mutations.raw.sql") %>% 
+  tbl("mutations") %>% 
+  filter(
+    tumor == "revertant",
+    normal_altCountT1 == 0,
+    normal_DP <= 150, 
+    normal_DP >= 25.5, 
+    mutation_DP <= 150, 
+    mutation_DP >= 25.5, 
+    mutation_altCountT1 >= 5,
+    mutation_AF <= 0.5 
+  ) %>% 
+  collect() %>% 
+  group_by(reference, CHROM, POS) %>% 
+  filter(n() == 1) %>% 
+  ungroup() %>% 
+  mutate(Filter = ifelse(FILTER == "PASS", "robust", "base"))
 ```
 
 ```{r hetremuttab}
-list(raw= raw, base = base, robust = robust) %>% 
-  lapply(nrow) %>% 
-  bind_rows(.id = "filter") %>% 
-  kable(cpation = "Number of mutations per filter")
+mutations %>% 
+  group_by(reference, Filter) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(reference ~ Filter) %>% 
+  kable(cpation = "Number of mutations per filter and reference", 
+        format.args = list(big.mark = " "))
 ```
 
 
 ```{r hetremutfig, fig.cap="Alleles-frequencies of filtered mutations in hetre."}
-list(raw= raw, base = base, robust = robust) %>% 
-  bind_rows(.id = "filter") %>% 
-  ggplot(aes(mutation_AF, col = filter), fill = NA) +
+ggplot(mutations, aes(mutation_AF, col = Filter), fill = NA) +
   geom_density(size = 1.3) +
-  scale_color_discrete("Filter") +
-  xlab("Allelic frequency")  
+  xlab("Allelic frequency")  +
+  facet_wrap(~ reference, nrow = 2) +
+  theme(legend.position = c(0.9, 0.1))
 ```
 
-```{r hetremuttabfull}
-mutate(base,filter = ifelse(SNV %in% robust$SNV, "robust", "base")) %>% 
-  mutate(CHROM = gsub("Fsylvatica_scaffold_", "", CHROM)) %>% 
-  dplyr::select(filter, library, CHROM, POS, REF, ALT, mutation_altCountT1, mutation_AF) %>% 
-  DT::datatable(colnames = c("filter", "library", "scaffold", "position", "ref", "alt", "copies", "allelic frequency"))
+```{r hetremutmutantfig, fig.cap="Mutation position on the Mutant's genome (scaffolds > 5-Mb) for base (blue) and robust (red) candidates."}
+ggplot(filter(genomes, genome == "Mutant", end > 5*10^6),
+       aes(x = name, xend = name)) +
+  geom_segment(aes(y = start, yend = end/10^6), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = mutation_AF),
+             data = filter(mutations, reference == "Fagus_sylvatica_mutant_v0", Filter == "robust") %>%
+               mutate(name = CHROM) %>%
+               filter(name %in% filter(genomes, genome == "Mutant", end > 5*10^6)$name)) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis("AF")
 ```
+
+```{r hetremutmutantfig2, fig.cap="Mutation position on the Mutant's genome (scaffolds > 5-Mb) for base (blue) and robust (red) candidates."}
+ggplot(filter(genomes, genome == "Mutant", end > 5*10^6),
+       aes(x = name, xend = name)) +
+  geom_segment(aes(y = start, yend = end/10^6), size = 3, col = "lightgrey") +
+  geom_point(aes(y = POS/10^6, col = mutation_AF),
+             data = filter(mutations, reference == "Fagus_sylvatica_mutant_v0", Filter == "robust") %>%
+               mutate(name = CHROM) %>%
+               filter(name %in% filter(genomes, genome == "Mutant", end > 5*10^6)$name) %>% 
+               filter(mutation_AF > 0.2)) +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis("AF")
+
+filter(mutations, reference == "Fagus_sylvatica_mutant_v0", Filter == "robust") %>%
+               mutate(name = CHROM) %>%
+               # filter(name %in% filter(genomes, genome == "Mutant", end > 5*10^6)$name) %>% 
+               filter(mutation_AF > 0.2)
+```
+
+
+```{r}
+filter(mutations, reference == "Fagus_sylvatica_mutant_v0", Filter == "robust") %>% 
+  dplyr::select(CHROM, POS, REF, ALT, mutation_altCountT1, mutation_refCountT1, normal_altCountT1, normal_refCountT1, mutation_AF) %>% 
+  DT::datatable(colnames = c("scf", "pos", "ref", "alt", "rev alt", "rev ref", "mut alt", "mut ref", "AF"))
+```
+

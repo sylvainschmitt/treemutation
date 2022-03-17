@@ -13,13 +13,13 @@ opts_chunk$set(
 ```
 
 ```{r renameAngela, eval=F, echo=F}
-sampleRef <- read_delim("data/mutations/angela/sampleRef.txt", delim = " ", 
+sampleRef <- read_delim("data/mutations/angela/prep/sampleRef.txt", delim = " ", 
                         col_names = c("idGeno", "id")) %>% 
   mutate(idGeno = gsub("DBR_", "", idGeno)) %>% 
   separate(id, c("sample", "leaf", "replicate"), remove = F)
-libraries <- read_table("data/mutations/angela/raw_libraries.txt", col_names = "files") %>% 
+libraries <- read_table("data/mutations/angela/prep/raw_libraries.txt", col_names = "files") %>% 
   separate(files, c("idGeno", "file"), "/")
-ids <- read_tsv("data/mutations/angela/idBordeaux.tsv") %>% 
+ids <- read_tsv("data/mutations/angela/prep/idBordeaux.tsv") %>% 
   filter(EspeceBotanique == "Dicorynia guianensis") %>% 
   filter(Tissu != "graines") %>% 
   dplyr::select(id, Branch, Replicate, Lumiere) %>% 
@@ -40,77 +40,80 @@ ids %>%
   mutate(library = paste0(sample, "_", 1:2)) %>% 
   mutate(file = paste0(library, ".fq.gz")) %>% 
   dplyr::select(sample, branch, light, leaf, library, file, branchOld, sampleOld, idOld, idGeno, fileOld) %>% 
-  write_tsv("data/mutations/angela/samples.tsv")
+  write_tsv("data/mutations/angela/prep/samples.tsv")
 
-read_tsv("data/mutations/angela/samples.tsv") %>% 
+read_tsv("data/mutations/angela/prep/samples.tsv") %>% 
   mutate(command = paste("mv", fileOld, file)) %>% 
   dplyr::select(command) %>% 
-  write_tsv("data/mutations/angela/rename.sh", col_names = F)
+  write_tsv("data/mutations/angela/prep/rename.sh", col_names = F)
 
-read_tsv("data/mutations/angela/samples.tsv") %>% 
+read_tsv("data/mutations/angela/prep/samples.tsv") %>% 
   mutate(command = paste("touch", file)) %>% 
   dplyr::select(command) %>% 
-  write_tsv("data/mutations/angela/dummy.sh", col_names = F)
+  write_tsv("data/mutations/angela/prep/dummy.sh", col_names = F)
 ```
 
 # Mutations Angela
 
 This chapter describes the analyses of Angela mutations currently done in the the [`angela` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/angela).
 
-## Processing
-
-**Results below are preliminary.**
-
-To produce robust results we will proceed as follow:
-
-* Detect all heterozygous sites by joint-genotyping allowing a maximum of 1 missing library
-* Detect all raw mutations in T2, T3, T4 with all cross comparisons
-* Detect all raw mutations in all leaves compared to T2
-* Remove all heterozygous sites from raw mutations
-* Remove all raw cambium mutations from leaf raw mutations without heterozygous sites
-* Test independently each filter on each cambium and leaf library
-* Obtain a robust dataset
-* Explore shared mutations across leaves, tips and branches
-
 ## Quality check
 
-The results of multiQC are available for the haplotypes HS1 [here](data/mutations/angela/multiqc_report_HS1.html) and HS2 [here](data/mutations/angela/multiqc_report_HS2.html).
+The results of multiQC are available for the haplotypes HS1 [here](data/mutations/angela/qc/multiqc_report_HS1.html) and HS2 [here](data/mutations/angela/qc/multiqc_report_HS2.html). They globally all gave a green light for subsequent analyses.
 
 ## Genome
 
+We compared the two haplophases and chose HS1 for contiguity and length (Fig. \@ref(fig:AngelaGenomFig) and Fig. \@ref(fig:AngelaBusco)) as well as mean coverage and homogeneity (Fig. \@ref(fig:circosHS1g)).
+
 ```{r AngelaGenomeData}
-hs1 <- read_tsv("data/mutations/angela/Dgu_HS1_HYBRID_SCAFFOLD.fa.fai", 
+hs1 <- read_tsv("data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.fa.fai", 
          col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
   dplyr::select(name, length) %>% 
   mutate(name = gsub("Super-Scaffold_", "", name)) %>% 
   mutate(start = 0, end = length) %>% 
   dplyr::select(-length) %>%  
   mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
-hs2 <- read_tsv("data/mutations/angela/Dgu_HS2_HYBRID_SCAFFOLD.fa.fai", 
+hs2 <- read_tsv("data/mutations/angela/genome/Dgu_HS2_HYBRID_SCAFFOLD.fa.fai", 
          col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
   dplyr::select(name, length) %>% 
   mutate(name = gsub("Super-Scaffold_", "", name)) %>% 
   mutate(start = 0, end = length) %>% 
   dplyr::select(-length) %>%  
   mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
-gc_hs1 <- vroom::vroom("data/mutations/angela/Dgu_HS1_HYBRID_SCAFFOLD.gc", skip = 1,
+gc_hs1 <- vroom::vroom("data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.gc", skip = 1,
              col_names = c("chrom", "start", "stop", "AT", "GC", "A", "C", "G", "T", "N", "other", "length")) %>% 
   mutate(pos = start + 500) %>% 
   mutate(chrom = gsub("Super-Scaffold_", "", chrom))
-gc_hs2 <- vroom::vroom("data/mutations/angela/Dgu_HS2_HYBRID_SCAFFOLD.gc", skip = 1,
+gc_hs2 <- vroom::vroom("data/mutations/angela/genome/Dgu_HS2_HYBRID_SCAFFOLD.gc", skip = 1,
              col_names = c("chrom", "start", "stop", "AT", "GC", "A", "C", "G", "T", "N", "other", "length")) %>% 
   mutate(pos = start + 500) %>% 
   mutate(chrom = gsub("Super-Scaffold_", "", chrom))
-cov_hs1 <- vroom::vroom("data/mutations/angela/DS2_HS1.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
+cov_hs1 <- vroom::vroom("data/mutations/angela/genome/DS2_HS1.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
   mutate(chrom = gsub("Super-Scaffold_", "", chrom))
-cov_hs2 <- vroom::vroom("data/mutations/angela/DS2_HS2.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
+cov_hs2 <- vroom::vroom("data/mutations/angela/genome/DS2_HS2.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>% 
   mutate(chrom = gsub("Super-Scaffold_", "", chrom))
-busco_hs1 <- read_tsv("data/mutations/angela/short_summary.specific.viridiplantae_odb10.Dgu_HS1_HYBRID_SCAFFOLD_busco.txt",
+busco_hs1 <- read_tsv("data/mutations/angela/genome/short_summary.specific.viridiplantae_odb10.Dgu_HS1_HYBRID_SCAFFOLD_busco.txt",
          skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
   dplyr::select(-X1)
-busco_hs2 <- read_tsv("data/mutations/angela/short_summary.specific.viridiplantae_odb10.Dgu_HS2_HYBRID_SCAFFOLD_busco.txt",
+busco_hs2 <- read_tsv("data/mutations/angela/genome/short_summary.specific.viridiplantae_odb10.Dgu_HS2_HYBRID_SCAFFOLD_busco.txt",
          skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
   dplyr::select(-X1)
+covs_files <- list.files("data/mutations/angela/genome/dists/", full.names = T)
+names(covs_files) <- list.files("data/mutations/angela/genome/dists/")
+covs <- lapply(covs_files, read_tsv, col_names = c("chromosome", "coverage", "proportion"), cols(
+  chromosome = col_character(),
+  coverage = col_double(),
+  proportion = col_double()
+)) %>% 
+  bind_rows(.id = "file") %>% 
+  mutate(library = gsub(".mosdepth.global.dist.txt", "", file)) %>% 
+  filter(chromosome == "total")
+cov_lims <- covs %>% 
+  filter(proportion == 0.1 | proportion == 0.9 | proportion == 0.5) %>% 
+  group_by(library, proportion) %>% 
+  summarise(coverage = mean(coverage)) %>% 
+  mutate(proportion = recode(as.character(proportion), "0.1" = "high_cov", "0.9" = "low_cov", "0.5" = "med_cov")) %>% 
+  reshape2::dcast(library ~ proportion)
 ```
 
 ```{r AngelaGenomFig, fig.cap="Anchored scaffolds size-distribution for haplotypes HS1 and HS2 in Angela's genome."}
@@ -139,6 +142,17 @@ list(HS1 = busco_hs1, HS2 = busco_hs2) %>%
   geom_text(aes(y = N, label = N), col = "white", position = position_stack(vjust = .5)) +
   scale_y_sqrt() +
   theme(axis.title.x = element_blank())
+```
+
+```{r AngelaCovs, fig.cap="Coverage distribution. Distribution of the number of locations in the reference genome with a given depth of coverage."}
+ggplot(covs, aes(coverage, proportion*100, col = library)) +
+  geom_line() +
+  xlim(0, 500) +
+  geom_hline(yintercept = 10, col = "red", linetype = "dashed") +
+  geom_hline(yintercept = 90, col = "red", linetype = "dashed") +
+  scale_color_discrete("") + 
+  xlab("Coverage (X)") +
+  ylab("% of base in the genome with at least X reads")
 ```
 
 ```{r circosHS1, eval=F}
@@ -188,230 +202,421 @@ include_graphics("save/AngelaCircosHS1CovGC.png")
 include_graphics("save/AngelaCircosHS2CovGC.png")
 ```
 
-## Trunk
+## Heterozygosity
+
+We used k-mer analyses (21-mers) using `jellyfish` and the `GenomeScope` to estimate genetic diversity $\pi=0.901%$ (Fig. \@ref(fig:genomescopeAngela)).
+**Should I also estimate non-synonymous diversity with ORF annotation using `transdecoder` and `SNPdat` (https://phdpages.netlify.app/6b189d4142e8224bff99e28abd11cbfdd50c51b1/symcapture/annotation.html#synonymy)?**
+We detected and filtered SNPs as follow:
+
+* Raw=5M : raw result from `GATK HaplotypeCaller + GenomicsDBImport + GenotypeGVCFs`
+* Biallelic=5.3M : biallelic sites with `bcftools`
+* SNP=4.7M : SNPs with `GATK`
+* Filtered=3.85M : SNPs with QUAL < 30, QD < 2, FS > 60, SOR > 3 using `GATK`
+* Non-missing=3.84M : SNPs in all genotypes and individuals with `plink`
+* Shared=3.84M : shared SNPs by at least 32 out of 33 individuals with  `bcftools`
+
+```{r genomescopeAngela, fig.cap="GenomeScope Profile. Full results here: http://genomescope.org/analysis.php?code=ayEfgONEP1cFWw2yjhfb."}
+knitr::include_graphics("data/mutations/angela/hz/genomescope.png")
+```
+
+## Mutations
+
+### Raw
+
+We obtained between 292 and 407k candidates per library.
 
 ```{r, cache=FALSE}
-trunk <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/angela/trunk_raw_mutations.sql") %>% tbl("mutations")
+trunk <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/angela/raw/cambium_nonhz_mutations.sql") %>% tbl("mutations")
+leaf <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/angela/raw/leaf_nonhz_mutations.sql") %>% tbl("mutations")
 ```
 
 ```{r, eval=F}
-t <- trunk %>% 
-  dplyr::select(tumor, CHROM, POS) %>% 
-  collect() %>% 
+t <- bind_rows(collect(trunk), collect(leaf)) %>% 
+  dplyr::select(tumor, CHROM, POS) %>%
   group_by(tumor) %>% 
   unique() %>% 
   summarise(N = n())
-write_tsv(t, "data/mutations/angela/trunk_raw_mutations.stats")
+write_tsv(t, "data/mutations/angela/raw/raw_mutations.stats")
 ```
 
-```{r nmutTrunkRawTab}
-read_tsv("data/mutations/angela/trunk_raw_mutations.stats") %>% 
-  kable(caption = "Number of raw mutations per cambium sample.", format.args = list(big.mark = " "))
+```{r nmutRawTab}
+read_tsv("data/mutations/angela/raw/raw_mutations.stats") %>% 
+  mutate(sample = str_match_all(tumor, "[A-Z]+"), repetition = str_match_all(tumor, "[0-9]+")) %>% 
+  unnest() %>% 
+  mutate(repetition = as.numeric(repetition)) %>% 
+  mutate(repetition = ifelse(sample == "T", repetition - 1, repetition)) %>% 
+  reshape2::dcast(sample ~ repetition, value.var = "N") %>% 
+  kable(caption = "Number of raw mutations per library.", format.args = list(big.mark = " "))
 ```
 
-We filtered mutations with a robust filters, adjusting the coverage to the obtained variation of coverages all libraries:
+### Filters
 
-* A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 360, normal_DP >= 50, mutation_DP <= 360, mutation_DP >= 50`)
-* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
-* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
-* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
-* `Strelka 2` automatic filtering (`Filter == PASS`)
+We tested independantly the effect of 4 filters and look their effect on (1) the percentage kept, (2) the distribution of allelic frequencies, and (3) the overlap between filters:
 
-```{r mutTrunkFiltered}
-trunk_mutations <- trunk %>% 
-  filter(normal_DP <= 360, normal_DP >= 50) %>%
-  filter(mutation_DP <= 360, mutation_DP >= 50) %>% 
+1. **NAC**: a null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
+1. **DP**: a read depth for the two sample between the 10th quantile and the 90th quantile of the coverage of the mutated library (`normal_DP <= high_cov, normal_DP >= low_cov, mutation_DP <= high_cov, mutation_DP >= low_cov`)
+1. **MAC**: a minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`), corresponding to a minimum allele frequency of 0.1 for a mean coverage of 100X
+1. **EVS**: `Strelka 2` automatic filtering based on the empiric variant score (`Filter == "PASS"`)
+
+**EVS** is the most stringent filter (Fig. \@ref(fig:pctmutfilter), 
+but only **MAC** filter changes the allele frequencies distribution (Fig. \@ref(fig:afmutfilter).
+Most filters share mutations, except **EVS** that rejected 36 813 mutations shared by the three others (Fig. \@ref(fig:vennmutfilter).
+And all filters except **MAC** are not sensitive to the library coverage (Fig. \@ref(fig:nmutcovfilter).
+We will thus use two filters for next steps:
+
+1. **base**: 
+    * **NAC**: a null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
+    * **DP**: a read depth for the two sample between the 10th quantile and the 90th quantile of the coverage of the mutated library (`normal_DP <= high_cov, normal_DP >= low_cov, mutation_DP <= high_cov, mutation_DP >= low_cov`)
+    * **MAC**: a minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`), corresponding to a minimum allele frequency of 0.1 for a mean coverage of 100X
+2. **evs**: 
+    * **base**
+    * **EVS**: `Strelka 2` automatic filtering based on the empiric variant score (`Filter == "PASS"`)
+
+```{r, eval=F}
+leaf_filters <- leaf %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  dplyr::select(tumor, SNV, normal_altCountT1, normal_DP, mutation_DP, mutation_altCountT1, FILTER, mutation_AF) %>% 
+  collect()
+trunk_filters <- trunk %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  dplyr::select(tumor, SNV, normal_altCountT1, normal_DP, mutation_DP, mutation_altCountT1, FILTER, mutation_AF) %>% 
+  collect()
+bind_rows(leaf_filters, trunk_filters) %>% 
+  left_join(rename(cov_lims, tumor = library)) %>% 
+  mutate(NAC = (normal_altCountT1 == 0)) %>% 
+  mutate(DP = (normal_DP <= high_cov &
+                         normal_DP >= low_cov &
+                         mutation_DP <= high_cov &
+                         mutation_DP >= low_cov)) %>% 
+  mutate(MAC = (mutation_altCountT1 >= 10)) %>% 
+  mutate(EVS = (FILTER == "PASS")) %>% 
+  select(tumor, SNV, mutation_AF, NAC, DP, MAC, EVS) %>% 
+  reshape2::melt(c("tumor", "SNV", "mutation_AF"), variable.name = "filter") %>% 
+  vroom::vroom_write("data/mutations/angela/filters/filters_mutations.stats")
+vroom::vroom("data/mutations/angela/filters/filters_mutations.stats") %>% 
+  group_by(tumor, filter, value) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(tumor + filter ~ value, value.var = 'N') %>% 
+  mutate(percentage = `TRUE`/(`TRUE`+`FALSE`)*100) %>% 
+  vroom::vroom_write("data/mutations/angela/filters/filters_mutations.pct")
+g <- vroom::vroom("data/mutations/angela/filters/filters_mutations.stats") %>% 
+  ggplot(aes(mutation_AF, col = value)) +
+  geom_density() +
+  scale_x_sqrt() +
+  facet_wrap(~ filter) +
+  xlab("Mutation allelic frequency")
+ggsave(g, filename = "data/mutations/angelafilters//filters_mutations_af.png", width = 4, height = 4, bg = "white")
+t <- vroom::vroom("data/mutations/angela/filters/filters_mutations.stats") %>% 
+  filter(value == TRUE) %>%
+  dplyr::select(-mutation_AF, -tumor, -value) %>% 
+  unique() 
+g <- ggvenn::ggvenn(lapply(split(t, t$filter), `[[`, "SNV"), show_percentage = F)
+ggsave(g, filename = "data/mutations/angela/filters/filters_mutations_venn.png", bg = "white")
+```
+
+```{r pctmutfilter, fig.cap="Percentage of kept mutations per filter."}
+vroom::vroom("data/mutations/angela/filters/filters_mutations.pct") %>% 
+  ggplot(aes(filter, percentage)) +
+  geom_boxplot() +
+  geom_jitter(aes(col = tumor)) +
+  scale_y_log10() +
+  scale_color_discrete("") +
+  xlab("Filter") + ylab("Percentage of mutations kept")
+```
+
+```{r afmutfilter, fig.cap="Alleles frequencies of filtered mutations.", fig.width=4, fig.height=4}
+knitr::include_graphics("data/mutations/angela/filters/filters_mutations_af.png")
+```
+
+```{r vennmutfilter, fig.cap="Filtered mutations sharing across filters.", fig.width=4, fig.height=4}
+knitr::include_graphics("data/mutations/angela/filters/filters_mutations_venn.png")
+```
+
+```{r nmutcovfilter, fig.cap="Link between the number of detected mutations and the coverage across samples depending on the filter used."}
+vroom::vroom("data/mutations/angela/filters/filters_mutations.pct")  %>%  
+  left_join(rename(cov_lims, tumor = library)) %>% 
+  group_by(tumor, filter) %>% 
+  ggplot(aes(med_cov, `TRUE`, col = filter, label = tumor)) +
+  geom_point() +
+  ggrepel::geom_text_repel() +
+  geom_smooth(se = F, method = "lm") +
+  scale_y_log10() +
+  xlab("Coverage") + ylab("Number of mutations")
+```
+
+### Cambium
+
+```{r, eval=F}
+trunk %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
   filter(normal_altCountT1 == 0) %>% 
   filter(mutation_altCountT1 >= 10) %>% 
-  filter(mutation_AF <= 0.5) %>% 
-  filter(FILTER == "PASS") %>% 
   collect() %>% 
-  group_by(tumor, CHROM, POS, REF, ALT) %>% 
-  summarise_at("mutation_AF", mean) %>% 
-  mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS)))
+  left_join(rename(cov_lims, tumor = library)) %>% 
+  filter(normal_DP <= high_cov &
+                         normal_DP >= low_cov &
+                         mutation_DP <= high_cov &
+                         mutation_DP >= low_cov) %>% 
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, -high_cov, -low_cov, -med_cov) %>% 
+  group_by(tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median) %>% 
+  vroom::vroom_write("data/mutations/angela/filters/trunk_mutations.tsv")
 ```
+
+Only 19 to 668 mutations passed evs filtering across samples (Tab. \@ref(tab:nmutTrunkFiltTab)).
+Most of mutations are low frequency, with an enrichment of AF<0.15 in T3 (Fig. \@ref(fig:afTrunkFiltFig)).
+Only a few mutations are shared by cambium samples, between T2 and T3 and between T3 and T4 (Fig. \@ref(fig:vennTrunkFiltFig)).
 
 ```{r nmutTrunkFiltTab}
-trunk_mutations %>% 
-  group_by(tumor) %>% 
+vroom::vroom("data/mutations/angela/filters/trunk_mutations.tsv") %>%  
+  dplyr::select(tumor, SNV, Filter) %>% 
+  unique() %>% 
+  group_by(tumor, Filter) %>% 
   summarise(N = n()) %>% 
-  kable(caption = "Number of filtered mutations per cambium.")
+  reshape2::dcast(tumor ~ Filter) %>% 
+  mutate(base = base + evs) %>% 
+  kable(caption = "Number of filtered mutations per cambium.")  
 ```
-
-
-The third sample (South) show a intriguing increase in low-frequency mutations.
 
 ```{r afTrunkFiltFig, fig.cap="Alleles-frequencies of filtered mutations in cambium samples."}
-trunk_mutations %>% 
+vroom::vroom("data/mutations/angela/filters/trunk_mutations.tsv") %>% 
   ggplot(aes(mutation_AF, col = tumor), fill = NA) +
   geom_density(size = 1.3) +
   scale_color_discrete("Sample") +
-  xlab("Allelic frequency")  
+  xlab("Allelic frequency")  +
+  facet_wrap(~ Filter) +
+  scale_x_sqrt()
 ```
-
-Only four mutations are shared by the three cambium samples.
 
 ```{r vennTrunkFiltFig, fig.cap="Filtered mutations sharing across cambium samples."}
-ggvenn::ggvenn(lapply(split(trunk_mutations, trunk_mutations$tumor), `[[`, "SNV"), show_percentage = F)
+trunk_mutations <- vroom::vroom("data/mutations/angela/filters/trunk_mutations.tsv")
+cowplot::plot_grid(
+  ggvenn::ggvenn(lapply(split(trunk_mutations, trunk_mutations$tumor), `[[`, "SNV"), show_percentage = F), 
+  ggvenn::ggvenn(lapply(split(filter(trunk_mutations, Filter == "evs"), filter(trunk_mutations, Filter == "evs")$tumor), `[[`, "SNV"), show_percentage = F),
+  labels = c("base", "evs")
+)
 ```
 
-```{r genomeTrunkFiltFig, fig.cap="Filtered mutations of cambium samples across the genome (scf>1Mb)."}
-ggplot(filter(genome, length > 1*10^6), aes(x = CHROM, xend = CHROM)) +
-  geom_segment(aes(y = start, yend = stop), size = 3, col = "lightgrey") +
-  geom_point(aes(y = POS/10^6, col = tumor, size = (tumor == "T2_T3_T4")),
-             data = trunk_mutations %>% 
-               group_by(SNV, CHROM, POS) %>% 
-               arrange(SNV) %>% 
-               summarise(tumor = paste0(tumor, collapse = "_"))) +
-  coord_flip() +
-  ylab("Position (Mb)") +
-  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
-  scale_size_manual(guide = "none", values = c(1,4))
-```
-
-## Leaf
-
-```{r, cache=FALSE}
-leaf <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/angela/leaf_nontrunk_mutations.sql") %>% tbl("mutations")
-```
+### Leaf
 
 ```{r, eval=F}
-t <- leaf %>% 
-  dplyr::select(tumor, CHROM, POS) %>% 
-  collect() %>% 
-  group_by(tumor) %>% 
-  unique() %>% 
-  summarise(N = n())
-write_tsv(t, "data/mutations/angela/leaf_nontrunk_mutations.stats")
-```
-
-
-```{r nmutLeafRawTab}
-read_tsv("data/mutations/angela/leaf_nontrunk_mutations.stats") %>% 
-  mutate(branch = str_sub(tumor, 1, 1), leaf = str_sub(tumor, 2, 3)) %>% 
-  reshape2::dcast(branch ~ leaf, value.var = "N") %>% 
-  kable(caption = "Number of raw mutations per leaf sample.", format.args = list(big.mark = " "))
-```
-
-We filtered mutations with a robust filters, adjusting the coverage to the obtained variation of coverages all libraries:
-
-* A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 360, normal_DP >= 50, mutation_DP <= 360, mutation_DP >= 50`)
-* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
-* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
-* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
-* `Strelka 2` automatic filtering (`Filter == PASS`)
-
-
-```{r mutLeafFiltered}
-leaf_mutations <- leaf %>% 
-  filter(normal_DP <= 360, normal_DP >= 50) %>%
-  filter(mutation_DP <= 360, mutation_DP >= 50) %>% 
+leaf %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
   filter(normal_altCountT1 == 0) %>% 
   filter(mutation_altCountT1 >= 10) %>% 
-  filter(mutation_AF <= 0.5) %>% 
-  filter(FILTER == "PASS") %>% 
   collect() %>% 
-  group_by(tumor, CHROM, POS, REF, ALT) %>% 
-  summarise_at("mutation_AF", mean) %>% 
-  mutate(branch = str_sub(tumor, 1, 1), tip = str_sub(tumor, 2, 2), leaf = str_sub(tumor, 3, 3)) %>% 
-  mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS)))
+  left_join(rename(cov_lims, tumor = library)) %>% 
+  filter(normal_DP <= high_cov &
+                         normal_DP >= low_cov &
+                         mutation_DP <= high_cov &
+                         mutation_DP >= low_cov) %>% 
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, -high_cov, -low_cov, -med_cov) %>% 
+  group_by(tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median) %>% 
+  mutate(branch = str_sub(tumor, 1, 1), tip = str_sub(tumor, 2, 2), leaf = str_sub(tumor, 3, 3)) %>%
+  vroom::vroom_write("data/mutations/angela/filters/leaf_mutations.tsv")
 ```
 
-```{r nmutLeafFiltTab}
-leaf_mutations %>% 
-  group_by(tumor, branch, tip, leaf) %>% 
+Only 28 to 63 mutations passed evs filtering across samples (Fig. \@ref(fig:nmutTrunkFiltTab)).
+Most of mutations are low frequency (Fig. \@ref(fig:afLeafFiltFig)).
+Most of mutations are not shared by biological replicates (Fig. \@ref(fig:vennLeafFiltevsFig) and Fig. \@ref(fig:vennLeafFiltbaseFig)).
+
+```{r nmutLeafFiltTab, fig.cap="Number of filtered mutations per leaf."}
+vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  group_by(tumor, branch, tip, leaf, Filter) %>% 
   summarise(N = n()) %>% 
-  reshape2::dcast(branch ~ tip + leaf, value.var = "N") %>% 
-  kable(caption = "Number of filtered mutations per leaf.")
+  ggplot(aes(branch, N, fill = tip)) +
+  geom_boxplot() +
+  facet_wrap(~ Filter, scales = "free_x") +
+  coord_flip() +
+  ylab("Number of mutations") + xlab("Branch")
 ```
-
 
 ```{r afLeafFiltFig, fig.cap="Alleles-frequencies of filtered mutations in leaf samples."}
-leaf_mutations %>% 
+vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
   ggplot(aes(mutation_AF, col = tumor), fill = NA) +
   geom_density(size = 1.3) +
   scale_color_discrete("Sample") +
-  xlab("Allelic frequency")  
+  xlab("Allelic frequency") +
+  facet_wrap(~ Filter) 
 ```
 
-Most of mutations are shared by biological replicates.
-
-```{r vennLeafFiltFig, fig.cap="Filtered mutations sharing across leaf samples within tips.", fig.height=8}
+```{r vennLeafFiltevsFig, fig.cap="Filtered mutations sharing across leaf samples within tips for evs filtering.", fig.height=8}
+t <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% filter(Filter == "evs")
 g1 <- lapply(LETTERS[1:5], function(B)
-  ggvenn::ggvenn(lapply(split(filter(leaf_mutations, branch == B, tip == "S"),
-                              filter(leaf_mutations, branch == B, tip == "S")$tumor),
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "S"),
+                              filter(t, branch == B, tip == "S")$tumor),
                         `[[`, "SNV"), show_percentage = F)
 )
 g2 <- lapply(LETTERS[1:5], function(B)
-  ggvenn::ggvenn(lapply(split(filter(leaf_mutations, branch == B, tip == "L"),
-                              filter(leaf_mutations, branch == B, tip == "L")$tumor),
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "L"),
+                              filter(t, branch == B, tip == "L")$tumor),
                         `[[`, "SNV"), show_percentage = F)
 )
 cowplot::plot_grid(plotlist = c(g1,g2))
 ```
 
-## Tip
+```{r vennLeafFiltbaseFig, fig.cap="Filtered mutations sharing across leaf samples within tips for base filtering.", fig.height=8}
+t <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv")
+g1 <- lapply(LETTERS[1:5], function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "S"),
+                              filter(t, branch == B, tip == "S")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+g2 <- lapply(LETTERS[1:5], function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "L"),
+                              filter(t, branch == B, tip == "L")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+cowplot::plot_grid(plotlist = c(g1,g2))
+```
 
-We further filtered mutations shared by all leaves in each tip.
+### Tip
+
+We further filtered mutations shared by at least 2 leaves or all leaves in each tip (filters base2, base3, evs2 and evs3).
+Only 1 to 15 evs3-filtered mutations where shared between all leaves across tips (Tab. \@ref(tab:nmutTipFiltTab))).
+Most mutations, even shared, have low frequencies (Fig. \@ref(fig:afTipFiltFig))!
+Only a few mutations are shared by tips within a branch (Fig. \@ref(fig:vennTipFiltFig)).
 
 ```{r mutTipFiltered}
-tip_mutations <- leaf_mutations %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
-  filter(n() == 3) %>% 
+tip_mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  group_by(branch, tip, SNV, CHROM, POS, REF, ALT) %>% 
+  mutate(N = n()) %>% 
+  filter(N > 1) %>% 
+  arrange(SNV) %>% 
   dplyr::select(-leaf) %>% 
   mutate(tumor = paste0(branch, tip)) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT, tumor, branch, tip) %>% 
-  summarise(mutation_AF = mean(mutation_AF))
-write_tsv(tip_mutations, "data/mutations/angela/tip_mutations.tsv")
+  group_by(CHROM, POS, SNV, REF, ALT, 
+           tumor, branch, tip, N) %>% 
+  summarise(mutation_AF = mean(mutation_AF),
+            Filter = ifelse("evs" %in% Filter, "evs", "base")) %>% 
+  mutate(Filter = paste0(Filter, N)) %>% 
+  dplyr::select(-N) %>% 
+  ungroup()
 ```
+
+```{r, eval=F}
+library(vcfR)
+# mutations as tsv
+write_tsv(tip_mutations, "data/mutations/angela/tip_mutations.tsv")
+# mutations back to vcf
+ref_mut_vcf <- read.vcfR("data/mutations/angela/raw/AL1_vs_T2.raw.vcf")
+header <- ref_mut_vcf@meta
+header[64] <- "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+header[65] <- "##FILTER=<ID=base2,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (10th-90th), and mutations sharing across leaves (at least 2).\">"
+header[66] <- "##FILTER=<ID=base3,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (10th-90th), and mutations sharing across leaves (at least 3).\">"
+header[67] <- "##FILTER=<ID=evs2,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (10th-90th), empiric variant score of Strelka2, and mutations sharing across leaves (at least 2).\">"
+header[68] <- "##FILTER=<ID=evs3,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (10th-90th), empiric variant score of Strelka2, and mutations sharing across leaves (at least 3).\">"
+header <- header[-c(69:88)]
+fix <- tip_mutations %>% 
+  mutate(QUAL = NA, INFO=NA) %>% 
+  dplyr::rename(ID = SNV, FILTER = Filter) %>% 
+  mutate(FITLER1 = str_match_all(FILTER, "[a-z]+"), FITLER2 = str_match_all(FILTER, "[0-9]+")) %>% 
+  unnest() %>% 
+  group_by(CHROM, POS, ID, REF, ALT, QUAL, INFO) %>% 
+  summarise(FITLER2 = max(FITLER2),
+            FITLER1 = ifelse("evs" %in% FITLER1, "evs", "base")) %>% 
+  ungroup() %>% 
+  mutate(FILTER = paste0(FITLER1, FITLER2)) %>% 
+  dplyr::select(-FITLER1, FITLER2) %>% 
+  dplyr::select(CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO) %>% 
+  arrange(CHROM, POS) %>% 
+  mutate(POS = as.character(POS))
+head(as.matrix(fix))
+gt <- dplyr::select(tip_mutations, SNV) %>% 
+  mutate(tumor = list(unique(tip_mutations$tumor))) %>% 
+  unnest() %>% 
+  left_join(select(tip_mutations, SNV, tumor, Filter)) %>% 
+  mutate(GT = ifelse(is.na(Filter), "0/0", "0/1")) %>% 
+  mutate(FORMAT = "GT") %>% 
+  dplyr::select(SNV, FORMAT, GT, tumor) %>% 
+  unique() %>% 
+  reshape2::dcast(SNV + FORMAT ~ tumor, value.var = "GT") %>% 
+  dplyr::rename(ID = SNV)
+gt <- left_join(dplyr::select(fix, ID), gt) %>% 
+  dplyr::select(-ID)
+head(as.matrix(gt))
+mutation_vcf <- ref_mut_vcf
+mutation_vcf@meta <- header
+mutation_vcf@fix <- as.matrix(fix)
+mutation_vcf@gt <- as.matrix(gt)
+write.vcf(mutation_vcf, "data/mutations/angela/filters/filtered_tip_mutations.vcf.gz")
+
+
+```
+
 
 ```{r nmutTipFiltTab}
 tip_mutations %>%
-  group_by(tumor, branch, tip) %>%
+  group_by(tumor, branch, tip, Filter) %>%
   summarise(N = n()) %>%
-  reshape2::dcast(branch ~ tip, value.var = "N") %>%
-  kable(caption = "Number of shared mutations per tip.")
+  reshape2::dcast(branch + tip ~ Filter, value.var = "N") %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  mutate(base2 = base2 + base3 + evs2, evs2 = evs2 + evs3, base3 = base3 + evs3) %>% 
+  kable(caption = "Number of shared mutations per tip.")  
 ```
-
-Interestingly, shared mutations have higher allele frequency, increasing their chance to be transmitted to all cells in the meristem. But few mutations with low allele frequency are still shared across leaves !
 
 ```{r afTipFiltFig, fig.cap="Mean alleles-frequencies of filtered mutations shared in each tip."}
 tip_mutations %>%
-  ggplot(aes(mutation_AF, col = tumor), fill = NA) +
-  geom_density(size = 1.3) +
+  ggplot(aes(mutation_AF, fill = tumor), fill = NA) +
+  geom_histogram(position = "dodge") +
   scale_color_discrete("Sample") +
-  xlab("Allelic frequency")
+  xlab("Allelic frequency") +
+  facet_wrap(~ Filter, scales = "free_y")  
 ```
 
-Only a few mutations are shared by tips within a branch.
-
-```{r vennTipFiltFig, fig.cap="Sharing of filtered mutations shared in each tip across branches."}
-g <- lapply(LETTERS[1:5], function(B)
+```{r vennTipFiltFig, fig.cap="Sharing of filtered mutations shared in each tip across branches. The different lines correspond in order tpo filters base2, evs2, base3, evs3."}
+g.base2 <- lapply(LETTERS[1:5], function(B){
   ggvenn::ggvenn(lapply(split(filter(tip_mutations, branch == B),
                             filter(tip_mutations, branch == B)$tumor),
                         `[[`, "SNV"), show_percentage = F)
-)
-cowplot::plot_grid(plotlist = g)
+})
+g.base3 <- lapply(LETTERS[1:5], function(B){
+  t <- filter(tip_mutations, Filter %in% c("base3", "evs3"))
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B),
+                            filter(t, branch == B)$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+})
+g.evs2 <- lapply(LETTERS[1:5], function(B){
+  t <- filter(tip_mutations, Filter %in% c("evs2", "evs3"))
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B),
+                            filter(t, branch == B)$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+})
+g.evs3 <- lapply(LETTERS[1:5], function(B){
+  t <- filter(tip_mutations, Filter == "evs3")
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B),
+                            filter(t, branch == B)$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+})
+cowplot::plot_grid(plotlist = c(g.base2, g.evs2, g.base3, g.evs3))  
 ```
 
-## Branch
+### Branch
 
-We further filtered mutations shared by all tips in each branch.
+We further filtered mutations shared by all tips in each branch (still using filters base2, base3, evs2 and evs3).
+Only 0 to 4 evs3-filtered mutations where shared between all leaves across tips (Tab. \@ref(tab:nmutBranchFiltTab))).
+Most mutations, even shared, have low frequencies (Fig. \@ref(fig:afBranchFiltFig))!
+Only a few mutations are shared by tips within a branch (Fig. \@ref(fig:vennTipFiltFig)), **but 6 mutations are shared across the crown with filter base2**.
 
 ```{r mutBranchFiltered}
 branch_mutations <- tip_mutations %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  group_by(branch, SNV, CHROM, POS, REF, ALT) %>% 
   filter(n() == 2) %>% 
   dplyr::select(-tip) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT, branch) %>% 
-  summarise(mutation_AF = mean(mutation_AF))
+  group_by(SNV, CHROM, POS, REF, ALT, branch, Filter) %>% 
+  summarise(mutation_AF = mean(mutation_AF)) 
 ```
-
 ```{r nmutBranchFiltTab}
 branch_mutations %>%
-  group_by(branch) %>%
+  group_by(branch, Filter) %>%
   summarise(N = n()) %>% 
-  kable(caption = "Number of shared mutations per tip.")
+  reshape2::dcast(branch ~ Filter) %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  mutate(base2 = base2 + base3 + evs2, evs2 = evs2 + evs3, base3 = base3 + evs3) %>% 
+  kable(caption = "Number of shared mutations per tip.") 
 ```
 
 ```{r afBranchFiltFig, fig.cap="Mean alleles-frequencies of filtered mutations shared in each tip."}
@@ -419,16 +624,30 @@ branch_mutations %>%
   ggplot(aes(mutation_AF, fill = branch), fill = NA) +
   geom_histogram(position = "dodge") +
   scale_color_discrete("Sample") +
-  xlab("Allelic frequency")
+  xlab("Allelic frequency") + 
+  facet_wrap(~Filter)
 ```
-Interestingly the only pairs of branches sharing mutations A-B and C-E are architecturally close. 
 
 ```{r vennBranchFiltFig, fig.cap="Sharing of filtered mutations shared in each branch in the whole tree."}
-ggvenn::ggvenn(lapply(split(branch_mutations,
-                            branch_mutations$branch),
+t <- branch_mutations
+g.base2 <- ggvenn::ggvenn(lapply(split(t,
+                            t$branch),
                         `[[`, "SNV"), show_percentage = F)
+t <- filter(branch_mutations, Filter %in% c("base3", "evs3"))
+g.base3 <- ggvenn::ggvenn(lapply(split(t,
+                            t$branch),
+                        `[[`, "SNV"), show_percentage = F)
+t <- filter(branch_mutations, Filter %in% c("evs2", "evs3"))
+g.evs2 <- ggvenn::ggvenn(lapply(split(t,
+                            t$branch),
+                        `[[`, "SNV"), show_percentage = F) 
+t <- filter(branch_mutations, Filter == "evs3")
+g.evs3 <- ggvenn::ggvenn(lapply(split(t,
+                            t$branch),
+                        `[[`, "SNV"), show_percentage = F) 
+cowplot::plot_grid(plotlist = list(g.base2, g.evs2, g.base3, g.evs3), labels = c("base2", "evs2", "base3", "evs3"))  
 ```
 
 ## Summary
 
-In summary, each leaf sample contained approximately 250,000 candidate mutations, resulting in 58 to 126 robust mutations with both high and low allelic frequencies. Most robust mutations were shared by leaves at the branch tips, resulting in 19 to 57 mutations shared by leaves at the tip of a branch with high average allelic frequency in all samples (but some low-frequency mutations persisted). Only 2 to 6 mutations were shared between the two tips of a branch with allelic frequency diversity. And of these, only 7 were shared within a pair of branches: 2 between A and B and 5 between C and E, highlighting the greater architectural proximity of these pairs of branches in the tree.
+<!-- In summary, each leaf sample contained approximately 250,000 candidate mutations, resulting in 58 to 126 robust mutations with both high and low allelic frequencies. Most robust mutations were shared by leaves at the branch tips, resulting in 19 to 57 mutations shared by leaves at the tip of a branch with high average allelic frequency in all samples (but some low-frequency mutations persisted). Only 2 to 6 mutations were shared between the two tips of a branch with allelic frequency diversity. And of these, only 7 were shared within a pair of branches: 2 between A and B and 5 between C and E, highlighting the greater architectural proximity of these pairs of branches in the tree. -->

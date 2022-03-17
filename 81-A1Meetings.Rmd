@@ -121,3 +121,20 @@
 * **Mutation detection**: continue with the plan
 * **Offspring genotyping**: meet with geneticists to discuss samples and techniques, dimensions of the assay.
 * **Data management**: discuss archiving with everybody, e.g. NCBI for raw genomic data, Zenodo for cleaned genomic data, GitHub for codes, what for the others (lidar) ?
+
+## 10/02 Carrotage
+
+*Patrick, Niklas, moi*
+
+* Jocelyn, Valentine, Patrick, Niklas?, me?, Olivier Brunaux?
+* 21-25/03
+* 3 days
+* Book climbers
+* Book 2 cars
+* Book accommodation in St-George or Regina
+* OM for me, Niklas and Jocelyn
+* Material
+    * carottage => Patrick
+    * climbing kit, ask Ilo
+    * Accupar
+    
