@@ -8,7 +8,6 @@ library(tidyverse)
 library(raster)
 library(leaflet)
 library(sf)
-knit_hooks$set(webgl = hook_webgl)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
@@ -18,8 +17,77 @@ opts_chunk$set(
 
 # Mutations rate
 
-> Evolution  of  mutation  rates(T5.1):  To  attempt  explaining  any  differences  in  observed  mutation  rates between  the  three  sequenced  species,  we  will  collect  data  from  the  literature  on  the  intra-individual accumulation of mutations (or somatic mutation rates) in plants and examine if a phylogenetic pattern (Soltis, Folk, & Soltis, 2019)can be observed after carefully ensuring the comparability of data considering the methods used in each study. (Soltis et al., 2019). We will then examine the evolution of gene families involved  in  UV  response  and  DNA  damage  tolerance  and  repair (Nakagawa  et  al.,  2011;  Oztas,  Selby, Sancar,  &  Adebali,  2018;  Ulm  &  Jenkins,  2015)and  any  other  relevant  pathways  to  explain  possible differences  in  the  rate  of  accumulation  of  mutations  between  plant  species,  and  the  three  sequenced species  in  particular.  Publically  available  data  on  the  same  gene  families  across  plant  lineages  will  be included (One Thousand Plant Transcriptomes Initiative, 2019). We will particularly address differences in gene  family  evolution  in  these  pathways    in  plants  with  different  life  history  traits  (e.g.  annual  plants, temperate trees).
-
 ```{r}
-include_graphics("https://i.pinimg.com/originals/e9/02/2c/e9022cd0abbf53461b6cdcafa10e4674.jpg")
+list("Angela" = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations.tsv"),
+     "Sixto" = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations.tsv")) %>% 
+  bind_rows(.id = "Tree") %>% 
+  mutate(Filter = recode(Filter, 
+                         "evs3" = list(c("base1", "evs1", "base2", "evs2", "base3", "evs3")),
+                         "evs2" = list(c("base1", "evs1", "base2", "evs2")),
+                         "evs1" = list(c("base1", "evs1")),
+                         "base2" = list(c("base1", "base2")),
+                         "base3" = list(c("base1", "base2", "base3"))
+  )) %>% 
+  unnest(Filter) %>% 
+  group_by(Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  group_by(Tree, Filter) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  ggplot(aes(mutation_AF, cummulated_mutations)) +
+  geom_line(aes(col = paste(Filter))) +
+  scale_y_log10() + scale_x_reverse() + scale_fill_discrete("Previsou estimate (per sample)") + scale_color_discrete(guide = "none") +
+  xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF") + facet_wrap(~ Tree)
 ```
+
+```{r }
+list("Angela" = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations.tsv"),
+     "Sixto" = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations.tsv")) %>% 
+  bind_rows(.id = "Tree") %>% 
+  mutate(Filter = recode(Filter, 
+                         "evs3" = list(c("base1", "evs1", "base2", "evs2", "base3", "evs3")),
+                         "evs2" = list(c("base1", "evs1", "base2", "evs2")),
+                         "evs1" = list(c("base1", "evs1")),
+                         "base2" = list(c("base1", "base2")),
+                         "base3" = list(c("base1", "base2", "base3"))
+  )) %>% 
+  unnest(Filter) %>% 
+  group_by(Tree, Filter, tumor) %>% 
+  summarise(mutations = n()) %>% 
+  ungroup() %>% 
+  bind_rows(
+    list("Angela" = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations.tsv"),
+         "Sixto" = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations.tsv")) %>% 
+      bind_rows(.id = "Tree") %>% 
+      filter(mutation_AF > 0.2) %>% 
+      mutate(Filter = recode(Filter, 
+                             "evs3" = list(c("base1", "evs1", "base2", "evs2", "base3", "evs3")),
+                             "evs2" = list(c("base1", "evs1", "base2", "evs2")),
+                             "evs1" = list(c("base1", "evs1")),
+                             "base2" = list(c("base1", "base2")),
+                             "base3" = list(c("base1", "base2", "base3"))
+      )) %>% 
+      unnest(Filter) %>% 
+      group_by(Tree, Filter, tumor) %>% 
+      summarise(mutations = n()) %>% 
+      ungroup() %>% 
+      mutate(Tree = recode(Tree, "Angela" = "Angela AF > 0.2", "Sixto" = "Sixto AF > 0.2"))
+  ) %>% 
+  bind_rows(data.frame(Tree = "Schmid-Siegert", tumor = "high", mutations = 17)) %>% 
+  bind_rows(data.frame(Tree = "Plomion", tumor = "high", mutations = 46)) %>% 
+  bind_rows(data.frame(Tree = "Hanlon", tumor = c("low", "high"), mutations = c(24,141))) %>% 
+  bind_rows(data.frame(Tree = "Wang", tumor = c("low", "high"), mutations = c(1,195))) %>% 
+  mutate(Filter = ifelse(is.na(Filter), list(c("base1", "evs1", "base2", "evs2", "base3", "evs3")), Filter)) %>% 
+  unnest(Filter) %>%
+  ggplot(aes(Tree, mutations, col = Tree)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  facet_wrap(~Filter) +
+  coord_flip() +
+  theme(legend.position = "bottom", axis.title.y = element_blank())
+```
+
+
+## Project description
+
+> Evolution  of  mutation  rates(T5.1):  To  attempt  explaining  any  differences  in  observed  mutation  rates between  the  three  sequenced  species,  we  will  collect  data  from  the  literature  on  the  intra-individual accumulation of mutations (or somatic mutation rates) in plants and examine if a phylogenetic pattern (Soltis, Folk, & Soltis, 2019)can be observed after carefully ensuring the comparability of data considering the methods used in each study. (Soltis et al., 2019). We will then examine the evolution of gene families involved  in  UV  response  and  DNA  damage  tolerance  and  repair (Nakagawa  et  al.,  2011;  Oztas,  Selby, Sancar,  &  Adebali,  2018;  Ulm  &  Jenkins,  2015)and  any  other  relevant  pathways  to  explain  possible differences  in  the  rate  of  accumulation  of  mutations  between  plant  species,  and  the  three  sequenced species  in  particular.  Publically  available  data  on  the  same  gene  families  across  plant  lineages  will  be included (One Thousand Plant Transcriptomes Initiative, 2019). We will particularly address differences in gene  family  evolution  in  these  pathways    in  plants  with  different  life  history  traits  (e.g.  annual  plants, temperate trees).

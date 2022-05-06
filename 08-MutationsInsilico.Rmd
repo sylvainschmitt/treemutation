@@ -1,9 +1,6 @@
 ```{r setupmutationsinsilico, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
@@ -99,6 +96,47 @@ stats %>%
 
 ```{r mutissf4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
 read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
+      mutate(type = recode(caller,    
+                         "mutect2" = "Cancer variant caller", 
+                         "freebayes" = "Generic caller", 
+                         "gatk" = "Generic caller", 
+                         "strelka2" = "Cancer variant caller",
+                         "somaticsniper" = "Cancer variant caller",
+                         "muse" = "Cancer variant caller",
+                         "varscan" = "Cancer variant caller"
+  )) %>% 
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  filter(C %in% c(25, 75, 150)) %>% 
+  mutate(C = paste0(C, "X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "75X", "150X"))) %>% 
+  dplyr::select(type, caller, C, AF, Recall, Precision) %>% 
+  reshape2::melt(c("type", "caller", "C", "AF")) %>% 
+  group_by(type, caller, C, AF, variable) %>% 
+  na.omit() %>% 
+  summarise(m = median(value), ll = min(value, na.rm = T), hh = max(value, na.rm = T)) %>% 
+  ggplot(aes(x = AF, col = caller, fill = caller)) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), alpha = 0.3, col = NA) +
+  geom_line(aes(y = m, linetype = type)) +
+  geom_point(aes(y = m), alpha = 0.5) +
+  facet_grid(C ~ variable) +
+  xlab("Allele frequency") +
+  ylab("") +
+  scale_color_brewer("", palette = "Paired") +
+  scale_fill_brewer("", palette = "Paired") +
+  theme(legend.position = "bottom") +
+  scale_linetype_manual("", values = c("dashed", "solid"), guide = guide_legend(nrow = 2))
+```
+
+```{r, eval=F}
+stat0 <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
     mutate(caller = recode(caller,    
                          "mutect2" = "Mutect2", 
                          "freebayes" = "freebayes", 
@@ -114,19 +152,34 @@ read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   dplyr::select(caller, C, AF, Recall, Precision) %>% 
   reshape2::melt(c("caller", "C", "AF")) %>% 
   group_by(caller, C, AF, variable) %>% 
+  summarise(m0 = median(value))
+stat1 <- read_tsv("data/mutations/insilico/stats.tsv") %>% 
+  dplyr::select(-mutationsfile) %>% 
+  mutate(callfile = gsub("results/mutations/N1000_R2_", "", callfile)) %>% 
+  mutate(callfile = gsub(".vcf", "", callfile)) %>% 
+  separate(callfile, c("AF", "NR", "REP", "caller"), "_") %>% 
+  mutate(AF = as.numeric(gsub("AF", "", AF))) %>% 
+  mutate(NR = as.character(gsub("NR", "", NR))) %>% 
+  mutate(REP = as.numeric(gsub("REP", "", REP))) %>% 
+  mutate(C = recode(NR, "166667" = "25X", "500000" = "75X", "1000000" = "150X")) %>% 
+  mutate(C = factor(C, levels = c("25X", "75X", "150X"))) %>%
+    mutate(caller = recode(caller,    
+                         "mutect2" = "Mutect2", 
+                         "freebayes" = "freebayes", 
+                         "gatk" = "GATK", 
+                         "strelka2" = "Strelka2", 
+                         "somaticsniper" = "Somatic Sniper", 
+                         "muse" = "MuSE",
+                         "varscan" = "VarScan"
+  )) %>% 
+  dplyr::select(caller, C, AF, Recall, Precision) %>% 
+  reshape2::melt(c("caller", "C", "AF")) %>% 
+  group_by(caller, C, AF, variable) %>% 
   na.omit() %>% 
-  summarise(m = median(value), q5 = quantile(value, 0.05), q95 = quantile(value, 0.95)) %>% 
-  # filter(C == "25X", AF == 0.35, caller == "Mutect2", variable == "Precision")
-  ggplot(aes(x = AF, col = caller, fill = caller)) +
-  geom_ribbon(aes(ymin = q5, ymax = q95), alpha = 0.3, col = NA) +
-  geom_line(aes(y = m)) +
-  geom_point(aes(y = m), alpha = 0.5) +
-  facet_grid(C ~ variable) +
-  xlab("Allele frequency") +
-  ylab("") +
-  scale_color_brewer("", palette = "Paired") +
-  scale_fill_brewer("", palette = "Paired") +
-  theme(legend.position = "bottom")
+  summarise(m1 = median(value))
+stat_cor <- left_join(stat0, stat1)
+cor.test(filter(stat_cor, variable == "Recall")$m0, filter(stat_cor, variable == "Recall")$m1)
+cor.test(filter(stat_cor, variable == "Precision")$m0, filter(stat_cor, variable == "Precision")$m1)
 ```
 
 ```{r mutissf5, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
@@ -378,6 +431,32 @@ l2 <- cowplot::get_legend(g2)
 
 cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(10,1,1))
 ```
+
+```{r}
+read_tsv("data/mutations/insilico/benchmarks.tsv") %>% 
+  separate(file, c("toola", "toolb")) %>% 
+  mutate(tool = paste(toola, toolb)) %>% 
+  group_by(tool) %>% 
+  mutate(tool = recode(tool,    
+                       "gatk mutect2" = "Mutect2", 
+                       "freebayes" = "freebayes", 
+                       "gatk genotypegvcfs" = "GATK GenotypeGVCFs", 
+                       "gatk haplotypecaller" = "GATK HaplotypeCaller", 
+                       "strelka2 N1000" = "Strelka2", 
+                       "somaticsniper N1000" = "Somatic Sniper", 
+                       "muse N1000" = "MuSE",
+                       "varscan N1000" = "VarScan"
+  )) %>% 
+  filter(tool %in% c("Mutect2", "freebayes", "GATK GenotypeGVCFs", "GATK HaplotypeCaller", 
+                      "Strelka2", "Somatic Sniper",  "MuSE", "VarScan")) %>% 
+  mutate(s = lubridate::as_datetime(s)) %>% 
+  group_by(tool) %>% 
+  ggplot(aes(tool, s)) +
+  geom_boxplot() +
+  coord_flip() +
+  xlab("") + ylab("Duration (mm:ss)")
+```
+
 
 ```{r, eval=F}
 read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 

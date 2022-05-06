@@ -138,3 +138,15 @@
     * climbing kit, ask Ilo
     * Accupar
     
+## 05/05 Sixto's results
+
+*Niklas, Myriam, Thibault, me*
+
+* Globally: don't follow archi, no signal in UVs, and the estimate gives a high # of low AF mutations + evidence the difficulty to estimate mutations # comparing with previous studies
+* Next steps: annotation (w transcripts, contact Christophe & Isabelle) & transmission (suggest a number of shared mutations in branches with position in the genome + ranking)
+* Meeting: schedule a meeting with everybody to discuss valorisation
+* 3 papaers: 2 genomes, 1 mutations
+* Save data
+* Follow mutations sharing along architecture (cell surfing idea)
+* Add architecture when comparing phylogenies
+* Add comparisons with oka if possible

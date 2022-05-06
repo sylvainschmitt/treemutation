@@ -98,7 +98,7 @@ overlapSfiltered <- overlapS %>%
 
 ```{r napoMutTab}
 overlapS %>% 
-  dplyr::select(Mutation, tumor, normal, REF, ALT, mutation_altCountT1, mutation_refCountT1,
+  dplyr::select(Mutation, tumor, normal, REF, ALT, mutation_altCountT2, mutation_refCountT2,
                 normal_altCountT1, normal_refCountT1, mutation_AF) %>% 
   kable(caption = "Overlap between candidate mutations and Napoleon's original mutations.", 
         col.names = c("Mutation", "Mutated", "Normal", "Ref", "Alt", 
@@ -147,9 +147,8 @@ overlapSfiltered %>%
 We filtered mutations with following filters:
 
 * A read depth for the two sample between half and two times the mean coverage (`normal_DP <= 120, normal_DP >= 30, mutation_DP <= 120, mutation_DP >= 30`)
-* A null number of alternate allele count in the normal sample (`normal_altCountT1 == 0`)
-* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCountT1 >= 10`)
-* An allelic frequency  inferior to 0.5 (`tumor_AF <= 0.5`)
+* A null number of alternate allele count in the normal sample (`normal_altCount == 0`)
+* A minimum of 10 alternate allele count in the mutated sample (`mutation_altCount >= 10`)
 
 We obtained 223 candidates  (Fig \@ref(fig:mutFilteredS)).
 We then used the suggested automatic filter of `Strelka2`,
@@ -159,11 +158,10 @@ resulting in a robust dataset of 87 mutations (Fig \@ref(fig:mutRobustS)).
 mutFilteredS <- strelka2raw %>% 
   filter(normal_DP <= 120, normal_DP >= 30) %>% 
   filter(mutation_DP <= 120, mutation_DP >= 30) %>% 
-  filter(normal_altCountT1 == 0) %>% 
-  filter(mutation_altCountT1 >= 10) %>% 
-  filter(mutation_AF <= 0.5) %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  filter(mutation_altCountT1 >= 10, mutation_altCountT2 >= 10) %>% 
   collect() 
-mutRobustS <- filter(mutFilteredS, FILTER == "PASS") 
+mutRobustS <- filter(mutFilteredS, FILTER == "PASS")  
 ```
 
 ```{r mutFilteredS, fig.cap="Mutations retained after original filtering: allele frequency (A) and positions on the 3P genome (B)."}
@@ -178,7 +176,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   ylab("Position (Mb)") +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
   viridis::scale_color_viridis(option = "inferno")
-cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))  
 ```
 
 ```{r mutRobustS, fig.cap="Mutations retained after robust filtering: allele frequency (A) and positions on the 3P genome (B)."}
@@ -193,7 +191,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   ylab("Position (Mb)") +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
   viridis::scale_color_viridis(option = "inferno")
-cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))  
 ```
 
 ## `GATK`
@@ -291,7 +289,7 @@ mutRobustG <- left_join(mutFilteredG,
           dplyr::select(mutRobustS, CHROM, POS) %>%
             mutate(Robust = 1)) %>%
   mutate(Robust = as.factor(ifelse(is.na(Robust), 0, 1))) %>% 
-  filter(Robust == 1)
+  filter(Robust == 1) 
 ```
 
 ```{r mutFilteredG, fig.cap="Mutations retained after original filtering: allele frequency (A) and positions on the 3P genome (B)."}
@@ -306,7 +304,7 @@ g2 <- ggplot(genome, aes(x = CHROM, xend = CHROM)) +
   ylab("Position (Mb)") +
   theme(axis.line.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank()) +
   viridis::scale_color_viridis(option = "inferno")
-cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
+cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B")) 
 ```
 
 ```{r mutRobustG, fig.cap="Mutations retained after robust filtering: allele frequency (A) and positions on the 3P genome (B)."}
@@ -328,28 +326,24 @@ cowplot::plot_grid(g1, g2, nrow = 2, labels = c("A", "B"))
 
 ```{r datasetsswiss}
 datasets <- list(
-  # "Schmid" = overlapG %>% 
-  #   mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-  #   rename(AF = tumor_AF) %>%
-  #   dplyr::select(CHROM, POS, SNV, AF),
   "Schmid" = overlapSfiltered %>% 
     ungroup() %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = mutation_AF) %>%
+    dplyr::rename(AF = mutation_AF) %>%
     mutate(type = paste0(REF, "->", ALT)) %>% 
     dplyr::select(CHROM, POS, SNV, AF, type),
   "GATK" = mutFilteredG %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = tumor_AF) %>%
+    dplyr::rename(AF = tumor_AF) %>%
     dplyr::select(CHROM, POS, SNV, AF),
   "Strelka2" = mutFilteredS %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = mutation_AF) %>%
+    dplyr::rename(AF = mutation_AF) %>%
     mutate(type = paste0(REF, "->", ALT)) %>% 
     dplyr::select(CHROM, POS, SNV, AF, type),
   "Robust" = mutRobustS %>% 
     mutate(SNV = paste0(CHROM, "_", "Pos", as.integer(POS))) %>%
-    rename(AF = mutation_AF) %>%
+    dplyr::rename(AF = mutation_AF) %>%
      mutate(type = paste0(REF, "->", ALT)) %>% 
     dplyr::select(CHROM, POS, SNV, AF, type)
 )
@@ -360,7 +354,7 @@ lapply(datasets, nrow) %>%
   bind_rows(.id = "dataset") %>%
   reshape2::melt(variable.name = "Dataset", value.name = "Number of candidates") %>%
   mutate(`Estimated total` = round(`Number of candidates`*100/72)) %>% 
-  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " "))
+  kable(caption = "Size of the different datasets.", format.args = list(big.mark = " ")) 
 ```
 
 ```{r datasetsswissAF, fig.cap="Allele frequency for the different datasets."}
@@ -368,15 +362,15 @@ bind_rows(datasets, .id = "dataset") %>%
   ggplot(aes(AF, col = dataset), fill = NA) +
   geom_density(size = 1.3) +
   scale_color_discrete("Dataset") +
-  xlab("Allelic frequency") 
+  xlab("Allelic frequency")  
 ```
 
 ```{r datasetsswissVenn2}
-ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F) 
+ggvenn::ggvenn(lapply(datasets, `[[`, "SNV"), show_percentage = F)  
 ```
 
 
-```{r}
+```{r swissMutType}
 bind_rows(datasets, .id = "dataset") %>% 
   na.omit() %>% 
   group_by(dataset, type) %>% 
@@ -386,9 +380,8 @@ bind_rows(datasets, .id = "dataset") %>%
   ggplot(aes(type, P, fill = dataset)) +
   geom_col(position = "dodge") +
   coord_flip() +
-  ylab("Percentage") + xlab(" ")
+  ylab("Percentage") + xlab(" ") 
 ```
-
 
 ```{r fig4, eval=F}
 bind_rows(datasets, .id = "dataset") %>%
