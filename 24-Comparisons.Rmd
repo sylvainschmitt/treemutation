@@ -1,0 +1,176 @@
+```{r setupcomp, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+```{r coveragecomp, eval=F}
+covs_files <- list.files("data/mutations/bordeaux/", pattern = "10k.cov", full.names = T)
+names(covs_files) <- list.files("data/mutations/bordeaux/", pattern = "10k.cov", full.names = F)
+covs_3p <- lapply(covs_files, read_tsv, col_names = c("chromosome", "start", "stop", "coverage"), cols(
+  chromosome = col_character(),
+  start = col_double(),
+  stop = col_double(),
+  coverage = col_double()
+)) %>%
+  bind_rows(.id = "file") %>%
+  mutate(library = gsub(".10k.cov", "", file)) %>% 
+  mutate(length = stop - start)
+covs_3p <- lapply(split(covs_3p, covs_3p$library), function(l)
+       lapply(0:500, function(c) 
+         data.frame(coverage = c,
+                    proportion = sum(filter(l, coverage >= c)$length)/sum(l$length))
+         ) %>% bind_rows()) %>% 
+  bind_rows(.id = "library")
+
+covs_files <- list.files("data/mutations/hetre/", pattern = "Fagus_sylvatica_v3.regions.bed", full.names = T)
+names(covs_files) <- list.files("data/mutations/hetre/", pattern = "Fagus_sylvatica_v3.regions.bed", full.names = F)
+covs_verzy <- lapply(covs_files, read_tsv, col_names = c("chromosome", "start", "stop", "coverage"), cols(
+  chromosome = col_character(),
+  start = col_double(),
+  stop = col_double(),
+  coverage = col_double()
+)) %>%
+  bind_rows(.id = "file") %>%
+  mutate(library = gsub("_on_Fagus_sylvatica_v3.regions.bed", "", file)) %>% 
+  mutate(length = stop - start)
+covs_verzy <- lapply(split(covs_verzy, covs_verzy$library), function(l)
+       lapply(0:500, function(c) 
+         data.frame(coverage = c,
+                    proportion = sum(filter(l, coverage >= c)$length)/sum(l$length))
+         ) %>% bind_rows()) %>% 
+  bind_rows(.id = "library")
+
+covs_files <- list.files("data/mutations/angela/genome/dists/", full.names = T)
+names(covs_files) <- list.files("data/mutations/angela/genome/dists/")
+covs_angela <- lapply(covs_files, read_tsv, col_names = c("chromosome", "coverage", "proportion"), cols(
+  chromosome = col_character(),
+  coverage = col_double(),
+  proportion = col_double()
+)) %>% 
+  bind_rows(.id = "file") %>% 
+  mutate(library = gsub(".mosdepth.global.dist.txt", "", file)) %>% 
+  filter(chromosome == "total") %>% 
+  dplyr::select(library, coverage, proportion)
+
+covs_files <- list.files("data/mutations/sixto/genome/dists/", full.names = T)
+names(covs_files) <- list.files("data/mutations/sixto/genome/dists/")
+covs_sixto <- lapply(covs_files, read_tsv, col_names = c("chromosome", "coverage", "proportion"), cols(
+  chromosome = col_character(),
+  coverage = col_double(),
+  proportion = col_double()
+)) %>%
+  bind_rows(.id = "file") %>%
+  mutate(library = gsub(".mosdepth.global.dist.txt", "", file)) %>%
+  filter(chromosome == "total") %>% 
+  dplyr::select(library, coverage, proportion)
+
+list(
+  # "Napoleon" = NA,
+  "3P" = covs_3p,
+  "Verzy" = covs_verzy,
+  "Sixto" = covs_sixto, 
+  "Angela" = covs_angela) %>% 
+  bind_rows(.id = "tree") %>% 
+  vroom::vroom_write("save/coverages_comparisons.tsv")
+```
+
+```{r datacomp}
+# genomes
+quercus_genome <- read_tsv("data/mutations/swiss/Qrob_PM1N.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6) %>% 
+  mutate(scf = as.numeric(gsub("Qrob_Chr", "", CHROM)))
+fagus_genome <- read_tsv("data/mutations/hetre/Fagus_sylvatica_v3.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6) %>% 
+  mutate(scf = as.numeric(gsub("Fsylvatica_scaffold_", "", CHROM)))
+sextonia_genome <- read_tsv("data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6) %>% 
+  mutate(scf = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+dicorynia_genome <- read_tsv("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.fai", 
+         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, stop = length/10^6) %>% 
+  mutate(scf = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+# coverages
+coverages <- vroom::vroom("save/coverages_comparisons.tsv")
+cov_lims <- coverages %>% 
+  mutate(proportion = round(proportion, 2)) %>% 
+  mutate(proportion = ifelse(tree == "Verzy" & proportion == 0.94, 0.95, proportion)) %>% 
+  filter(proportion == 0.05 | proportion == 0.95) %>% 
+  group_by(tree, library, proportion) %>% 
+  summarise(coverage = mean(coverage, na.omit = T)) %>% 
+  mutate(proportion = recode(as.character(proportion), "0.05" = "high_cov", "0.95" = "low_cov")) %>% 
+  reshape2::dcast(tree + library ~ proportion) %>% 
+  bind_rows(data.frame(tree = "Napoleon", library = c("upper", "lower"), high_cov = 120, low_cov = 2)) %>% 
+  mutate(low_cov = ifelse(low_cov < 10, 10, low_cov))
+```
+
+# Comparisons
+
+This chapter compares the mutations of Napoleon, 3P, the dwarf beech, Sixto and Angela based on the closest possible filtering.
+
+## Genomes
+
+```{r compgenomes}
+list("Quercus robur" = quercus_genome, 
+     "Fagus sylvatica" = fagus_genome, 
+     "Sextonia rubra" = sextonia_genome, 
+     "Dicorynia guyanensis" = dicorynia_genome) %>% 
+  bind_rows(.id = "Species") %>% 
+  filter(stop >= 1) %>% 
+  ggplot(aes(reorder(as.character(scf), stop), stop)) +
+  geom_col() +
+  coord_flip() +
+  ylab("Length (mb)") + 
+  xlab("Chromosome / Scaffold (>1Mb)") +
+  facet_wrap(~ Species, scales = "free_y") +
+  theme(strip.text.x = element_text(face = "italic"), axis.text.y = element_text(size = 4))
+```
+
+## Libraries
+
+```{r}
+ggplot(coverages, aes(coverage, proportion*100, col = library)) +
+  geom_line() +
+  xlim(0, 400) +
+  geom_hline(yintercept = 5, col = "red", linetype = "dashed") +
+  geom_hline(yintercept = 95, col = "red", linetype = "dashed") +
+  scale_color_discrete(guide = "none") + 
+  xlab("Sequencing depth (X)") +
+  ylab("% of base in the genome with at least X reads") +
+  facet_wrap(~ tree, nrow = 4) 
+```
+
+```{r}
+cov_lims %>% 
+  ggplot(aes(x = paste(tree, library), xend = paste(tree, library), y = low_cov, yend = high_cov, col = tree)) + 
+  geom_segment() +
+  coord_flip() +
+  scale_color_discrete("") +
+  ylab("Kept sequencing depth") + xlab("") +
+  theme(axis.text.y = element_blank())
+```
+
+## Filtered mutations
+
+## Branch mutations
+
+## Rates
+
+## Types
+
+## Spectra
+
+## Annotations
+
+## Genes
