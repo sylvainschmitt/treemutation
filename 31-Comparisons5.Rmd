@@ -1,4 +1,4 @@
-```{r setupcomp, include=FALSE}
+```{r setupcomp5, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
 library(tidyverse)
@@ -8,7 +8,7 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r coveragecomp, eval=F}
+```{r coveragecomp5, eval=F}
 covs_files <- list.files("data/mutations/bordeaux/", pattern = "10k.cov", full.names = T)
 names(covs_files) <- list.files("data/mutations/bordeaux/", pattern = "10k.cov", full.names = F)
 covs_3p <- lapply(covs_files, read_tsv, col_names = c("chromosome", "start", "stop", "coverage"), cols(
@@ -79,7 +79,7 @@ list(
   vroom::vroom_write("save/coverages_comparisons.tsv")
 ```
 
-```{r datacomp}
+```{r datacomp5}
 # genomes
 quercus_genome <- read_tsv("data/mutations/swiss/Qrob_PM1N.fa.fai", 
          col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
@@ -121,7 +121,7 @@ This chapter compares the mutations of Napoleon, 3P, the dwarf beech, Sixto and 
 
 ## Genomes
 
-```{r compgenomes}
+```{r compgenomes5}
 list("Quercus robur" = quercus_genome, 
      "Fagus sylvatica" = fagus_genome, 
      "Sextonia rubra" = sextonia_genome, 
@@ -139,7 +139,7 @@ list("Quercus robur" = quercus_genome,
 
 ## Libraries
 
-```{r}
+```{r compvos5}
 ggplot(coverages, aes(coverage, proportion*100, col = library)) +
   geom_line() +
   xlim(0, 400) +
@@ -151,7 +151,7 @@ ggplot(coverages, aes(coverage, proportion*100, col = library)) +
   facet_wrap(~ tree, nrow = 4) 
 ```
 
-```{r}
+```{r compvolims5}
 cov_lims %>% 
   ggplot(aes(x = paste(tree, library), xend = paste(tree, library), y = low_cov, yend = high_cov, col = tree)) + 
   geom_segment() +
