@@ -6,6 +6,7 @@ if(knitr:::is_html_output()) options(knitr.table.format = "html")
 if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
 library(circlize)
+library(ComplexHeatmap)
 library(ape)
 library(ggtree)
 theme_set(bayesplot::theme_default())
@@ -207,6 +208,125 @@ include_graphics("save/AngelaCircosHS2CovGC.png")
 ```{r}
 rm(busco_hs1, busco_hs2, cov_hs1, cov_hs2, covs, gc_hs1, gc_hs2, covs_files, hs2)
 ```
+
+### Annotation
+
+```{r circosAnnot, eval=F}
+min_length <- 2*10^6
+window <- 10*10^3
+hs1_f <- filter(hs1, end > min_length)
+te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  filter(type %in% c("gene", "CDS")) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+png("save/AngelaCircosAnnot.png", width = 1000, height = 1000)
+circos.par(gap.degree = 4)
+circos.initializeWithIdeogram(as.data.frame(hs1_f))
+circos.genomicTrack(gene_f,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "red", ...)
+})
+circos.yaxis(side = "left")
+circos.genomicTrack(te_f, 
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "blue", ...)
+})
+circos.yaxis(side = "left")
+text(0, 0, "HS1", cex = 1.5)
+legend("bottomleft", pch = 16, col = c("red", "blue"), legend = c("genes", "TE"), bty = "n")
+dev.off()
+circos.clear()
+```
+
+```{r circosAnnot2, eval=F}
+min_length <- 2*10^6
+window <- 10*10^3
+hs1_f <- filter(hs1, end > min_length)
+te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  filter(type %in% c("gene", "CDS")) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+annot <- left_join(te_f, gene_f) %>% 
+  mutate(gene = ifelse(is.na(gene), 0, gene)) %>% 
+  mutate(gene = log(gene + 1)) %>% 
+  mutate(TE = log(TE + 1))
+rm(te_f, gene_f)
+te_breaks <- seq(0, max(annot$TE), by = 0.1)
+col_te <- colorRamp2(te_breaks, viridis::viridis(length(te_breaks)))
+gene_breaks <- seq(0, max(annot$gene), by = 0.1)
+col_gene <- colorRamp2(gene_breaks, viridis::viridis(length(gene_breaks), option = "A"))
+png("save/AngelaCircosAnnot.png", width = 1000, height = 1000)
+circos.heatmap.initialize(as.vector(annot$TE), split = as.factor(annot$name))
+circos.heatmap(as.vector(annot$TE), col = col_te, show.sector.labels = TRUE)
+circos.heatmap(as.vector(annot$gene), col = col_gene)
+circos.clear()
+lgd_te <- Legend(title = "TE", col_fun = col_te, at =  seq(0, ceiling(max(annot$TE)), by = 1), labels = round(exp(seq(0, ceiling(max(annot$TE)), by = 1))+1))
+lgd_gene <- Legend(title = "gene", col_fun = col_gene, at =  seq(0, ceiling(max(annot$gene)), by = 1), labels = round(exp(seq(0, ceiling(max(annot$gene)), by = 1))+1))
+draw(packLegend(lgd_te, lgd_gene, direction = "horizontal"))
+dev.off()
+```
+
+```{r}
+include_graphics("save/AngelaCircosAnnot.png")
+```
+
+```{r}
+annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/angela/annotation/angela.annot.sqlite")
+orfs <- tbl(annotation, "ORF") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  collect()
+DBI::dbDisconnect(annotation) ; rm(annotation)
+n <- orfs %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  nrow()
+orfs %>% 
+  dplyr::select(orf_id, start, stop, length) %>% 
+  reshape2::melt(c("orf_id", "length")) %>% 
+  ggplot(aes(value)) +
+  geom_bar() +
+  facet_grid((length > 100) ~ variable) +
+  ggtitle(paste("Angela:", n, "ORFs"), "Start M, Stop *, length >= 100")
+rm(orfs, n)
+```
+
 
 ## Heterozygosity
 
@@ -771,6 +891,7 @@ fruit_mutations <- vroom::vroom("data/mutations/angela/filters/filtered_tip_muta
   filter(replicate > 2) %>% 
   arrange(desc(replicate), desc(af)) %>% 
   mutate(rank = 1:n())    
+# write_tsv(fruit_mutations, "data/mutations/angela/filters/angela_fruits_candidate_mutations.tsv")
 ```
 
 Selection of mutations for transmission in fruits.
@@ -809,3 +930,243 @@ fruit_mutations %>%
   DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank"))   
 ```
 
+## Genes
+
+```{r, eval=F}
+genes <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("CHROM", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  filter(type == "transcript")
+t <- archi_mutations %>%
+  split(.$SNV) %>%
+  lapply(function(x) left_join(x, genes, by = "CHROM") %>%
+           filter(start <= POS, end >= POS)) %>%
+  bind_rows(.id = "SNV")
+nrow(t)/nrow(archi_mutations)*100 # 2067 in trsc
+annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/angela/annotation/angela.annot.sqlite")
+orfs <-  tbl(annotation, "ORF") %>%
+  mutate(start_aa = str_sub(peptide, 1, 1)) %>%
+  mutate(stop_aa = str_sub(peptide, -1, -1)) %>%
+  mutate(length = rend - lend) %>%
+  collect()
+t <- t %>%
+  left_join(orfs, by = c("attributes" = "transcript_id")) %>%
+  filter(!is.na(orf_id))
+rm(orfs)
+DBI::dbDisconnect(annotation) ; rm(annotation)
+write_tsv(t, "save/tmp.tsv")
+read_tsv("save/tmp.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% # 567 in CDS
+  dplyr::select(attributes, posTrsc, ALT) %>% 
+  write_tsv("data/mutations/angela/annotation/SNPsOnTrsc.tsv", col_names = F)
+```
+
+```{bash, eval=F, echo=T}
+cd data/mutations/angela/annotation
+~/Tools/gffread/gffread trsc.fa.transdecoder.gff3 -T -o trsc.fa.transdecoder.gtf
+perl ~/Tools/SNPdat_package_v1.0.5/SNPdat_v1.0.5.pl \
+  -i SNPsOnTrsc.tsv \
+  -g trsc.fa.transdecoder.gtf \
+  -f trsc.fa \
+  -s synonymy.summary \
+  -o synonymy.output
+```
+
+```{r, eval=F}
+read_tsv("save/tmp.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+  mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+  dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+  left_join(read_tsv("data/mutations/angela/annotation/synonymy.output", col_names = T)) %>% 
+  group_by(SNV, synonymous) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(SNV ~ synonymous) %>% 
+  filter(!is.na(N)) %>% 
+  nrow()
+```
+
+```{r goeAngela}
+go <- read_tsv("data/mutations/angela/annotation/trinotate_go_annotations.txt", col_names = c("gene", "id")) %>% 
+  separate_rows(id, sep = ",") %>% 
+  left_join(src_sqlite("data/mutations/angela/annotation/angela.annot.sqlite") %>% 
+              tbl("go") %>% 
+              collect())
+genes <- read_tsv("save/tmp.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+  mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+  dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+  left_join(read_tsv("data/mutations/angela/annotation/synonymy.output", col_names = T)) %>% 
+  filter(synonymous == "N") %>% 
+  separate(`Chromosome Number`, c("gene", "trsc_id"), remove = F) %>% 
+  dplyr::select(gene) %>% 
+  unique() %>% 
+  mutate(gene = tolower(gene))
+goe <- clusterProfiler::enricher(gene = unique(genes$gene),
+                          pvalueCutoff = 0.2, 
+                          pAdjustMethod = "BH",
+                          universe = unique(go$gene),
+                          minGSSize = 10, 
+                          maxGSSize = 500, 
+                          qvalueCutoff = 0.2, 
+                          TERM2GENE = dplyr::select(go, id, gene),
+                          TERM2NAME = dplyr::select(go, id, name))
+```
+
+```{r, fig.cap="Mutations types."}
+data.frame(type = c("All", "Within transcripts with genes", "Within CDS", "Non-synonymous"),
+           count = c(15468, 2069, 567, 314)) %>% 
+  ggplot(aes(type, count)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_log10() +
+  ggtitle("Type of mutations for Angela") +
+  xlab("") +
+  geom_text(aes(y = 2, label = format(count, big.mark = " ")), col = "white")
+```
+
+```{r, fig.cap="Mutation allelic fraction per type."}
+# genes <- genomeIntervals::readGff3("data/mutations/angela/annotation/trsc.fa.transdecoder.gff3")
+# genes <- genomeIntervals::interval_union(genes)
+# sum(genomeIntervals::width(genes))/sum(hs1$end)*100
+data <- archi_mutations %>% 
+  mutate(all = 1) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              dplyr::select(SNV) %>% 
+              mutate(transcript = 1)) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(CDS = 1)) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+              dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+              left_join(read_tsv("data/mutations/angela/annotation/synonymy.output", col_names = T)) %>% 
+              group_by(SNV, synonymous) %>% 
+              summarise(N = n()) %>% 
+              reshape2::dcast(SNV ~ synonymous) %>% 
+              filter(!is.na(N)) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(nonsynonymous = 1)) %>% 
+  left_join(filter(goe@result, qvalue < 0.05) %>% 
+              dplyr::select(geneID) %>% 
+              separate_rows(geneID) %>% 
+              unique() %>% 
+              left_join(read_tsv("save/tmp.tsv") %>% 
+                          dplyr::select(SNV, attributes) %>% 
+                          separate(attributes, c("geneID", "transcript"))) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(goenriched = 1))
+g1 <- data %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, CDS) %>% 
+  unique() %>% 
+  mutate(type = ifelse(is.na(CDS), "intergenic", "CDS")) %>% 
+  ggplot(aes(type, mutation_AF)) +
+  geom_violin() +
+  ggpubr::stat_compare_means(method = "t.test") +
+  ylab("Allelic fraction") +
+  ggtitle("All mutations AF > 0.01", "ratio:0.034 (<expected:0.139)") +
+  geom_point(col = "red", size = 2,
+             data = data.frame(mutation_AF = c(median(filter(data, is.na(CDS))$mutation_AF),
+                                               median(filter(data, CDS == 1)$mutation_AF)),
+                               type = c("intergenic", "CDS")))
+g2 <- filter(data, CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
+  dplyr::select(SNV, synonymy, mutation_AF) %>% 
+  unique() %>% 
+  ggplot(aes(synonymy, mutation_AF)) +
+  geom_violin() +
+  ggpubr::stat_compare_means(method = "t.test") +
+  ylab("Allelic fraction") +
+  ggtitle("Mutations in CDS, AF > 0.01", "dN/dS=1.67") +
+  geom_point(col = "red", size = 2,
+             data = data.frame(mutation_AF = c(median(filter(data, CDS == 1, nonsynonymous == 1)$mutation_AF),
+                                               median(filter(data, CDS == 1, is.na(nonsynonymous))$mutation_AF)),
+                                            synonymy = c("NS", "S")))
+cowplot::plot_grid(g2, g1)
+```
+
+```{r, fig.cap="Synonymy with allelic fraction."}
+data <- archi_mutations %>% 
+  mutate(all = 1) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              dplyr::select(SNV) %>% 
+              mutate(transcript = 1)) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(CDS = 1)) %>% 
+  left_join(read_tsv("save/tmp.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+              dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+              left_join(read_tsv("data/mutations/angela/annotation/synonymy.output", col_names = T)) %>% 
+              group_by(SNV, synonymous) %>% 
+              summarise(N = n()) %>% 
+              reshape2::dcast(SNV ~ synonymous) %>% 
+              filter(!is.na(N)) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(nonsynonymous = 1)) %>% 
+  left_join(filter(goe@result, qvalue < 0.05) %>% 
+              dplyr::select(geneID) %>% 
+              separate_rows(geneID) %>% 
+              unique() %>% 
+              left_join(read_tsv("save/tmp.tsv") %>% 
+                          dplyr::select(SNV, attributes) %>% 
+                          separate(attributes, c("geneID", "transcript"))) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(goenriched = 1))
+filter(data, CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
+  dplyr::select(SNV, synonymy, mutation_AF) %>% 
+  unique() %>% 
+  mutate(AF = cut(mutation_AF, seq(0, 0.5, by = 0.005))) %>% 
+  group_by(AF, synonymy) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(AF ~ synonymy) %>% 
+  mutate_at(c("NS", "S"), funs(ifelse(is.na(.),0,.))) %>% 
+  mutate(dNds = NS/S, N = NS+S) %>% 
+  separate(AF, c("X1", "X2"), ",") %>% 
+  mutate(X1 = as.numeric(gsub("(", "", X1, fixed = T))) %>% 
+  mutate(X2 = as.numeric(gsub("]", "", X2, fixed = T))) %>% 
+  mutate(AF = (X1+X2)/2) %>% 
+  ggplot(aes(AF, dNds, size = N)) +
+  geom_smooth(method = "lm", size = 1) +
+  geom_point() +
+  geom_hline(yintercept = 1, linetype = "dashed")
+```
+
+```{r, fig.cap="GO enrichment for Angela non-synonymous mutations."}
+goe@result %>% 
+  filter(qvalue < 0.05) %>% 
+  na.omit() %>% 
+  ggplot(aes(reorder(Description, qvalue), Count, fill = -log(qvalue))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  viridis::scale_fill_viridis() +
+  theme(axis.title = element_blank()) +
+  ggtitle("GO enrichment for Angela non-synonymous mutations")
+```
+
+```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations."}
+enrichplot::emapplot(goe) +
+  ggtitle("GO enrichment for Angela non-synonymous mutations")
+```

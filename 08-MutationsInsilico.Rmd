@@ -97,13 +97,13 @@ stats %>%
 ```{r mutissf4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
 read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>% 
       mutate(type = recode(caller,    
-                         "mutect2" = "Cancer variant caller", 
-                         "freebayes" = "Generic caller", 
-                         "gatk" = "Generic caller", 
-                         "strelka2" = "Cancer variant caller",
-                         "somaticsniper" = "Cancer variant caller",
-                         "muse" = "Cancer variant caller",
-                         "varscan" = "Cancer variant caller"
+                         "mutect2" = "Cancer caller", 
+                         "freebayes" = "SNP caller", 
+                         "gatk" = "SNP caller", 
+                         "strelka2" = "Cancer caller",
+                         "somaticsniper" = "Cancer caller",
+                         "muse" = "Cancer caller",
+                         "varscan" = "Cancer caller"
   )) %>% 
     mutate(caller = recode(caller,    
                          "mutect2" = "Mutect2", 
@@ -180,6 +180,12 @@ stat1 <- read_tsv("data/mutations/insilico/stats.tsv") %>%
 stat_cor <- left_join(stat0, stat1)
 cor.test(filter(stat_cor, variable == "Recall")$m0, filter(stat_cor, variable == "Recall")$m1)
 cor.test(filter(stat_cor, variable == "Precision")$m0, filter(stat_cor, variable == "Precision")$m1)
+
+stat_cor %>% 
+  group_by(caller, variable) %>% 
+  do(cor.test(.$m0, .$m1) %>% broom::tidy()) %>% 
+  na.omit() %>% 
+  reshape2::dcast(caller ~ variable, value.var = "estimate")
 ```
 
 ```{r mutissf5, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
@@ -226,7 +232,7 @@ g1 <- filter(data, caller %in% c("freebayes", "GATK", "VarScan")) %>%
   facet_wrap(~ C, ncol = 4) + 
   scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
   scale_size_continuous(range = c(0.1, 1)) +
-  scale_color_manual("Generic callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
+  scale_color_manual("SNP callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
   theme(legend.position = "bottom") +
   xlab("Allele fraction") + ylab("Recall")
 l1 <- cowplot::get_legend(g1)
@@ -240,7 +246,7 @@ g2 <- filter(data, !(caller %in% c("freebayes", "GATK", "VarScan"))) %>%
   facet_wrap(~ C, ncol = 4) + 
   scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
   scale_size_continuous(range = c(0.1, 1)) +
-  scale_color_manual("Mutation-specific callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
+  scale_color_manual("Cancer callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
   theme(legend.position = "bottom") +
   xlab("Allele fraction") + ylab("Recall")
 l2 <- cowplot::get_legend(g2)
@@ -411,7 +417,7 @@ g1 <- filter(data, caller %in% c("freebayes", "GATK", "VarScan")) %>%
   geom_point(aes(y = m), size = 2) +
   facet_grid(C ~ variable) + 
   scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
-  scale_color_manual("Generic callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
+  scale_color_manual("SNP callers", values = RColorBrewer::brewer.pal(7, "Accent")[c(1,2,7)]) +
   xlab("Allele fraction") + ylab("Rate") +
   theme(legend.position = "bottom")
 l1 <- cowplot::get_legend(g1)
@@ -424,7 +430,7 @@ g2 <- filter(data, !(caller %in% c("freebayes", "GATK", "VarScan"))) %>%
   geom_point(aes(y = m), size = 2) +
   facet_grid(C ~ variable) + 
   scale_y_continuous(trans = "rev_sqrt", breaks = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1)) +
-  scale_color_manual("Mutation-specific callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
+  scale_color_manual("Cancer callers", values = RColorBrewer::brewer.pal(7, "Accent")[3:6]) +
   xlab("Allele fraction") + ylab("Rate") +
   theme(legend.position = "bottom")
 l2 <- cowplot::get_legend(g2)

@@ -21,6 +21,21 @@ dicorynia_genome <- read_tsv("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYB
   dplyr::select(CHROM, length) %>% 
   mutate(start = 0, stop = length/10^6) %>% 
   mutate(scf = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+# busco
+sextonia_busco <- read_tsv("data/mutations/sixto/genome/short_summary.specific.viridiplantae_odb10.HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD_busco.txt",
+                  skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
+  dplyr::select(-X1) %>% 
+  mutate(Type = factor(Type, levels= c("Complete and single-copy BUSCOs (S)",
+                                       'Complete and duplicated BUSCOs (D)',
+                                       "Fragmented BUSCOs (F)",
+                                       "Missing BUSCOs (M)")))
+dicorynia_busco <- read_tsv("data/mutations/angela/genome/short_summary.specific.viridiplantae_odb10.Dgu_HS1_HYBRID_SCAFFOLD_busco.txt",
+                  skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
+  dplyr::select(-X1) %>% 
+  mutate(Type = factor(Type, levels= c("Complete and single-copy BUSCOs (S)",
+                                       'Complete and duplicated BUSCOs (D)',
+                                       "Fragmented BUSCOs (F)",
+                                       "Missing BUSCOs (M)")))
 # coverages
 covs_files <- list.files("data/mutations/angela/genome/dists/", full.names = T)
 names(covs_files) <- list.files("data/mutations/angela/genome/dists/")
@@ -72,9 +87,10 @@ archi_mutations_angela_evs <- vroom::vroom("data/mutations/angela/filters/leaf_m
   mutate(tip = paste0(branch, tip)) %>% 
   group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
   summarise(mutation_AF = mean(mutation_AF)) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  group_by(SNV, CHROM, POS) %>% 
   summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
-             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " "),
+            REF = first(REF), ALT = first(ALT)) %>% 
   ungroup() %>% 
   arrange(desc(n_tips), desc(mutation_AF)) %>% 
   mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
@@ -89,9 +105,10 @@ archi_mutations_angela_base <- vroom::vroom("data/mutations/angela/filters/leaf_
   mutate(tip = paste0(branch, tip)) %>% 
   group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
   summarise(mutation_AF = mean(mutation_AF)) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  group_by(SNV, CHROM, POS) %>% 
   summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
-             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " "),
+            REF = first(REF), ALT = first(ALT)) %>% 
   ungroup() %>% 
   arrange(desc(n_tips), desc(mutation_AF)) %>% 
   mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
@@ -108,9 +125,10 @@ archi_mutations_sixto_evs <- vroom::vroom("data/mutations/sixto/filters/leaf_mut
   mutate(branch = str_sub(branch, 1, 1)) %>%
   group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
   summarise(mutation_AF = mean(mutation_AF)) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  group_by(SNV, CHROM, POS) %>% 
   summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
-            n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " "),
+            REF = first(REF), ALT = first(ALT)) %>% 
   ungroup() %>% 
   arrange(desc(n_tips), desc(mutation_AF)) %>% 
   mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
@@ -125,9 +143,10 @@ archi_mutations_sixto_base <- vroom::vroom("data/mutations/sixto/filters/leaf_mu
   mutate(branch = str_sub(branch, 1, 1)) %>%
   group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
   summarise(mutation_AF = mean(mutation_AF)) %>% 
-  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  group_by(SNV, CHROM, POS) %>% 
   summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
-            n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+             n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " "),
+            REF = first(REF), ALT = first(ALT)) %>% 
   ungroup() %>% 
   arrange(desc(n_tips), desc(mutation_AF)) %>% 
   mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
@@ -137,6 +156,8 @@ archi_mutations_sixto_base <- vroom::vroom("data/mutations/sixto/filters/leaf_mu
   mutate(origin2 = ifelse(origin2 == "x" & n_branches == 1, "branch", origin2)) %>% 
   mutate(origin2 = ifelse(origin2 == "x", "carpenter", origin2)) %>% 
   mutate(origin2 = ifelse(origin1 == "XI", "crown", origin2))
+# lapply(list(archi_mutations_angela_evs, archi_mutations_angela_base, archi_mutations_sixto_evs, archi_mutations_sixto_base),
+#        function(x) nrow(x) == length(unique(x$SNV)))
 # phylo4d
 angela@data <- data.frame(label = angela@label) %>% 
   left_join(archi_mutations_angela_evs %>% 
@@ -165,15 +186,18 @@ sixto@data <- data.frame(label = sixto@label) %>%
 # phylogenies
 angela_phylo <- ape::read.tree("data/mutations/angela/trees/evs.min4.fa.treefile")
 sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/evs.min4.fa.treefile")
+
 ```
 
 # Comparisons 2
 
-This chapter compares the mutations of Sixto and Angela based on the closest possible filtering.
+This chapter compares the mutations of Sixto and Angela on the basis of the closest possible filtering. 
 
 ## Genomes
 
-```{r compgenomes2}
+The total genome size of *Sextonia rubra* is larger than that of *Dicoryinia guyanensis*, but the *Dicoryinia guyanensis* genome was better assembled in fewer scaffolds (Fig. \@ref(fig:compgenomes2)).
+
+```{r compgenomes2, fig.cap="Caption."}
 list("Sextonia rubra" = sextonia_genome, 
      "Dicorynia guyanensis" = dicorynia_genome) %>% 
   bind_rows(.id = "Species") %>% 
@@ -186,9 +210,25 @@ list("Sextonia rubra" = sextonia_genome,
   theme(strip.text.x = element_text(face = "italic"), axis.text.y = element_text(size = 4))
 ```
 
+```{r compgenomes2busco, fig.cap="Caption."}
+list("Sextonia rubra" = sextonia_busco, 
+     "Dicorynia guianensis" = dicorynia_busco) %>% 
+  bind_rows(.id = "Species") %>% 
+  ggplot(aes(Species, N, fill = Type)) +
+  geom_col() +
+  geom_text(aes(y = N, label = N), col = "white", position = position_stack(vjust = .5)) +
+  scale_y_sqrt() +
+  scale_fill_discrete("", guide = guide_legend(nrow = 4)) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_text(face = "italic"), 
+        axis.line.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+
 ## Libraries
 
-```{r compcovs2}
+As expected, Angela's sequencing depth is twice as high as Sixto's, averaging about 150X versus 80X (Fig. \@ref(fig:compcovs2)), which translates into greater accepted sequencing depth in Angela (note that as a result, Sixto's libraries are less filtered in terms of coverage, Fig. \@ref(fig:compvolims2)). 
+
+```{r compcovs2, fig.cap="Caption."}
 ggplot(coverages, aes(coverage, proportion*100, col = library)) +
   geom_line() +
   xlim(0, 400) +
@@ -200,7 +240,7 @@ ggplot(coverages, aes(coverage, proportion*100, col = library)) +
   facet_wrap(~ tree, nrow = 4) 
 ```
 
-```{r compvolims2}
+```{r compvolims2, fig.cap="Caption."}
 cov_lims %>% 
   ggplot(aes(x = paste(tree, library), xend = paste(tree, library), y = low_cov, yend = high_cov, col = tree)) + 
   geom_segment() +
@@ -212,7 +252,9 @@ cov_lims %>%
 
 ## Mutations
 
-```{r mutcomp2, fig.width=10, fig.height=10}
+The origins of the mutations are distributed in the crown, but most of the mutations with basic filtering come from the base of the crown, followed by the carpenter, the branches and finally the tips (Fig. \@ref(fig:mutcomp2)). Interestingly, stronger filtering favoured mutations in the tips as well as at the base of the crown.
+
+```{r mutcomp2, fig.width=10, fig.height=10, fig.cap="Caption."}
 g1 <- ggtree(angela, right = T) +
   geom_point2(aes(size = mutations_evs, col = mutations_evs)) +
   geom_tiplab(offset = 1) +
@@ -269,9 +311,35 @@ cowplot::plot_grid(g1, g2, g3, g4)
 rm(g1, g2, g3, g4)
 ```
 
+```{r}
+lapply(list(angela = "data/mutations/angela/filters/leaf_mutations.tsv",
+            sixto = "data/mutations/sixto/filters/leaf_mutations.tsv"), vroom::vroom) %>% 
+  bind_rows(.id = "tree") %>% 
+  # filter(mutation_AF > 0.15) %>% 
+  # filter(Filter == "evs") %>% 
+  mutate(tip = paste0(branch, tip)) %>% 
+  dplyr::select(tree, tip, SNV) %>% 
+  unique() %>% 
+  group_by(tree, tip) %>% 
+  summarise(N = n()) %>% 
+  left_join(
+    list(angela = data.frame(length = adephylo::distRoot(angela)), 
+         sixto = data.frame(length = adephylo::distRoot(sixto))) %>% 
+      bind_rows(.id = "tree") %>% 
+      rownames_to_column("tip")) %>% 
+  # split(.$tree) %>% lapply(function(x) lm(N ~ length, x)) %>% lapply(summary)
+  ggplot(aes(length, N, col = tree)) +
+  geom_smooth(method = "lm", se = F) +
+  geom_point() +
+  ggrepel::geom_text_repel(aes(label = tip)) +
+  xlab("Branch length from trunk") + ylab("Number of detected mutations")
+```
+
 ## Frequencies
 
-```{r afcomp2}
+Surprisingly, the allelic frequencies of mutations occurring at the base of the crown are not significantly higher than those at the tips (Fig. \@ref(fig:afcomp2)).
+
+```{r afcomp2, fig.cap="Caption."}
 list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
        left_join(dplyr::select(archi_mutations_sixto_base, SNV, origin2)),
      "Angela" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
@@ -284,7 +352,7 @@ list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %
   facet_grid(tree ~ Filter)
 ```
 
-```{r deltaafcomp2}
+```{r deltaafcomp2, fig.cap="Caption."}
 list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
        left_join(dplyr::select(archi_mutations_sixto_base, SNV, origin2)),
      "Angela" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
@@ -299,9 +367,34 @@ list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %
   facet_grid(tree ~ Filter)
 ```
 
+```{r deltaafcomp3, fig.cap="Caption."}
+t <- list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+       left_join(dplyr::select(archi_mutations_sixto_base, SNV, origin2)),
+     "Angela" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+       left_join(dplyr::select(archi_mutations_angela_base, SNV, origin2))) %>% 
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, SNV) %>% 
+  summarise(DeltaAF =max(mutation_AF) - min(mutation_AF), repetitions = n())
+t2 <- t %>% group_by(repetitions) %>% summarise(DeltaAF = median(DeltaAF))
+coefs <- lm(log(DeltaAF) ~ repetitions, t2)$coefficients
+ggplot(t, aes(repetitions, DeltaAF, group = NA)) +
+  geom_violin(aes(group = cut_width(repetitions, 1)), scale = "width") +
+  stat_function(fun = function(x){exp(coefs[1] +  coefs[2]*x)}, col = "blue") +
+  geom_point(data = t2, col = "red") +
+  annotate("text", 20, 0.32, label = expression(y==e^{alpha+beta*x})) +
+  annotate("text", 20, 0.3, label = expression(beta==0.09285)) +
+  annotate("text", 20, 0.28, label = expression(p==5.25e-07)) +
+  annotate("text", 20, 0.26, label = expression(R^2==0.7682)) +
+  annotate("text", 20, 0.24, label = expression(N==19)) +
+  xlab("Number of libraries with the muation") + ylab(expression(Delta[AF]==max[AF]-min[AF]))
+rm(t, t2, coefs)
+```
+
 ## Phylogeny
 
-```{r angelaphyloarchi}
+Therefore, mutations are strongly shared across the crown and do not always follow the architecture. As a result, the phylogeny of the mutations does not match the architecture of the tree, with the exception of branch I, which is conserved in Sixto (Fig. \@ref(fig:angelaphyloarchi) & Fig. \@ref(fig:sixtophyloarchi)). 
+
+```{r angelaphyloarchi, fig.cap="Caption."}
 dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5)T:1.3;")), 
                      phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(angela_phylo)))) %>%
   dendextend::untangle(method = "ladderize") %>%
@@ -309,7 +402,7 @@ dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "((((AS:3.83
                          main_right = "Angela - Phylogeny - EVS", main_left = " Angela - Architecture")
 ```
 
-```{r sixtophyloarchi}
+```{r sixtophyloarchi, fig.cap="Caption."}
 dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "(((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64)T:1.3;")), 
                      phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(sixto_phylo)))) %>%
   dendextend::untangle(method = "ladderize") %>%
@@ -319,12 +412,135 @@ dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "(((((B1L:5
 
 ## Light
 
+The light condition of the sampled tips at the time of sampling did not affect the number of mutations observed per library (Fig. \@ref(fig:lightComp2)). 
+
+```{r lightComp2, fig.cap="Caption."}
+list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  dplyr::select(tree, tip, tumor, Filter, SNV) %>% 
+  unique() %>% 
+  group_by(tree, tip, tumor, Filter) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  ggplot(aes(tree, mutations, fill = condition)) +
+  geom_boxplot() +
+  facet_wrap(~Filter, scales = "free") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
+  xlab("") + ylab("Number of mutations")
+```
+
 ## Type
+
+Mutation types are similar between Angela and Sixto, with the exception of an increase in C->A and C->T but a decrease in T->A in Sixto compared to Angela, which are probably due to the sampling effect (Fig. \@ref(fig:typeComp2), to be further investigated).
+
+```{r typeComp2, fig.cap="Caption."}
+list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  group_by(type, tumor, tree) %>% 
+  summarise(N = n()) %>% 
+  group_by(tree, tumor) %>% 
+  mutate(pct = N/sum(N)*100) %>% 
+  ggplot(aes(type, pct, fill = tree)) +
+  geom_boxplot(position = "dodge") + 
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank(),
+        axis.line.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  facet_wrap(~ type, nrow = 1, scales = "free_x") +
+  xlab("Percentage of mutations (%) per sample") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
+  ylab("Percentage of mutations") +
+  ggtitle("Mutation type per library", "At least in 2-leaves with evs filtering.")
+```
 
 ## Spectra
 
+The mutation spectra are similar between Angela and Sixto, with a few exceptions that are probably due to a sampling effect (Fig. \@ref(fig:spectraComp2), to be explored further). 
+
+```{r spectraComp2, fig.cap="Caption."}
+list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  group_by(type, spectra, tumor, tree) %>% 
+  summarise(N = n()) %>% 
+  group_by(tree, tumor) %>% 
+  mutate(pct = N/sum(N)*100) %>% 
+  ggplot(aes(spectra, pct, fill = tree)) +
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~ type, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
+  theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
+  scale_y_log10() +
+  # ggpubr::stat_compare_means(label = "p.signif") +
+  ylab("Percentage of mutations per library") + ggtitle("Mutation spectra", "At least in 2-leaves with evs filtering.")
+```
+
 ## Rates
+
+Angela and Sixto show ten to ten thousand mutations depending on the filtering and the minimum accepted allelic frequency (Fig. \@ref(fig:ratesComp2)). Using base filtering, Angela has a higher number of mutations than Sixto, due to the twofold sequencing depth. Nevertheless, ev filtering gave a similar number of mutations close to thousands in both trees.
+
+```{r ratesComp2, fig.cap="Caption."}
+list(Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
+  bind_rows(.id = "tree") %>%
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  group_by(tree, Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  ggplot(aes(mutation_AF, cummulated_mutations, col = tree, linetype = Filter)) +
+  geom_line() +
+  scale_y_log10() + scale_x_reverse() +
+  xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF")
+```
 
 ## Annotations
 
+*In progress.*
+
 ## Genes
+
+*In progress.*
+
+```{r}
+list(
+  angela = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous"),
+           count = c(15468, 2069, 567,314)),
+  sixto = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous"),
+           count = c(3223, 210, 31, 9))
+) %>% bind_rows(.id = "tree") %>% 
+  mutate(type = factor(type, levels = c("all", "transcripts with genes", "within CDS", "non-synonymous"))) %>% 
+  ggplot(aes(type, count, fill = tree)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  scale_y_log10() +
+  geom_text(aes(y = 2, label = format(count, big.mark = " "), group = tree), 
+            position = position_dodge(width = .9), col = "white") +
+  xlab("") +
+  ggtitle("Mutations")
+```
+
+## Fruits
+
+```{r, eval=F}
+library(tidyverse)
+library(googlesheets4)
+theme_set(bayesplot::theme_default())
+nano <- list(
+  Sixto = read_sheet(ss = "https://docs.google.com/spreadsheets/d/1w9KauZ_XFGkEZoZcLbVywD1UK2FwJMtmzoNymsLEc4k/edit?usp=sharing", sheet = "Sixto_Nano"),
+  Angela = read_sheet(ss = "https://docs.google.com/spreadsheets/d/1w9KauZ_XFGkEZoZcLbVywD1UK2FwJMtmzoNymsLEc4k/edit?usp=sharing", sheet = "Angela_Nano")
+) %>% bind_rows(.id = "Tree")
+nano %>% 
+  mutate(A260_A280_ratio = "ok") %>% 
+  mutate(A260_A280_ratio = ifelse(A260_A280 < 1.8, "low", A260_A280_ratio)) %>% 
+  mutate(A260_A280_ratio = ifelse(A260_A280 > 2, "high", A260_A280_ratio)) %>% 
+  mutate(ADN_ng_uL = ifelse(ADN_ng_uL < 0, 0, ADN_ng_uL)) %>% 
+  ggplot(aes(ADN_ng_uL, fill = A260_A280_ratio)) +
+  geom_histogram() +
+  facet_wrap(~ Tree, scales = "free") +
+  scale_fill_manual(expression(frac(A260,A280)), values = c("darkorange", "brown2", "chartreuse3")) +
+  xlab(expression(ADN~ng.µL^-1))
+```
+

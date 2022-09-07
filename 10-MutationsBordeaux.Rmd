@@ -590,8 +590,8 @@ g0 <- lapply(list(swiss = "save/candidates_swiss.tsv",
                                     "Original studies", "Mutect2", "Strelka2 All", "Strelka2 EVS"),
                         label = c("N=12", "N=510 611", "N=51", "N=41",
                                   "N=60", "N=464", "N=121", "N=87"),
-                        AF = c(0.4, 0.4, 0.15, 0.15,
-                               0.45, 0.15, 0.25, 0.35),
+                        AF = c(0.4, 0.5, 0.15, 0.15,
+                               0.45, 0.2, 0.25, 0.35),
                         y = c(10, 5, 8, 9,
                               4, 10, 7, 5)) %>%
                mutate(study = recode(study,
@@ -659,7 +659,7 @@ g1 <- bind_rows(vroom::vroom("save/mut_anot_genom0.tsv"),
 g1
 ```
 
-```{r Fig4Cbdxswiss, eval=F}
+```{r Fig4Cbdxswiss}
 study_cols <- RColorBrewer::brewer.pal(2, "Dark2") # 1 - Schmid-Siegert, 2 - Plomion
 nucleotide_cols <- c('"#0E8F19"', '"#9C0C22"', '"#120b96"', '"#000000"') # 1 - A green, 2 - T red, 3 - C blue, 4 - G black
 
@@ -738,7 +738,7 @@ data <- data0 %>%
   ungroup() %>% 
   dplyr::select(study, type, Spectrum, P) %>% 
   mutate(x = paste0(type, Spectrum)) %>% 
-  bind_rows(data %>% 
+  bind_rows(data0 %>% 
               dplyr::select(study, type) %>% 
               unique() %>% 
               mutate(x = paste0(type, "Z"), P = NA)) %>% 
@@ -817,7 +817,7 @@ g2 <- ggplot(data,aes(x, P, fill = study)) +
            color="black", size=5 , angle=0, fontface="bold", parse=TRUE) +
   scale_size_manual(guide = "none", values = c(2, 0.6))
 
-g2
+# g2
 ```
 
 ```{r Fig4,  fig.height=8, fig.width=12, eval=F}

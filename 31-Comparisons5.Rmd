@@ -79,6 +79,231 @@ list(
   vroom::vroom_write("save/coverages_comparisons.tsv")
 ```
 
+```{r filteringComp5, eval=F}
+# covlims
+coverages <- vroom::vroom("save/coverages_comparisons.tsv")
+cov_lims <- coverages %>% 
+  mutate(proportion = round(proportion, 2)) %>% 
+  mutate(proportion = ifelse(tree == "Verzy" & proportion == 0.94, 0.95, proportion)) %>% 
+  filter(proportion == 0.05 | proportion == 0.95) %>% 
+  group_by(tree, library, proportion) %>% 
+  summarise(coverage = mean(coverage, na.omit = T)) %>% 
+  mutate(proportion = recode(as.character(proportion), "0.05" = "high_cov", "0.95" = "low_cov")) %>% 
+  reshape2::dcast(tree + library ~ proportion) %>% 
+  bind_rows(data.frame(tree = "Napoleon", library = c("upper", "lower"), high_cov = 120, low_cov = 2)) %>% 
+  mutate(low_cov = ifelse(low_cov < 10, 10, low_cov))
+# napo
+napo <- src_sqlite("data/mutations/swiss/strelka2_raw.sql") %>% tbl("mutations")
+napo_mutations <- napo %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  filter(mutation_altCountT1 >= 5, mutation_altCountT2 >= 5) %>% 
+  collect() %>% 
+  lazy_dt() %>% 
+  left_join(rename(cov_lims, tumor = library, mutation_high_cov = high_cov, mutation_low_cov = low_cov)) %>% 
+  left_join(rename(cov_lims, normal = library, normal_high_cov = high_cov, normal_low_cov = low_cov)) %>% 
+  filter(normal_DP <= normal_high_cov & normal_DP >= normal_low_cov & mutation_DP <= mutation_high_cov & mutation_DP >= mutation_low_cov) %>%
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, 
+                -mutation_high_cov, -mutation_low_cov, -normal_high_cov, -normal_low_cov) %>% 
+  group_by(tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median)
+vroom::vroom_write(as_tibble(napo_mutations), "data/mutations/swiss/leaf_mutations.tsv")
+# 3p
+bdx <- src_sqlite("data/mutations/bordeaux/strelka2_raw.sql") %>% tbl("mutations")
+bdx_mutations <- bdx %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  filter(mutation_altCountT1 >= 5, mutation_altCountT2 >= 5) %>% 
+  collect() %>% 
+  lazy_dt() %>% 
+  left_join(rename(cov_lims, tumor = library, mutation_high_cov = high_cov, mutation_low_cov = low_cov)) %>% 
+  left_join(rename(cov_lims, normal = library, normal_high_cov = high_cov, normal_low_cov = low_cov)) %>% 
+  filter(normal_DP <= normal_high_cov & normal_DP >= normal_low_cov & mutation_DP <= mutation_high_cov & mutation_DP >= mutation_low_cov) %>%
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, 
+                -mutation_high_cov, -mutation_low_cov, -normal_high_cov, -normal_low_cov) %>%
+  as_tibble() %>% 
+  group_by(tree, tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median)
+vroom::vroom_write(as_tibble(bdx_mutations), "data/mutations/bordeaux/leaf_mutations.tsv")
+# Verzy
+verzy <- src_sqlite("data/mutations/hetre/mutations.raw.sql") %>% tbl("mutations")
+verzy_mutations <- verzy %>% 
+  filter(reference == "Fagus_sylvatica_v3") %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  filter(mutation_altCountT1 >= 5, mutation_altCountT2 >= 5) %>% 
+  collect() %>% 
+  lazy_dt() %>% 
+  left_join(rename(cov_lims, tumor = library, mutation_high_cov = high_cov, mutation_low_cov = low_cov)) %>% 
+  left_join(rename(cov_lims, normal = library, normal_high_cov = high_cov, normal_low_cov = low_cov)) %>% 
+  filter(normal_DP <= normal_high_cov & normal_DP >= normal_low_cov & mutation_DP <= mutation_high_cov & mutation_DP >= mutation_low_cov) %>%
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, 
+                -mutation_high_cov, -mutation_low_cov, -normal_high_cov, -normal_low_cov) %>%
+  as_tibble() %>% 
+  group_by(tree, tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median)
+vroom::vroom_write(as_tibble(verzy_mutations), "data/mutations/hetre/leaf_mutations.tsv")
+rm(list = ls()) ; invisible(gc())
+```
+
+```{r spectraComp5data, eval=F}
+# libs
+library(Biostrings)
+library(genomeIntervals)
+# oak
+genome <- readDNAStringSet("data/mutations/bordeaux/Qrob_PM1N.fa")
+genome_index <- read_tsv("data/mutations/bordeaux/Qrob_PM1N.fa.fai",
+                         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, end = length) %>% 
+  dplyr::select(-length)
+# napo
+mutations <- vroom::vroom("data/mutations/swiss/leaf_mutations.tsv") %>% 
+  filter(Filter == "evs") %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  unique() %>% 
+  ungroup()
+seqs <- lapply(1:nrow(mutations), function(i)
+  as.character(unlist(extractAt(genome[mutations$CHROM[i]], IRanges(mutations$POS[i]-1, width=3)))))
+t <- mutations %>% 
+  mutate(spectra = unlist(seqs)) %>% 
+  mutate(REF5 = str_sub(spectra, 1, 1), REFspectra = str_sub(spectra, 2, 2), REF3 = str_sub(spectra, 3, 3)) %>% 
+  dplyr::select(-REFspectra) %>% 
+  mutate(type = paste0(REF, "->", ALT)) %>% 
+  mutate(strand = recode(type,
+                         "G->T" = "-",
+                         "C->A" = "+",
+                         "G->C" = "-",
+                         "C->G" = "+",
+                         "G->A" = "-",
+                         "C->T" = "+",
+                         "A->T" = "-",
+                         "T->A" = "+",
+                         "A->G" = "-",
+                         "T->C" = "+",
+                         "A->C" = "-",
+                         "T->G" = "+"
+                       )) %>%
+  mutate(type = recode(type,
+                       "G->T" = "C->A",
+                       "G->C" = "C->G",
+                       "G->A" = "C->T",
+                       "A->T" = "T->A",
+                       "A->G" = "T->C",
+                       "A->C" = "T->G"
+  )) %>%
+  mutate(POS5 = REF5, POS3 = REF3) %>% 
+  mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(REFr = recode(REF, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>%
+  mutate(REFf = ifelse(strand == "+", REF, REFr)) %>%
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
+  mutate(spectra = paste0(POS5f, REFf, POS3f)) %>% 
+  dplyr::select(CHROM, POS, SNV, REF, ALT, tumor, mutation_AF, Filter, type, spectra)
+write_tsv(t, "data/mutations/swiss/leaf_mutations_spectra.tsv") 
+# 3p
+mutations <- vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv") %>% 
+  filter(Filter == "evs") %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  unique() %>% 
+  ungroup()
+seqs <- lapply(1:nrow(mutations), function(i)
+  as.character(unlist(extractAt(genome[mutations$CHROM[i]], IRanges(mutations$POS[i]-1, width=3)))))
+t <- mutations %>% 
+  mutate(spectra = unlist(seqs)) %>% 
+  mutate(REF5 = str_sub(spectra, 1, 1), REFspectra = str_sub(spectra, 2, 2), REF3 = str_sub(spectra, 3, 3)) %>% 
+  dplyr::select(-REFspectra) %>% 
+  mutate(type = paste0(REF, "->", ALT)) %>% 
+  mutate(strand = recode(type,
+                         "G->T" = "-",
+                         "C->A" = "+",
+                         "G->C" = "-",
+                         "C->G" = "+",
+                         "G->A" = "-",
+                         "C->T" = "+",
+                         "A->T" = "-",
+                         "T->A" = "+",
+                         "A->G" = "-",
+                         "T->C" = "+",
+                         "A->C" = "-",
+                         "T->G" = "+"
+                       )) %>%
+  mutate(type = recode(type,
+                       "G->T" = "C->A",
+                       "G->C" = "C->G",
+                       "G->A" = "C->T",
+                       "A->T" = "T->A",
+                       "A->G" = "T->C",
+                       "A->C" = "T->G"
+  )) %>%
+  mutate(POS5 = REF5, POS3 = REF3) %>% 
+  mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(REFr = recode(REF, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>%
+  mutate(REFf = ifelse(strand == "+", REF, REFr)) %>%
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
+  mutate(spectra = paste0(POS5f, REFf, POS3f)) %>% 
+  dplyr::select(CHROM, POS, SNV, REF, ALT, tumor, mutation_AF, Filter, type, spectra)
+write_tsv(t, "data/mutations/bordeaux/leaf_mutations_spectra.tsv") 
+# verzy
+genome <- readDNAStringSet("data/mutations/hetre/Fagus_sylvatica_v3.fa")
+genome_index <- read_tsv("data/mutations/hetre/Fagus_sylvatica_v3.fa.fai",
+                         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(CHROM, length) %>% 
+  mutate(start = 0, end = length) %>% 
+  dplyr::select(-length)
+mutations <- vroom::vroom("data/mutations/hetre/leaf_mutations.tsv") %>% 
+  filter(Filter == "evs") %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  unique() %>% 
+  ungroup()
+seqs <- lapply(1:nrow(mutations), function(i)
+  as.character(unlist(extractAt(genome[mutations$CHROM[i]], IRanges(mutations$POS[i]-1, width=3)))))
+t <- mutations %>% 
+  mutate(spectra = unlist(seqs)) %>% 
+  mutate(REF5 = str_sub(spectra, 1, 1), REFspectra = str_sub(spectra, 2, 2), REF3 = str_sub(spectra, 3, 3)) %>% 
+  dplyr::select(-REFspectra) %>% 
+  mutate(type = paste0(REF, "->", ALT)) %>% 
+  mutate(strand = recode(type,
+                         "G->T" = "-",
+                         "C->A" = "+",
+                         "G->C" = "-",
+                         "C->G" = "+",
+                         "G->A" = "-",
+                         "C->T" = "+",
+                         "A->T" = "-",
+                         "T->A" = "+",
+                         "A->G" = "-",
+                         "T->C" = "+",
+                         "A->C" = "-",
+                         "T->G" = "+"
+                       )) %>%
+  mutate(type = recode(type,
+                       "G->T" = "C->A",
+                       "G->C" = "C->G",
+                       "G->A" = "C->T",
+                       "A->T" = "T->A",
+                       "A->G" = "T->C",
+                       "A->C" = "T->G"
+  )) %>%
+  mutate(POS5 = REF5, POS3 = REF3) %>% 
+  mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(REFr = recode(REF, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>%
+  mutate(REFf = ifelse(strand == "+", REF, REFr)) %>%
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
+  mutate(spectra = paste0(POS5f, REFf, POS3f)) %>% 
+  dplyr::select(CHROM, POS, SNV, REF, ALT, tumor, mutation_AF, Filter, type, spectra)
+write_tsv(t, "data/mutations/hetre/leaf_mutations_spectra.tsv") 
+rm(list = ls()) ; invisible(gc())
+```
+
 ```{r datacomp5}
 # genomes
 quercus_genome <- read_tsv("data/mutations/swiss/Qrob_PM1N.fa.fai", 
@@ -115,7 +340,7 @@ cov_lims <- coverages %>%
   mutate(low_cov = ifelse(low_cov < 10, 10, low_cov))
 ```
 
-# Comparisons
+# Comparisons 5
 
 This chapter compares the mutations of Napoleon, 3P, the dwarf beech, Sixto and Angela based on the closest possible filtering.
 
@@ -161,16 +386,469 @@ cov_lims %>%
   theme(axis.text.y = element_blank())
 ```
 
-## Filtered mutations
+## Mutations
 
-## Branch mutations
+```{r nmutComp5, fig.cap="Caption."}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  dplyr::select(tree, tumor, Filter, SNV) %>% 
+  unique() %>% 
+  group_by(tree, tumor, Filter) %>% 
+  summarise(mutations = n()) %>% 
+  ggplot(aes(Filter, mutations, col = tree)) +
+  geom_boxplot() +
+  facet_wrap(~Filter, scales = "free") +
+  ggpubr::stat_compare_means(label = "p.signif") +
+  xlab("") + ylab("Number of mutations")
+```
 
-## Rates
+## Frequencies
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  ggplot(aes(mutation_AF, col = tree)) +
+  geom_density() +
+  xlim(0, 0.5) +
+  facet_wrap(~ Filter) +
+  scale_x_log10() +
+  xlab("Allelic frequencies (AF)")
+```
 
 ## Types
 
+```{r typeComp5, fig.cap="Caption."}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations_spectra.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations_spectra.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations_spectra.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  group_by(type, tumor, tree) %>% 
+  summarise(N = n()) %>% 
+  group_by(tree, tumor) %>% 
+  mutate(pct = N/sum(N)*100) %>% 
+  ggplot(aes(type, pct, col = tree)) +
+  geom_boxplot(position = "dodge") + 
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank(),
+        axis.line.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  facet_wrap(~ type, nrow = 1, scales = "free_x") +
+  xlab("Percentage of mutations (%) per sample") +
+  ggpubr::stat_compare_means(label = "p.signif") +
+  ylab("Percentage of mutations")
+```
+
 ## Spectra
+
+```{r spectraComp5, fig.cap="Caption."}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations_spectra.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations_spectra.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations_spectra.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  group_by(type, spectra, tumor, tree) %>% 
+  summarise(N = n()) %>% 
+  group_by(tree, tumor) %>% 
+  mutate(pct = N/sum(N)*100) %>% 
+  ggplot(aes(spectra, pct, col = tree)) +
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~ type, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
+  theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
+  # scale_y_log10() +
+  # ggpubr::stat_compare_means(label = "p.signif") +
+  ylab("Percentage of mutations per library")
+```
+
+## Rates
+
+### Cummulated distributions
+
+```{r ratesComp5, fig.cap="Caption."}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  group_by(tree, Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  ggplot(aes(mutation_AF, cummulated_mutations, col = tree)) +
+  geom_line() +
+  scale_y_log10() + scale_x_reverse() +
+  xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF") +
+  facet_wrap(~ Filter, nrow = 2)
+```
+
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  # filter(tree %in% c("Angela", "Sixto")) %>% 
+  rename(library = tumor) %>% 
+  group_by(tree, library) %>% 
+  summarise(N = n()) %>% 
+  left_join(coverages %>% 
+              group_by(tree, library) %>% 
+              filter(proportion > 0.49, proportion < 0.51) %>% 
+              summarise(coverage = mean(coverage))) %>% 
+  mutate(coverage = ifelse(tree == "Napoleon", 60, coverage)) %>% 
+  # lm(N ~ coverage, data = .) %>% sjPlot::tab_model()
+  ggplot(aes(coverage, N, col = tree, group = NA))+
+  geom_point() +
+  geom_smooth(method = "lm") +
+  annotate("text", 100, 4000, label = expression(beta==15.20)) +
+  annotate("text", 100, 3500, label = expression(p==0.026)) +
+  annotate("text", 100, 3000, label = expression(R^2==0.144)) +
+  annotate("text", 100, 2500, label = expression(N==28)) +
+  xlab("Mean sequencing depth per library (X)") + ylab("Number of mutations detected per library")
+```
+
+### Lognormal distributions
+
+```{r , fig.cap="Caption."}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, tumor) %>% 
+  mutate(mutation_AF_ints = cut(mutation_AF, breaks = seq(0, 1, length.out = 100))) %>% 
+  group_by(tree, tumor, mutation_AF_ints) %>% 
+  summarise(N = n()) %>% 
+  separate(mutation_AF_ints, c("startAF", "stopAF"), ",", remove = F) %>% 
+  mutate(startAF = as.numeric(gsub("(", "", startAF, fixed = T)), stopAF = as.numeric(gsub("]", "", stopAF))) %>% 
+  mutate(AF = (startAF+stopAF)/2) %>%
+  ggplot(aes(AF, N, col = tree, group = tumor)) +
+  geom_line() +
+  geom_point() +
+  ylim(1, NA) + scale_y_log10() +
+  xlab("Allelic frequency") + ylab("Numner of mutations")
+```
+
+```{r}
+t <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree")
+fit <- MASS::fitdistr(t$mutation_AF, "lognormal") 
+ggplot(t, aes(mutation_AF)) +
+  geom_histogram(aes(y = ..density..), bins = 100, fill = "lightgrey") +
+  stat_function(fun = function(x) dlnorm(x, meanlog = fit$estimate[1], sdlog = fit$estimate[2]), col = "red") +
+  xlim(0, 0.5) +
+  xlab("Allelic frequency") + ylab("Observed mutations density")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, tumor) %>% 
+  summarise(mu = mean(log(mutation_AF)),  sigma = sd(log(mutation_AF))) %>% 
+  rowwise() %>% 
+  mutate(AF = list(seq(0, 1, length.out = 1000))) %>% 
+  unnest(AF) %>% 
+  mutate(N = dlnorm(AF, meanlog = mu, sdlog = sigma)) %>% 
+  group_by(tree, AF) %>% 
+  summarise(ll = min(N), m = median(N), hh = max(N)) %>% 
+  ggplot(aes(x = AF, fill = tree, col = tree)) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), alpha = 0.2, col = NA) +
+  geom_line(aes(y = m), size = 2) +
+  xlim(0, 0.5) +
+  xlab("Allelic frequency") + ylab("Observed mutations density")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, tumor) %>% 
+  summarise(`mu[log]~p<2e-16~R^2==0.89` = mean(log(mutation_AF)),  `sigma[log]~p==0.094~R^2==0.03` = sd(log(mutation_AF))) %>% 
+  reshape2::melt(c("tree", "tumor")) %>% 
+  mutate(name = paste0(tree, ":", tumor)) %>% 
+  left_join(coverages %>% 
+              group_by(tree, library) %>% 
+              filter(proportion > 0.4, proportion < 0.5) %>% 
+              summarise(coverage = mean(coverage)) %>% 
+              mutate(tumor = library)) %>% 
+    mutate(coverage = ifelse(tree == "Napoleon", 60, coverage)) %>% 
+  # split(.$variable) %>% lapply(function(x) lm(value ~ coverage, data = x)) %>% lapply(summary)
+  ggplot(aes(coverage, value, col = tree, group = NA)) +
+  facet_wrap(~variable, scales = "free", labeller = label_parsed) +
+  geom_smooth(method = "lm", col = c(rep("blue", 80), rep("grey", 80))) +
+  geom_point() +
+  xlab("Mean sequencing depth per library (X)") +
+  ylab("Parameters of the log-distribution of AF")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, tumor) %>% 
+  summarise(sigma = sd(log(mutation_AF))) %>% 
+  group_by(tree) %>% 
+  summarise(ll = min(sigma), l = quantile(sigma, 0.25), m = median(sigma),
+            h = quantile(sigma, 0.75), hh = max(sigma)) %>% 
+    ggplot(aes(x = tree, xend = tree,
+             color = tree, fill = tree)) +
+  geom_point(aes(y = m), shape = 21, size = 3, alpha = 0.5) +
+  geom_segment(aes(y = ll, yend = hh),
+               size = 1, show.legend = F, alpha = 0.5) +
+  geom_segment(aes(y = l, yend = h), size = 2, alpha = 0.5) +
+  coord_flip() +
+  ylab(expression(sigma[log])) + xlab("")
+```
+
+### Exponential distrbutions
+
+```{r}
+t <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree")
+mu <- quantile(t$mutation_AF, 0.1)
+dexptrunc <- function(x, rate){
+  if(rate > 0)
+    return(TruncatedDistributions::dtexp(x, a=mu, b=Inf, rate=rate))
+  else
+    return(rep(NaN, length(x)))
+} 
+pexptrunc <- function(q, rate){
+  if(length(x) > 0)
+    return(TruncatedDistributions::ptexp(q, a=mu, b=Inf, rate=rate))
+  else
+    return(x)
+} 
+fit <- fitdistrplus::fitdist(filter(t, mutation_AF > mu)$mutation_AF, "exptrunc", start = list(rate=50))
+r <- fit$estimate[1]
+c <- r*exp(r*mu)
+ggplot(t, aes(mutation_AF)) +
+  geom_histogram(aes(y = ..density..), bins = 100, fill = "lightgrey") +
+  stat_function(fun = function(x) dexptrunc(x, rate = r), col = "red") +
+  stat_function(fun = function(x) c*exp(-r*x), col = "blue") +
+  geom_vline(xintercept = mu, col = "black", linetype = "dashed") +
+  xlim(0, 0.5) +
+  xlab("Allelic frequency") + ylab("Observed mutations density")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(treetumor = paste0(tree, "_", tumor)) %>% 
+  dplyr::select(treetumor, mutation_AF) %>% 
+  split(.$treetumor) %>% 
+  lapply(function(x){
+    mu <- quantile(t$mutation_AF, 0.1)
+    dexptrunc <- function(x, rate){
+      if(rate > 0)
+        return(TruncatedDistributions::dtexp(x, a=mu, b=Inf, rate=rate))
+      else
+        return(rep(NaN, length(x)))
+    } 
+    pexptrunc <- function(q, rate){
+      if(length(x) > 0)
+        return(TruncatedDistributions::ptexp(q, a=mu, b=Inf, rate=rate))
+      else
+        return(x)
+    } 
+    fit <- try(fitdistrplus::fitdist(filter(x, mutation_AF > mu)$mutation_AF, "exptrunc", start = list(rate=15)))
+    if(inherits(fit, "try-error")) data.frame(rate = NA, mu = mu, c = NA)
+    if(!inherits(fit, "try-error")) data.frame(r = fit$estimate[1], mu = mu, c = fit$estimate[1]*exp(fit$estimate[1]*mu))
+  }) %>% bind_rows(.id = "treetumor") %>% 
+  separate(treetumor, c("tree", "tumor")) %>% 
+  rowwise() %>%
+  mutate(AF = list(seq(0, 1, length.out = 1000))) %>%
+  unnest(AF) %>%
+  mutate(N = c*exp(-r*AF)) %>% 
+  group_by(tree, AF) %>%
+  summarise(ll = min(N), m = median(N), hh = max(N)) %>%
+  ggplot(aes(x = AF, fill = tree, col = tree)) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), alpha = 0.2, col = NA) +
+  geom_line(aes(y = m), size = 2) +
+  xlim(0, 0.5) +
+  xlab("Allelic frequency") + ylab("Observed mutations density")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(treetumor = paste0(tree, "_", tumor)) %>% 
+  dplyr::select(treetumor, mutation_AF) %>% 
+  split(.$treetumor) %>% 
+  lapply(function(x){
+    mu <- quantile(t$mutation_AF, 0.1)
+    dexptrunc <- function(x, rate){
+      if(rate > 0)
+        return(TruncatedDistributions::dtexp(x, a=mu, b=Inf, rate=rate))
+      else
+        return(rep(NaN, length(x)))
+    } 
+    pexptrunc <- function(q, rate){
+      if(length(x) > 0)
+        return(TruncatedDistributions::ptexp(q, a=mu, b=Inf, rate=rate))
+      else
+        return(x)
+    } 
+    fit <- try(fitdistrplus::fitdist(filter(x, mutation_AF > mu)$mutation_AF, "exptrunc", start = list(rate=15)))
+    if(inherits(fit, "try-error")) data.frame(rate = NA, mu = mu, c = NA)
+    if(!inherits(fit, "try-error")) data.frame(r = fit$estimate[1],  c = fit$estimate[1]*exp(fit$estimate[1]*mu))
+  })  %>% bind_rows(.id = "treetumor") %>% 
+  separate(treetumor, c("tree", "tumor")) %>% 
+    reshape2::melt(c("tree", "tumor")) %>% 
+  mutate(name = paste0(tree, ":", tumor)) %>% 
+  left_join(coverages %>% 
+              group_by(tree, library) %>% 
+              filter(proportion > 0.4, proportion < 0.5) %>% 
+              summarise(coverage = mean(coverage)) %>% 
+              mutate(tumor = library)) %>% 
+    mutate(coverage = ifelse(tree == "Napoleon", 60, coverage)) %>% 
+  ggplot(aes(coverage, value, col = tree, group = NA)) +
+  facet_wrap(~variable, scales = "free", labeller = label_parsed) +
+  geom_smooth(col = "blue", method = "lm") +
+  geom_point() +
+  xlab("Mean sequencing depth per library (X)") +
+  ylab("Parameters of the power-distribution of AF")
+```
+
+### Power law distribution
+
+```{r}
+t <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree")
+mu <- quantile(t$mutation_AF, 0.1)
+fit <- igraph::fit_power_law(t$mutation_AF, xmin = mu)
+a <- fit$alpha
+b <- fit$xmin
+c <- (a-1)*b^(a-1)
+ggplot(t, aes(mutation_AF)) +
+  geom_histogram(aes(y = ..density..), bins = 100, fill = "lightgrey") +
+   stat_function(fun = function(x) c*x^(-a), col = "red") +
+  xlab("Allelic frequency") + ylab("Observed mutations density") +
+  geom_vline(xintercept = b, linetype = 'dashed', col = "red") +
+  xlim(0, 0.5) + ylim(0, 50)
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(treetumor = paste0(tree, "_", tumor)) %>% 
+  dplyr::select(treetumor, mutation_AF) %>% 
+  split(.$treetumor) %>% 
+  lapply(function(x){
+    mu <- quantile(t$mutation_AF, 0.1)
+    fit <- igraph::fit_power_law(x$mutation_AF, xmin = mu)
+    a <- fit$alpha
+    b <- fit$xmin
+    c <- (a-1)*b^(a-1)
+    return(data.frame(a = a, b = b, c = c))
+  }) %>% bind_rows(.id = "treetumor") %>% 
+  separate(treetumor, c("tree", "tumor")) %>% 
+  rowwise() %>%
+  mutate(AF = list(seq(0, 1, length.out = 1000))) %>%
+  unnest(AF) %>%
+  mutate(N = c*AF^(-a)) %>% 
+  group_by(tree, AF) %>%
+  summarise(ll = min(N), m = median(N), hh = max(N)) %>%
+  ggplot(aes(x = AF, fill = tree, col = tree)) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), alpha = 0.2, col = NA) +
+  geom_line(aes(y = m), size = 2) +
+  xlim(0, 0.5) +  ylim(0, 500) +
+  xlab("Allelic frequency") + ylab("Observed mutations density")
+```
+
+```{r}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(treetumor = paste0(tree, "_", tumor)) %>% 
+  dplyr::select(treetumor, mutation_AF) %>% 
+  split(.$treetumor) %>% 
+  lapply(function(x){
+    mu <- quantile(t$mutation_AF, 0.1)
+    fit <- igraph::fit_power_law(x$mutation_AF, xmin = mu)
+    a <- fit$alpha
+    b <- fit$xmin
+    c <- (a-1)*b^(a-1)
+    return(data.frame(a = a, b = b, c = c))
+  }) %>% bind_rows(.id = "treetumor") %>% 
+  separate(treetumor, c("tree", "tumor")) %>% 
+    reshape2::melt(c("tree", "tumor")) %>% 
+  mutate(name = paste0(tree, ":", tumor)) %>% 
+  filter(variable != "b") %>% 
+  left_join(coverages %>% 
+              group_by(tree, library) %>% 
+              filter(proportion > 0.4, proportion < 0.5) %>% 
+              summarise(coverage = mean(coverage)) %>% 
+              mutate(tumor = library)) %>% 
+    mutate(coverage = ifelse(tree == "Napoleon", 60, coverage)) %>% 
+  ggplot(aes(coverage, value, col = tree, group = NA)) +
+  facet_wrap(~variable, scales = "free", labeller = label_parsed) +
+  geom_smooth(method = "lm", col = "blue") +
+  geom_point() +
+  xlab("Mean sequencing depth per library (X)") +
+  ylab("Parameters of the power-distribution of AF")
+```
 
 ## Annotations
 
+*Angela and Sixto in progress.*
+
 ## Genes
+
+*Angela and Sixto in progress.*

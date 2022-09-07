@@ -1,3 +1,8 @@
+treemutation 1.0.0.9026
+* rate modelling
+* annotation
+* mutations & genes
+
 treemutation 1.0.0.9025
 * filter bio & comp2
 
