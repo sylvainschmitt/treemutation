@@ -17,12 +17,12 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasiteregina, include = F}
+```{r datasiteregina, include = F, eval=F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 dem <- raster("data/Paracou/lidar/DEM_1m_2015.tif") # for CRS
 first_candidates <- st_read("data/Regina/trees/Regina TREEMUTATION candidates.gpx", layer = "waypoints")
 angela <- st_read("data/Regina/trees/Angela.gpx")
-las <- lapply(list.files("data/Regina/lidar/LAZ_zoi_trees/", pattern = ".laz$", full.names = T), readLAS)
+las <- lapply(list.files("data/Regina/lidar/ONF/LAZ_zoi_trees/", pattern = ".laz$", full.names = T), readLAS)
 dcm <- lapply(las, grid_canopy, res = 1, algorithm = p2r())
 dcm <- do.call(merge, dcm)
 projection(dcm) <- projection(dem)
@@ -82,7 +82,7 @@ Cons:
 
 * Distance for phenology
 
-```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR."}
+```{r reginaMap, fig.cap="Regina individuals and MNC from ONF's LiDAR.", eval=F}
 leaflet() %>%
   addTiles(group = "OSM") %>%
   # addPolygons(st_zm(trajectosONF), group = "trajectos", col = "blue") %>% 

@@ -280,7 +280,7 @@ orfs %>%
 
 ## Rubrynolide enzymes
 
-```{r}
+```{r, eval=F}
 t <- googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1KD4RpBwSlpjqXevWjCW-VXFHM9jQRYeDJJ8mmcW1InA/edit?usp=sharing") %>% 
   dplyr::rename(info = `Name IMG gene ID`) %>% 
   mutate(id = stringr::str_sub(info, -10))
@@ -1117,6 +1117,7 @@ data <- archi_mutations %>%
                           separate(attributes, c("geneID", "transcript"))) %>% 
               dplyr::select(SNV) %>% 
               mutate(goenriched = 1))
+write_tsv(data, "save/mutations_annotated_sixto.tsv")
 filter(data, CDS == 1) %>% 
   filter(mutation_AF > 0.01) %>% 
   dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
@@ -1151,7 +1152,8 @@ goe@result %>%
   ggtitle("GO enrichment for Sixto non-synonymous mutations")
 ```
 
-```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations."}
+```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations.", eval=F}
 enrichplot::emapplot(goe) +
   ggtitle("GO enrichment for Sixto non-synonymous mutations")
 ```
+

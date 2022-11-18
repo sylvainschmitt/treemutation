@@ -352,6 +352,21 @@ list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %
   facet_grid(tree ~ Filter)
 ```
 
+
+```{r, eval=F}
+list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+       left_join(dplyr::select(archi_mutations_sixto_base, SNV, origin2)),
+     "Angela" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+       left_join(dplyr::select(archi_mutations_angela_base, SNV, origin2))) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(!is.na(origin2)) %>% 
+    filter(Filter == "base") %>% 
+  ggplot(aes(x = mutation_AF, color = tree)) +
+  geom_density() +
+  xlab("Allelic fraction (AF)")
+```
+
+
 ```{r deltaafcomp2, fig.cap="Caption."}
 list("Sixto" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
        left_join(dplyr::select(archi_mutations_sixto_base, SNV, origin2)),
@@ -426,6 +441,22 @@ list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
   ggplot(aes(tree, mutations, fill = condition)) +
   geom_boxplot() +
   facet_wrap(~Filter, scales = "free") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
+  xlab("") + ylab("Number of mutations")
+```
+
+```{r, eval=F}
+list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  dplyr::select(tree, tip, tumor, Filter, SNV) %>% 
+  unique() %>% 
+  group_by(tree, tip, tumor, Filter) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  filter(Filter == "base") %>% 
+  ggplot(aes(tree, mutations, fill = condition)) +
+  geom_boxplot() +
   ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
   xlab("") + ylab("Number of mutations")
 ```
@@ -515,14 +546,356 @@ list(
   ggplot(aes(type, count, fill = tree)) +
   geom_col(position = "dodge") +
   coord_flip() +
+  # scale_y_log10() +
+  geom_text(aes(y = count+100, label = format(count, big.mark = " "), group = tree), 
+            position = position_dodge(width = .9), col = "black") +
+  xlab("")
+  # ggtitle("Mutations")
+```
+
+```{r}
+data <- list(angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+     sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
+  dplyr::select(tree, SNV, synonymy, mutation_AF) 
+aov(lm(log(mutation_AF) ~ tree + synonymy, data)) %>% summary()
+ggplot(data, aes(tree, mutation_AF, fill = synonymy)) +
+  geom_violin() +
+  ggtitle("Anova: log(AF) ~ tree + synonymy", "tree p < 2e-16, synonymy p = 1.47e-14") +
+   ylab("Allelic fraction") +
+  scale_fill_manual(values = c("firebrick", "darkgreen"))
+```
+
+
+## Fruits
+
+### From SSRseq Olivier
+
+#### Align genotypes
+
+```{r, eval=F, echo=T}
+library(Biostrings)
+candidates <- bind_rows(
+  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 1:n(), tree = "Angela"),
+  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 125:(124+n()), tree = "Sixto")
+) %>% 
+  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+alleles <- readxl::read_xlsx("data/mutations/fruits/SSRseq_TreeMutation_DataAnalysis.xlsx", "AlleleInformation") %>% 
+  dplyr::rename(locus = Locus, genotype = AlleleSeqCode, sequence = AlleleSequence) %>% 
+  dplyr::select(locus, genotype, sequence) %>% 
+  mutate(locus2 = gsub("TreeMut_SNP-", "", locus)) %>% 
+  separate(locus2, c("mutation", "pos"), "_Super-Scaffold_", convert = T) %>% 
+  separate_rows(mutation, convert = T) %>% 
+  separate(pos, "CHROM", convert = T) %>% 
+  left_join(candidates) %>% 
+  mutate(name = paste0("SNV", sprintf("%03d", mutation), "_A", genotype))
+angela_alleles <- DNAStringSet(filter(alleles, tree == "Angela")$sequence)
+names(angela_alleles) <- filter(alleles, tree == "Angela")$name
+writeXStringSet(angela_alleles, "data/mutations/fruits/angela_alleles.fa")
+sixto_alleles <- DNAStringSet(filter(alleles, tree == "Sixto")$sequence)
+names(sixto_alleles) <- filter(alleles, tree == "Sixto")$name
+writeXStringSet(sixto_alleles, "data/mutations/fruits/sixto_alleles.fa")
+refs <- bind_rows(readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Sixto") %>% 
+            mutate(tree = "Sixto"),
+          readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Angela") %>% 
+            mutate(tree = "Angela")) %>% 
+  mutate(library = paste0(Code_Espece, Tube), tissue = Tissu) %>%
+  dplyr::select(library, tree, tissue) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Angela.xlsx", "libraries") %>% 
+              mutate(tissue = paste("branch", branch), library = idOld, tree = "Angela") %>% 
+              dplyr::select(library, tree, tissue)) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Sixto.xlsx", "samples") %>% 
+              mutate(tissue = paste("branch", Branch), library = id, tree = "Sixto") %>% 
+              dplyr::select(library, tree, tissue))
+```
+
+```{bash, eval=F, echo=T}
+bwa mem -t 2 ../angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.fa angela_alleles.fa | samtools sort > angela_alleles_aligned.bam
+samtools index angela_alleles_aligned.bam
+bwa mem -t 2 ../sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa sixto_alleles.fa | samtools sort > sixto_alleles_aligned.bam
+samtools index sixto_alleles_aligned.bam
+```
+
+#### Automate IGV
+
+```{bash installigvreports, eval=F, echo=T}
+conda create -n igvreports python=3.7.1
+conda activate igvreports
+pip install igv-reports
+conda deactivate
+```
+
+```{bash igvreportsangela2, eval=F, echo=T}
+conda activate igvreports
+create_report data/mutations/fruits/angela_fruits_candidate_mutations.tsv \
+data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.fa \
+--sequence 2 --begin 3 --end 3 \
+--flanking 1000 \
+--info-columns SNV CHROM POS REF ALT af replicate branch rank \
+--tracks data/mutations/fruits/angela_alleles_aligned.bam data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff \
+--output data/mutations/fruits/angela_fruits_aligned.html
+conda deactivate
+```
+
+```{bash igvreportssixto2, eval=F, echo=T}
+conda activate igvreports
+create_report data/mutations/fruits/sixto_fruits_candidate_mutations.tsv \
+data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa \
+--sequence 2 --begin 3 --end 3 \
+--flanking 1000 \
+--info-columns SNV CHROM POS REF ALT af replicate branch rank \
+--tracks data/mutations/fruits/sixto_alleles_aligned.bam data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff \
+--output data/mutations/fruits/sixto_fruits_aligned.html
+conda deactivate
+```
+
+#### Results
+
+```{r}
+readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
+  mutate(Tree = ifelse(as.numeric(gsub("SNV", "", SNV)) > 124, "Sixto", "Angela")) %>% 
+  group_by(Tree, Type) %>%
+  summarise(N = n()) %>% 
+  reshape2::dcast(Type ~ Tree) %>% 
+  mutate(Total = Angela + Sixto) %>% 
+  mutate(Percentage = round(Total/160*100))
+```
+
+
+```{r datafruitsolivier}
+refs <- bind_rows(readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Sixto") %>% 
+            mutate(tree = "Sixto"),
+          readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Angela") %>% 
+            mutate(tree = "Angela")) %>% 
+  mutate(library = paste0(Code_Espece, Tube), tissue = Tissu) %>%
+  dplyr::select(library, tree, tissue, Echantillon) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Angela.xlsx", "libraries") %>% 
+              mutate(tissue = paste("branch", branch), library = idOld, tree = "Angela") %>% 
+              dplyr::select(library, tree, tissue)) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Sixto.xlsx", "samples") %>% 
+              mutate(tissue = paste("branch", Branch), library = id, tree = "Sixto") %>% 
+              dplyr::select(library, tree, tissue))
+candidates <- bind_rows(
+  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 1:n(), tree = "Angela"),
+  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 125:(124+n()), tree = "Sixto")
+) %>% 
+  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+mutations <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "mutations")
+geno <- readxl::read_xlsx("data/mutations/fruits/SSRseq_TreeMutation_DataAnalysis.xlsx", "Genotypes", skip = 10)
+loci_names <- names(geno)[-1][seq(1, ncol(geno)-2, 2)]
+names(geno)[1+seq(1, ncol(geno)-2, 2)] <- paste0(loci_names, "_Locus1")
+names(geno)[2+seq(1, ncol(geno)-2, 2)] <- paste0(loci_names, "_Locus2")
+```
+
+```{r allfruitsolivier}
+all <- geno %>% 
+  reshape2::melt(id.vars = "Indiv", variable.name = "locus", value.name = "genotype") %>% 
+  mutate(genotype = as.numeric(ifelse(genotype == "NA", NA, genotype))) %>%
+  filter(!is.na(genotype)) %>% 
+  mutate(locus = gsub("TreeMut_SNP-", "", locus)) %>% 
+  separate(locus, "SNV", "_Super-Scaffold_") %>% 
+  separate_rows(SNV, convert = T) %>% 
+  mutate(SNV =  paste0("SNV", sprintf("%03d", SNV))) %>% 
+  dplyr::rename(Genotype = genotype) %>% 
+  left_join(mutations) %>% 
+  filter(!is.na(Base)) %>% 
+  separate(Indiv, c("library"), "_[[:alpha:]]$", remove = F) %>% 
+  left_join(refs) %>% 
+  filter(!is.na(tissue)) %>% 
+  left_join(mutate(candidates, SNV =  paste0("SNV", sprintf("%03d", mutation))))
+stats <- all %>% 
+  group_by(tree, SNV, library, tissue, af, branch, REF, ALT) %>% 
+  summarise(type = paste0(unique(sort(Base)), collapse = ", ")) %>% 
+  group_by(tree, SNV, af, branch, REF, ALT, tissue) %>% 
+  mutate(Ntot = n()) %>% 
+  group_by(tree, SNV, af, branch, REF, ALT, tissue, Ntot, type) %>% 
+  summarise(N = n()) %>% 
+  mutate(pct = N/Ntot*100) %>% 
+  mutate(title = paste0(SNV, " ", REF, ">", ALT, " AF=", round(af, 2), " branches=", branch))
+```
+
+```{r graphfruitsolivier}
+graph <- stats %>% 
+  ggplot(aes(paste(tree, tissue), y = pct, fill = type)) +
+  geom_col() + 
+  geom_text(aes(y = 5, label = Ntot), col = "white") +
+  ggforce::facet_wrap_paginate(~ title, scales = "free", nrow = 1, ncol = 1) +
+  coord_flip() +
+  ylab("Percentage") + xlab("")
+```
+
+```{r saveallgraphfruitsolivier, eval=F, echo=T}
+pdf( "data/mutations/fruits/fruits_mutations.pdf")
+for(i in 1:ggforce::n_pages(graph))
+  print(graph + ggforce::facet_wrap_paginate(~title, scales = "free",
+                                         ncol = 1, nrow = 1, page = i))
+dev.off()
+```
+
+```{r exgraphfruitsolivier}
+graph + ggforce::facet_wrap_paginate(~title, scales = "free",
+                                     ncol = 1, nrow = 1, page = 1)
+```
+
+```{r snv045, eval=F}
+samples <- all %>% 
+  filter(SNV == "SNV045") %>% 
+  filter(!is.na(Echantillon)) %>% 
+  group_by(tree, Echantillon) %>% 
+  summarise(type = paste0(unique(sort(Base)), collapse = ", ")) %>% 
+  filter(type == "T") %>% 
+  separate(Echantillon, c("species", "branch_fruit", "sample_fruit", "tissue_short")) %>% 
+  mutate(fruit = paste0(branch_fruit, sample_fruit))
+  # only branch B !
+all %>% 
+  separate(Echantillon, c("species", "branch_fruit", "sample_fruit", "tissue_short")) %>% 
+  mutate(fruit = paste0(branch_fruit, sample_fruit)) %>% 
+  filter(fruit %in% samples$fruit) %>% 
+  group_by(fruit, tissue, SNV) %>% 
+  summarise(type = ifelse(length(unique(Base)) == 1, "homozygote", "heterozygote")) %>% 
+  group_by(fruit, tissue, type) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(fruit + tissue ~ type) %>% 
+  filter(tissue != "endocarpe") %>% 
+  mutate(heterozygote = ifelse(is.na(heterozygote), 0, heterozygote)) %>% 
+  mutate(homozygosity = homozygote / (heterozygote + homozygote) * 100) %>% 
+  ggplot(aes(homozygosity)) +
+  geom_density() +
+  xlim(0, 100) +
+  ggtitle('Fruits with SNV045 homozygosity across mutations',
+          '5/16 non 100% homozygote')
+```
+#### Tissues
+
+```{r}
+fruits <- all %>% 
+  separate(Echantillon, c("species", "branch_fruit", "sample_fruit", "tissue_short")) %>% 
+  mutate(fruit = paste0(branch_fruit, sample_fruit)) %>% 
+  filter(!is.na(branch_fruit)) %>% 
+  filter(tissue != "endocarpe") %>% 
+  group_by(SNV, af, branch, branch_fruit, fruit, tissue) %>% 
+  summarise(genotype = paste0(unique(sort(Base)), collapse = "")) %>% 
+  mutate(type = ifelse(nchar(genotype) == 2, "heterozygous", "homozygous"))
+```
+
+```{r}
+# branch coherence
+fruits %>% 
+  filter(type == "heterozygous") %>% 
+  rowwise() %>% 
+  mutate(branches = list(str_split(branch, ", ")[[1]])) %>% 
+  filter(!(branch_fruit %in% branches)) %>% 
+  filter(SNV != "SNV128", SNV != "SNV132", SNV != "SNV151", SNV != "SNV160",) %>% 
+  group_by(SNV, branch) %>% 
+  summarise(branch_fruit = paste(unique(branch_fruit, collapse = ",")),
+            fruits = length(unique(fruit))) %>% 
+  left_join(fruits %>% 
+              dplyr::select(SNV, fruit) %>% 
+              unique() %>% 
+              group_by(SNV) %>% 
+              summarise(total = n())) %>% 
+  mutate(percentage = round(fruits / total * 100))
+```
+
+```{r}
+# tissue coherence
+agreement <- fruits %>%
+  filter(tissue %in% c("embryo sac", "cotyledon")) %>% 
+  reshape2::dcast(SNV + fruit ~ tissue, value.var = "type") %>% 
+  mutate(agreement = !(cotyledon != `embryo sac`)) %>% 
+  mutate(agreement = ifelse(is.na(agreement), T, agreement)) %>% 
+  group_by(SNV, agreement) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(SNV ~ agreement) %>% 
+  mutate(`FALSE` = ifelse(is.na(`FALSE`), 0, `FALSE`)) %>% 
+  mutate(agreement = round(`TRUE` / (`TRUE` + `FALSE`) * 100))
+```
+
+```{r}
+ggplot(agreement, aes(agreement)) + 
+  geom_histogram() +
+  xlab("Agreement cotyledon & embryon (%)")
+```
+
+```{r}
+filter(agreement, agreement < 100)
+```
+
+#### Transmission
+
+```{r}
+transmission <- fruits %>% 
+  filter(tissue == "embryo sac") %>% 
+  group_by(SNV, af, type) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(SNV + af ~ type) %>% 
+  mutate(heterozygous = ifelse(is.na(heterozygous), 0, heterozygous)) %>% 
+  mutate(transmission = heterozygous / (heterozygous+homozygous))
+transmission %>% 
+  filter(transmission > 0) %>% 
+  ggplot(aes(af, transmission)) +
+  geom_smooth(method = "lm") +
+  geom_point(size = 2) +
+  ggrepel::geom_text_repel(aes(label = SNV)) +
+  scale_x_log10() +
   scale_y_log10() +
+  xlab("Mean alleleic fraction in branches") +
+  ylab("Transmission rate across embryons")
+```
+
+```{r}
+readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
+  mutate(Tree = ifelse(as.numeric(gsub("SNV", "", SNV)) > 124, "Sixto", "Angela")) %>% 
+  left_join(candidates %>% 
+              mutate(SNV = paste0("SNV", sprintf("%03d", mutation))) %>% 
+              dplyr::select(SNV, af)) %>% 
+  filter(Type %in% c("reference only", "mutation")) %>% 
+  left_join(transmission %>% 
+              filter(transmission > 0) %>% 
+              mutate(type = "transmitted") %>% 
+              dplyr::select(SNV, type)) %>% 
+  mutate(type = ifelse(is.na(type), "untransmitted", type)) %>% 
+  ggplot(aes(type, af, fill = type)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  coord_flip() +
+  ggtitle("Wilcoxon test, p = 0.2") +
+  xlab("") +
+  ylab("Mean alleleic fraction in branches") +
+  scale_fill_discrete(guide = "none")
+```
+
+### Old
+
+```{r}
+list(
+  angela = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"),
+           count = c(152, 41, 19, 17, 0)),
+  sixto = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"),
+           count = c(36, 0, 0, 0, 0))
+) %>% bind_rows(.id = "tree") %>% 
+  mutate(type = factor(type, levels = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"))) %>% 
+  ggplot(aes(type, count, fill = tree)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
   geom_text(aes(y = 2, label = format(count, big.mark = " "), group = tree), 
             position = position_dodge(width = .9), col = "white") +
   xlab("") +
-  ggtitle("Mutations")
+  ggtitle("Fruit mutations")
 ```
 
-## Fruits
+
+
 
 ```{r, eval=F}
 library(tidyverse)

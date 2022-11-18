@@ -36,7 +36,7 @@ include_graphics("data/Regina/drone/Angela/DJI_2910.JPG")
 **E. coriacea** following Pascal. Currently the' best candidate near Regina.
 
 ```{r MN5505ground, fig.cap="MN5505 from the ground."}
-include_graphics("data/Regina/pictures/TreeMutation20200308/MN5505/_0018436.jpg")
+include_graphics("data/Regina/pictures/TreeMutation20210308/MN5505/_0018436.jpg")
 ```
 
 ```{r MN5505drone, fig.cap="MN5505 from the drone."}

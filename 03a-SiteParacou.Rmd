@@ -15,7 +15,7 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasiteparacou, include = F}
+```{r datasiteparacou, include = F, eval=F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv") %>% 
   st_as_sf(coords = c("lon", "lat"),
@@ -60,7 +60,7 @@ Cons:
 * Non destructive sampling
 * Avoid trunk
 
-```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns."}
+```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns.", eval=F}
 leaflet() %>%
   addTiles() %>% 
   addRasterImage(aggregate(dcm2004, 4), colors = "Greys", group = "DCM 2004") %>%

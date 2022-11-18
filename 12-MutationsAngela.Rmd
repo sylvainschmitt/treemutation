@@ -1132,6 +1132,7 @@ data <- archi_mutations %>%
                           separate(attributes, c("geneID", "transcript"))) %>% 
               dplyr::select(SNV) %>% 
               mutate(goenriched = 1))
+write_tsv(data, "save/mutations_angela_sixto.tsv")
 filter(data, CDS == 1) %>% 
   filter(mutation_AF > 0.01) %>% 
   dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
@@ -1166,7 +1167,10 @@ goe@result %>%
   ggtitle("GO enrichment for Angela non-synonymous mutations")
 ```
 
-```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations."}
+```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations.", eval=F}
 enrichplot::emapplot(goe) +
   ggtitle("GO enrichment for Angela non-synonymous mutations")
 ```
+
+
+

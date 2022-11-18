@@ -1,3 +1,7 @@
+treemutation 1.0.0.9027
+* mutations transmission in fruits based on amplicons
+* update R 4.2.1 and associated change (or eval=F)
+
 treemutation 1.0.0.9026
 * rate modelling
 * annotation

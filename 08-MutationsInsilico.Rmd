@@ -293,7 +293,7 @@ g <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
   transition_manual(C) +
   labs(title = 'Coverage: {current_frame}') +
   theme(legend.position = "bottom")
-anim_save("save/insilico.gif", g)
+anim_save("save/insilico.gif", g, renderer = gifski_renderer())
 ```
 
 

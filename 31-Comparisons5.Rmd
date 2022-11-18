@@ -498,6 +498,26 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
   facet_wrap(~ Filter, nrow = 2)
 ```
 
+```{r, eval=F}
+list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  group_by(tree, Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  filter(Filter == "base") %>% 
+  ggplot(aes(mutation_AF, cummulated_mutations, col = tree)) +
+  geom_line() +
+  scale_y_log10() + scale_x_reverse() +
+  xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF")
+```
+
 
 ```{r}
 list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
@@ -636,7 +656,7 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
 
 ### Exponential distrbutions
 
-```{r}
+```{r, eval=F}
 t <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -668,7 +688,7 @@ ggplot(t, aes(mutation_AF)) +
   xlab("Allelic frequency") + ylab("Observed mutations density")
 ```
 
-```{r}
+```{r, eval=F}
 list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -710,7 +730,7 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
   xlab("Allelic frequency") + ylab("Observed mutations density")
 ```
 
-```{r}
+```{r, eval=F}
 list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
