@@ -1,10 +1,12 @@
 ```{r setupmutationsangela, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
-library(tidyverse)
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tibble)
+library(ggplot2)
 library(circlize)
 library(ComplexHeatmap)
 library(ape)
@@ -211,10 +213,23 @@ rm(busco_hs1, busco_hs2, cov_hs1, cov_hs2, covs, gc_hs1, gc_hs2, covs_files, hs2
 
 ### Annotation
 
-```{r circosAnnot, eval=F}
-min_length <- 2*10^6
-window <- 10*10^3
+```{r, circosAnnot, eval=F}
+min_length <- 20*10^6
+window <- 100*10^3
 hs1_f <- filter(hs1, end > min_length)
+gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  filter(type  == "gene") %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
 te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
                col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
   mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
@@ -225,81 +240,24 @@ te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.ou
   mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
   mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
   separate(interval, c("start", "stop"), ",", convert = T)
-gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
-                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
-  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% hs1_f$name) %>% 
-  filter(type %in% c("gene", "CDS")) %>% 
-  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
-  group_by(name, interval) %>% 
-  summarise(gene = n()) %>% 
-  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
-  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
-  separate(interval, c("start", "stop"), ",", convert = T) %>% 
-  ungroup()
-png("save/AngelaCircosAnnot.png", width = 1000, height = 1000)
-circos.par(gap.degree = 4)
-circos.initializeWithIdeogram(as.data.frame(hs1_f))
-circos.genomicTrack(gene_f,
+png("save/AngelaCircosAnnot.png", width = 1000, height = 1000, bg = NA)
+circos.par(gap.degree = c(rep(1, nrow(hs1_f)-2), 5, rep(1, 1)),
+           track.height = 0.2,
+           points.overflow.warning = F)
+circos.initializeWithIdeogram(as.data.frame(hs1_f),
+                              labels.cex = 4, axis.labels.cex = 1)
+circos.genomicTrack(gene_f, track.height = 0.2,
     panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "red", ...)
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
 })
-circos.yaxis(side = "left")
-circos.genomicTrack(te_f, 
+circos.yaxis(side = "left", at = c(10, 20, 30, 40), labels.cex = 1)
+circos.genomicTrack(te_f, track.height = 0.2,
     panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "blue", ...)
+        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
 })
-circos.yaxis(side = "left")
-text(0, 0, "HS1", cex = 1.5)
-legend("bottomleft", pch = 16, col = c("red", "blue"), legend = c("genes", "TE"), bty = "n")
+circos.yaxis(side = "left", at = c(200,400), labels.cex = 1)
 dev.off()
 circos.clear()
-```
-
-```{r circosAnnot2, eval=F}
-min_length <- 2*10^6
-window <- 10*10^3
-hs1_f <- filter(hs1, end > min_length)
-te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
-               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
-  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% hs1_f$name) %>% 
-  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
-  group_by(name, interval) %>% 
-  summarise(TE = n()) %>% 
-  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
-  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
-  separate(interval, c("start", "stop"), ",", convert = T)
-gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
-                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
-  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% hs1_f$name) %>% 
-  filter(type %in% c("gene", "CDS")) %>% 
-  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
-  group_by(name, interval) %>% 
-  summarise(gene = n()) %>% 
-  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
-  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
-  separate(interval, c("start", "stop"), ",", convert = T) %>% 
-  ungroup()
-annot <- left_join(te_f, gene_f) %>% 
-  mutate(gene = ifelse(is.na(gene), 0, gene)) %>% 
-  mutate(gene = log(gene + 1)) %>% 
-  mutate(TE = log(TE + 1))
-rm(te_f, gene_f)
-te_breaks <- seq(0, max(annot$TE), by = 0.1)
-col_te <- colorRamp2(te_breaks, viridis::viridis(length(te_breaks)))
-gene_breaks <- seq(0, max(annot$gene), by = 0.1)
-col_gene <- colorRamp2(gene_breaks, viridis::viridis(length(gene_breaks), option = "A"))
-png("save/AngelaCircosAnnot.png", width = 1000, height = 1000)
-circos.heatmap.initialize(as.vector(annot$TE), split = as.factor(annot$name))
-circos.heatmap(as.vector(annot$TE), col = col_te, show.sector.labels = TRUE)
-circos.heatmap(as.vector(annot$gene), col = col_gene)
-circos.clear()
-lgd_te <- Legend(title = "TE", col_fun = col_te, at =  seq(0, ceiling(max(annot$TE)), by = 1), labels = round(exp(seq(0, ceiling(max(annot$TE)), by = 1))+1))
-lgd_gene <- Legend(title = "gene", col_fun = col_gene, at =  seq(0, ceiling(max(annot$gene)), by = 1), labels = round(exp(seq(0, ceiling(max(annot$gene)), by = 1))+1))
-draw(packLegend(lgd_te, lgd_gene, direction = "horizontal"))
-dev.off()
 ```
 
 ```{r}
@@ -327,6 +285,148 @@ orfs %>%
 rm(orfs, n)
 ```
 
+### Mutations
+
+```{r}
+min_length <- 20*10^6
+window <- 100*10^3
+hs1_f <- filter(hs1, end > min_length)
+mutation_f <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  select(SNV, CHROM, POS) %>% 
+  unique() %>% 
+  mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  mutate(interval = cut(POS, breaks = seq(0, max(POS)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+candidates <- bind_rows(
+  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 1:n(), tree = "Angela"),
+  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 125:(124+n()), tree = "Sixto")
+) %>% 
+  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
+  mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
+  dplyr::select(mutation, Type, SNV) %>% 
+  left_join(candidates) %>% 
+  mutate(transmitted = ifelse(mutation %in% c(6, 13, 57, 94, 107, 128, 132, 133, 151, 160), "yes", "no")) %>% 
+  filter(tree == "Angela", transmitted == "yes") %>% 
+  mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
+  select(name, start, stop, snv)
+gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  filter(type  == "gene") %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+te_f <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+```
+
+```{r}
+png("save/AngelaCircosmutations.png", width = 1000, height = 1000, bg = NA)
+circos.par(gap.degree = c(rep(1, nrow(hs1_f)-2), 5, rep(1, 1)),
+           track.height = 0.2,
+           points.overflow.warning = F)
+circos.initializeWithIdeogram(as.data.frame(hs1_f),
+                              labels.cex = 4, axis.labels.cex = 1)
+circos.genomicTrack(gene_f, track.height = 0.1,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#008000", border = "#008000", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(10, 20, 30, 40), labels.cex = 1)
+circos.genomicTrack(te_f, track.height = 0.1,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(200,400), labels.cex = 1)
+circos.genomicTrack(mutation_f,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#ffc000", border = "#ffc000", area = T, ...)
+})
+circos.yaxis(side = "left", labels.cex = 1)
+circos.genomicLabels(transmitted_f, labels.column = 4, side = "inside", 
+                     col = "#cc0000", cex = 1.5)
+dev.off()
+circos.clear()
+```
+
+```{r}
+include_graphics("save/AngelaCircosmutations.png")
+```
+
+```{r, eval=F}
+library(chromoMap)
+min_length <- 10*10^6
+window <- 100*10^3
+hs1_f <- filter(hs1, end > min_length)
+mutation_f <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  select(SNV, CHROM, POS) %>% 
+  unique() %>% 
+  mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  mutate(interval = cut(POS, breaks = seq(0, max(POS)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% hs1_f$name) %>% 
+  filter(type  == "gene") %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+t1 <- hs1_f %>%  
+  mutate(name = paste0("Sc", name)) %>% 
+  mutate(start = as.numeric(start+1),
+         end = as.numeric(end+1)) %>%
+  select(name, start, end) %>% 
+  as.data.frame()
+t2 <- mutation_f %>%   
+  # left_join(gene_f) %>% 
+  mutate(annot = paste0("A", 1:n())) %>% 
+  mutate(name=paste0("Sc", name)) %>% 
+    mutate(start = as.numeric(start+1),
+         end = as.numeric(stop+1),
+         mutations = as.numeric(mutations)) %>%
+  select(annot, name, start, end, mutations) %>% 
+  as.data.frame()
+chromoMap(list(t1), list(t2), data_based_color_map = T,
+          data_type = "numeric", legend = T)
+```
+
+```{r}
+# library(RIdeogram)
+```
 
 ## Heterozygosity
 
@@ -721,7 +821,8 @@ vcfs <- lapply(mutations, function(data){
     dplyr::select(SNV, FORMAT, GT, tumor) %>% 
     unique() %>% 
     reshape2::dcast(SNV + FORMAT ~ tumor, value.var = "GT") %>% 
-    dplyr::rename(ID = SNV)
+    dplyr::rename(ID = SNV) %>% 
+    mutate(R = "0/0")
   gt <- left_join(dplyr::select(fix, ID), gt) %>% 
     dplyr::select(-ID)
   # head(as.matrix(gt))
@@ -737,10 +838,45 @@ invisible(lapply(names(vcfs), function(v) write.vcf(vcfs[[v]], paste0("data/muta
 files <- list.files(path = "data/mutations/angela/trees/", pattern = ".nexus")
 invisible(lapply(files, function(f){
   mutations <- phangorn::read.phyDat(file.path("data/mutations/angela/trees", f), format = "nexus")
-  mutations <- as.DNAbin(mutations)
+  mutations <- ape::as.DNAbin(mutations)
   ips::write.fas(mutations, file.path("data/mutations/angela/trees", gsub("nexus", "fa", f)))
 }))
-# for file in $(ls *.min4.fa); do iqtree -s $file -redo ; done
+# for file in $(ls *.min4.fa); do iqtree2 -s $file -m TIM2+I+G -B 1000 -redo -o R ; done
+
+```
+
+```{r}
+library(vcfR)
+vcf <- read.vcfR("data/mutations/angela/trees/base.vcf.gz")
+gt <- extract.gt(vcf, element="GT", as.numeric=TRUE, IDtoRowNames=FALSE)
+heatmap.bp(gt[1:2598,])
+```
+
+```{r}
+vcf <- vcfR::read.vcfR("data/mutations/angela/trees/base.vcf.gz")
+extract.gt(vcf, element="GT", as.numeric=TRUE, IDtoRowNames=FALSE)[,-11] %>% 
+  cor() %>% 
+  as.data.frame() %>% 
+  mutate_all(round, 2)
+```
+
+```{r}
+library(ape)
+vcf <- vcfR::read.vcfR("data/mutations/angela/trees/base.vcf.gz")
+gt <- vcfR::extract.gt(vcf, element="GT", as.numeric=TRUE, IDtoRowNames=FALSE)[,-11] 
+m <- dist.gene(t(gt))
+t <- nj(m)
+plot(t)
+```
+
+```{r }
+treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
+  ggtree() + 
+  geom_tippoint(aes(col = substr(label, 1, 1)),
+                size = 4) + 
+  geom_tiplab() +
+  geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
+  theme(legend.position = "none")
 ```
 
 ```{r angleatipsphylo, fig.width=12}
@@ -764,7 +900,7 @@ genome_index <- read_tsv("data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.f
   mutate(start = 0, end = length) %>% 
   dplyr::select(-length)
 mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
-  filter(Filter == "evs") %>% 
+  # filter(Filter == "evs") %>% 
   group_by(SNV, CHROM, POS, REF, ALT) %>% 
   unique() %>% 
   ungroup()

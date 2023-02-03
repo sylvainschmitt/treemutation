@@ -1,7 +1,12 @@
 ```{r setupcomp2, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(tidyverse)
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tibble)
+library(ggplot2)
 library(ggtree)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
@@ -184,9 +189,8 @@ sixto@data <- data.frame(label = sixto@label) %>%
   mutate(mutations_base = ifelse(is.na(mutations_base), 0, mutations_base)) %>% 
   dplyr::select(-label)
 # phylogenies
-angela_phylo <- ape::read.tree("data/mutations/angela/trees/evs.min4.fa.treefile")
-sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/evs.min4.fa.treefile")
-
+angela_phylo <- ape::read.tree("data/mutations/angela/trees/base.min4.fa.treefile")
+sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/base.min4.fa.treefile")
 ```
 
 # Comparisons 2
@@ -409,43 +413,59 @@ rm(t, t2, coefs)
 
 Therefore, mutations are strongly shared across the crown and do not always follow the architecture. As a result, the phylogeny of the mutations does not match the architecture of the tree, with the exception of branch I, which is conserved in Sixto (Fig. \@ref(fig:angelaphyloarchi) & Fig. \@ref(fig:sixtophyloarchi)). 
 
-```{r angelaphyloarchi, fig.cap="Caption."}
-dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5)T:1.3;")), 
-                     phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(angela_phylo)))) %>%
-  dendextend::untangle(method = "ladderize") %>%
-  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE,
-                         main_right = "Angela - Phylogeny - EVS", main_left = " Angela - Architecture")
+```{r, fig.width=5, fig.height=6}
+cowplot::plot_grid(
+  treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
+    ggtree() + 
+    geom_tippoint(aes(col = substr(label, 1, 1)),
+                  size = 4) + 
+    geom_tiplab() +
+    geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
+    theme(legend.position = "none") +
+    ggtitle("Angela"),
+  treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
+    ggtree() + 
+    geom_tippoint(aes(col = substr(label, 1, 1)),
+                  size = 4) + 
+    geom_tiplab() +
+    geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
+    theme(legend.position = "none") +
+    ggtitle("Sixto"),
+  nrow = 2
+)
 ```
 
-```{r sixtophyloarchi, fig.cap="Caption."}
-dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "(((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64)T:1.3;")), 
-                     phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(sixto_phylo)))) %>%
+
+```{r angelaphyloarchi, fig.cap="Caption."}
+dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);")), 
+                     phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(angela_phylo)))) %>%
   dendextend::untangle(method = "ladderize") %>%
-  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE,
-                         main_right = "Sixto - Phylogeny - EVS", main_left = " Sixto - Architecture")
+  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE, highlight_distinct_edges = F,
+                         main_right = "Angela - Phylogeny", main_left = " Angela - Architecture") 
+```
+
+
+```{r angelaphyloarchi, fig.cap="Caption."}
+dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);")), 
+                     phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(angela_phylo)))) %>%
+  dendextend::untangle(method = "ladderize") %>%
+  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE, highlight_distinct_edges = F,
+                         main_right = "Angela - Phylogeny", main_left = " Angela - Architecture") 
+```
+
+```{r sixtophyloarchi, fig.cap="Caption.", eval=F}
+dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);")), 
+                     treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree")) %>%
+  dendextend::untangle(method = "ladderize") %>%
+  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE, , highlight_distinct_edges = F,
+                         main_right = "Sixto - Phylogeny", main_left = " Sixto - Architecture") 
 ```
 
 ## Light
 
 The light condition of the sampled tips at the time of sampling did not affect the number of mutations observed per library (Fig. \@ref(fig:lightComp2)). 
 
-```{r lightComp2, fig.cap="Caption."}
-list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
-     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
-  bind_rows(.id = "tree") %>% 
-  dplyr::select(tree, tip, tumor, Filter, SNV) %>% 
-  unique() %>% 
-  group_by(tree, tip, tumor, Filter) %>% 
-  summarise(mutations = n()) %>% 
-  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
-  ggplot(aes(tree, mutations, fill = condition)) +
-  geom_boxplot() +
-  facet_wrap(~Filter, scales = "free") +
-  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
-  xlab("") + ylab("Number of mutations")
-```
-
-```{r, eval=F}
+```{r lightComp2base, fig.cap="Caption."}
 list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
      Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
   bind_rows(.id = "tree") %>% 
@@ -458,7 +478,91 @@ list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
   ggplot(aes(tree, mutations, fill = condition)) +
   geom_boxplot() +
   ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
-  xlab("") + ylab("Number of mutations")
+  xlab("") + ylab("Number of mutations") +
+  scale_fill_manual("", values = c("gold", "gray83"))
+```
+
+```{r lightComp2baseKS, fig.cap="Caption."}
+t <- list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
+          Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  dplyr::select(tree, tip, tumor, Filter, SNV) %>% 
+  unique() %>% 
+  group_by(tree, tip, tumor, Filter) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  filter(Filter == "base")
+ksA <- ks.test(log(filter(t, tree == "Angela", tip == "L")$mutations), 
+               log(filter(t, tree == "Angela", tip == "S")$mutations))
+ksS <- ks.test(log(filter(t, tree == "Sixto", tip == "L")$mutations), 
+               log(filter(t, tree == "Sixto", tip == "S")$mutations))
+ggplot(t, aes(mutations, col = condition)) +
+  stat_ecdf(geom="step", pad=TRUE) +
+  facet_wrap(~ tree, scales = "free_x") +
+  scale_colour_manual("", values = c("gold", "black")) +
+  ylab("Probability") +
+  scale_x_log10() +
+  geom_text(aes(label = pval), y = 1, col = "black",
+            data = data.frame(tree = c("Angela", "Sixto"), pval = c("ns", "ns"), 
+                 mutations = c(2500/2, 500/2)))
+```
+
+```{r lightComp2type, fig.cap="Caption."}
+list(Angela = vroom::vroom("data/mutations/angela//filters/filtered_tip_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  dplyr::select(type, tree, tip, tumor, SNV) %>% 
+  unique() %>% 
+  group_by(type, tree, tip, tumor) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  ggplot(aes(type, mutations, fill = condition)) +
+  geom_boxplot() +
+  facet_wrap(~ tree, scales = "free_y") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
+                             symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1), 
+                                  symbols = c("***", "**", "*", "ns"))) +
+  xlab("") + ylab("Number of mutations") +
+  scale_fill_manual("", values = c("gold", "gray83"))
+```
+```{r lightComp2spectraAngela, fig.cap="Caption.", fig.height=5, fig.width=8}
+vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv") %>% 
+  select(type, spectra, tumor, tip, SNV) %>% 
+  unique() %>% 
+  group_by(type, spectra, tip, tumor) %>% 
+  summarise(mutatinos = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  ggplot(aes(spectra, mutatinos, fill = condition)) +
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~ type, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
+  theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
+  ggpubr::stat_compare_means(label = "p.signif", label.y.npc = 0.9, size = 3,
+                             symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1),
+                                  symbols = c("***", "**", "*", "ns"))) +
+  ylab("Numer of mutations") + 
+  scale_fill_manual("Angela", values = c("gold", "gray83")) +
+  scale_y_log10()
+```
+
+```{r lightComp2spectraSixto, fig.cap="Caption.", fig.height=5, fig.width=8}
+vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") %>% 
+  select(type, spectra, tumor, tip, SNV) %>% 
+  unique() %>% 
+  group_by(type, spectra, tip, tumor) %>% 
+  summarise(mutatinos = n()) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  ggplot(aes(spectra, mutatinos, fill = condition)) +
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~ type, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
+  theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
+  ggpubr::stat_compare_means(label = "p.signif", label.y.npc = 0.9, size = 3,
+                             symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1),
+                                  symbols = c("***", "**", "*", "ns"))) +
+  ylab("Numer of mutations") + 
+  scale_fill_manual("Sixto", values = c("gold", "gray83")) +
+  scale_y_log10()
 ```
 
 ## Type
@@ -480,9 +584,10 @@ list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations
         legend.position = "bottom") +
   facet_wrap(~ type, nrow = 1, scales = "free_x") +
   xlab("Percentage of mutations (%) per sample") +
-  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
-  ylab("Percentage of mutations") +
-  ggtitle("Mutation type per library", "At least in 2-leaves with evs filtering.")
+  ggpubr::stat_compare_means(label = "p.signif", 
+                             symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1),
+                                  symbols = c("***", "**", "*", "ns"))) +
+  ylab("Percentage of mutations")
 ```
 
 ## Spectra
@@ -503,8 +608,10 @@ list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations
   theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
   theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
   scale_y_log10() +
-  # ggpubr::stat_compare_means(label = "p.signif") +
-  ylab("Percentage of mutations per library") + ggtitle("Mutation spectra", "At least in 2-leaves with evs filtering.")
+  ggpubr::stat_compare_means(label = "p.signif", label.y.npc = 0.9, size = 3,
+                             symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1),
+                                  symbols = c("***", "**", "*", "ns"))) +
+  ylab("Percentage of mutations per library")
 ```
 
 ## Rates
@@ -665,7 +772,7 @@ readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classificat
   summarise(N = n()) %>% 
   reshape2::dcast(Type ~ Tree) %>% 
   mutate(Total = Angela + Sixto) %>% 
-  mutate(Percentage = round(Total/160*100))
+  mutate(Percentage = round(Total/140*100))
 ```
 
 
@@ -789,27 +896,73 @@ fruits <- all %>%
 ```
 
 ```{r}
-# branch coherence
-fruits %>% 
+transmitted <- fruits %>% 
+  filter(tissue %in% c("embryo sac")) %>% 
   filter(type == "heterozygous") %>% 
-  rowwise() %>% 
-  mutate(branches = list(str_split(branch, ", ")[[1]])) %>% 
-  filter(!(branch_fruit %in% branches)) %>% 
-  filter(SNV != "SNV128", SNV != "SNV132", SNV != "SNV151", SNV != "SNV160",) %>% 
-  group_by(SNV, branch) %>% 
-  summarise(branch_fruit = paste(unique(branch_fruit, collapse = ",")),
-            fruits = length(unique(fruit))) %>% 
-  left_join(fruits %>% 
-              dplyr::select(SNV, fruit) %>% 
-              unique() %>% 
-              group_by(SNV) %>% 
-              summarise(total = n())) %>% 
-  mutate(percentage = round(fruits / total * 100))
+  group_by(SNV, branch, branch_fruit) %>%
+  summarise(fruits = length(unique(fruit))) %>% 
+  left_join(data.frame(SNV = c("SNV006", "SNV013", "SNV031",
+                               "SNV054", "SNV057", "SNV107",
+                               "SNV128", "SNV132", "SNV151",
+                               "SNV160"),
+                       tree = c(rep("Angela", 6), rep("Sixto", 4)))) %>% 
+  left_join(data.frame(branch_fruit = c("A", "B", "C", "D", "B"),
+                       tree = c(rep("Angela", 4), "Sixto"),
+                       total_fruits = c(20, 25, 4, 6, 4))) %>% 
+  mutate(transmission = round(fruits/total_fruits*100)) %>% 
+  left_join(candidates %>% 
+              mutate(SNV = paste0("SNV", sprintf("%03d", mutation))) %>% 
+              mutate(mutation = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
+              select(SNV, mutation)) %>% 
+  left_join(lapply(list(Angela = "data/mutations/angela/filters/leaf_mutations.tsv",
+                        Sixto = "data/mutations/sixto/filters/leaf_mutations.tsv"), vroom::vroom) %>% 
+              bind_rows(.id = "tree") %>% 
+              mutate(mutation = SNV) %>% 
+              select(tree, tumor, mutation, mutation_AF) %>% 
+              mutate(branch_fruit = str_sub(tumor, 1, 1)) %>% 
+              group_by(tree, mutation) %>% 
+              mutate(AF_crown_med = median(mutation_AF),
+                     AF_crown_sd = sd(mutation_AF)) %>% 
+              group_by(tree, branch_fruit, mutation, AF_crown_med, AF_crown_sd) %>% 
+              summarise(AF_branch_med = median(mutation_AF),
+                        AF_branch_sd = sd(mutation_AF)))
 ```
+
+```{r}
+transmitted %>% 
+  select(tree, SNV, branch, branch_fruit, fruits, transmission, AF_branch_med)
+```
+
+
+```{r}
+transmitted %>% 
+  ungroup() %>% 
+  filter(!is.na(AF_crown_med)) %>% 
+  mutate(AF_branch_sd = ifelse(is.na(AF_branch_sd), 0, AF_branch_sd)) %>% 
+  mutate(AFcrown = paste(AF_crown_med, AF_crown_sd),
+         AFbranch = paste(AF_branch_med, AF_branch_sd)) %>% 
+  select(SNV, total_fruits, branch_fruit, transmission, AFcrown, AFbranch) %>% 
+  reshape2::melt(c("SNV",  "total_fruits", "branch_fruit", "transmission"), 
+                 variable.name = "level", value.name = "AF") %>% 
+  separate(AF, c("median", "sd"), " ", convert = T) %>% 
+  mutate(level = gsub("AF", "", level)) %>% 
+  mutate(transmission = transmission + rnorm(nrow(.))) %>% 
+  ggplot(aes(median, transmission/100, col = level)) +
+  geom_point(aes(size = total_fruits)) +
+  geom_errorbarh(aes(xmin = median - sd, xmax = median + sd), alpha = 0.5) +
+  geom_smooth(method = "lm", se = F) +
+  ggpubr::stat_cor(label.y = c(0.3, 0.29)) +
+  xlab("Allelic fraction (median +/- sd)") +
+  ylab("Transmission rate") +
+  scale_color_discrete("") +
+  scale_size_continuous("Number of\ntested fruits")
+```
+
 
 ```{r}
 # tissue coherence
 agreement <- fruits %>%
+  filter(SNV %in% transmitted$SNV) %>% 
   filter(tissue %in% c("embryo sac", "cotyledon")) %>% 
   reshape2::dcast(SNV + fruit ~ tissue, value.var = "type") %>% 
   mutate(agreement = !(cotyledon != `embryo sac`)) %>% 
@@ -819,60 +972,54 @@ agreement <- fruits %>%
   reshape2::dcast(SNV ~ agreement) %>% 
   mutate(`FALSE` = ifelse(is.na(`FALSE`), 0, `FALSE`)) %>% 
   mutate(agreement = round(`TRUE` / (`TRUE` + `FALSE`) * 100))
+agreement %>% 
+  filter(SNV %in% filter(fruits, type == "heterozygous")$SNV)
+fruits %>% 
+  filter(SNV == "SNV057") %>% 
+  reshape2::dcast(fruit ~ tissue, value = "genotype")
 ```
 
 ```{r}
-ggplot(agreement, aes(agreement)) + 
-  geom_histogram() +
-  xlab("Agreement cotyledon & embryon (%)")
+transmitted %>% 
+  select(tree, SNV, branch, branch_fruit, fruits, transmission, AF_branch_med) %>% 
+  mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
+  left_join(select(agreement, SNV, agreement))
 ```
 
 ```{r}
-filter(agreement, agreement < 100)
-```
-
-#### Transmission
-
-```{r}
-transmission <- fruits %>% 
-  filter(tissue == "embryo sac") %>% 
-  group_by(SNV, af, type) %>% 
-  summarise(N = n()) %>% 
-  reshape2::dcast(SNV + af ~ type) %>% 
-  mutate(heterozygous = ifelse(is.na(heterozygous), 0, heterozygous)) %>% 
-  mutate(transmission = heterozygous / (heterozygous+homozygous))
-transmission %>% 
-  filter(transmission > 0) %>% 
-  ggplot(aes(af, transmission)) +
-  geom_smooth(method = "lm") +
-  geom_point(size = 2) +
-  ggrepel::geom_text_repel(aes(label = SNV)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  xlab("Mean alleleic fraction in branches") +
-  ylab("Transmission rate across embryons")
+transmitted %>% 
+  group_by(tree, branch_fruit) %>% 
+  summarise(N = n())
 ```
 
 ```{r}
-readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
-  mutate(Tree = ifelse(as.numeric(gsub("SNV", "", SNV)) > 124, "Sixto", "Angela")) %>% 
-  left_join(candidates %>% 
-              mutate(SNV = paste0("SNV", sprintf("%03d", mutation))) %>% 
-              dplyr::select(SNV, af)) %>% 
-  filter(Type %in% c("reference only", "mutation")) %>% 
-  left_join(transmission %>% 
-              filter(transmission > 0) %>% 
-              mutate(type = "transmitted") %>% 
-              dplyr::select(SNV, type)) %>% 
-  mutate(type = ifelse(is.na(type), "untransmitted", type)) %>% 
-  ggplot(aes(type, af, fill = type)) +
-  geom_boxplot() +
-  scale_y_log10() +
-  coord_flip() +
-  ggtitle("Wilcoxon test, p = 0.2") +
-  xlab("") +
-  ylab("Mean alleleic fraction in branches") +
-  scale_fill_discrete(guide = "none")
+transmitted %>% 
+  mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
+  left_join(select(agreement, SNV, agreement)) %>% 
+  left_join(list("Sixto" = archi_mutations_sixto_base,
+                 "Angela" = archi_mutations_angela_base) %>% 
+              bind_rows(.id = "tree") %>% 
+              filter(SNV %in% transmitted$mutation) %>% 
+              mutate(mutation = SNV, origin = origin1) %>% 
+              select(mutation, origin)) %>% 
+  select(tree, SNV, branch, branch_fruit, fruits, transmission, 
+         AF_branch_med, agreement, origin) %>% 
+  write_tsv("~/Téléchargements/mutations.tsv")
+```
+
+```{r}
+all %>% 
+  separate(Echantillon, c("species", "branch_fruit", "sample_fruit", "tissue_short")) %>% 
+  mutate(fruit = paste0(branch_fruit, sample_fruit)) %>% 
+  filter(!is.na(branch_fruit)) %>% 
+  group_by(SNV, af, branch, branch_fruit, fruit, tissue) %>% 
+  summarise(genotype = paste0(unique(sort(Base)), collapse = "")) %>% 
+  mutate(type = ifelse(nchar(genotype) == 2, "heterozygous", "homozygous")) %>% 
+  filter(SNV %in% transmitted$SNV) %>% 
+  filter(type != "homozygous") %>% 
+  group_by(SNV, tissue) %>% 
+  summarise(mutation = length(unique(fruit))) %>% 
+  reshape2::dcast(SNV ~ tissue)
 ```
 
 ### Old
