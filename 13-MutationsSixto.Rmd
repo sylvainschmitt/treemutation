@@ -167,56 +167,8 @@ rm(busco, cov, covs, gc, covs_files)
 
 ### Annotation
 
-```{r circosAnnotSixto, eval=F}
-min_length <- 35*10^6
-window <- 100*10^3
-fai_f <- filter(fai, end > min_length)
-te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
-               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
-  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% fai_f$name) %>% 
-  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
-  group_by(name, interval) %>% 
-  summarise(TE = n()) %>% 
-  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
-  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
-  separate(interval, c("start", "stop"), ",", convert = T)
-gene_f <- read_tsv("data/mutations/sixto/annotation/braker.gtf",
-                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
-  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% fai_f$name) %>% 
-  filter(type  == "gene") %>% 
-  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
-  group_by(name, interval) %>% 
-  summarise(gene = n()) %>% 
-  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
-  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
-  separate(interval, c("start", "stop"), ",", convert = T) %>% 
-  ungroup()
-png("save/SixtoCircosAnnot.png", width = 1000, height = 1000, bg = NA)
-circos.par(gap.degree = c(rep(1, nrow(fai_f)-2), 5, rep(1, 1)),
-           track.height = 0.2,
-           points.overflow.warning = F)
-circos.initializeWithIdeogram(as.data.frame(fai_f),
-                              labels.cex = 4, axis.labels.cex = 1)
-circos.genomicTrack(gene_f, track.height = 0.2,
-    panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
-})
-circos.yaxis(side = "left", at = c(20, 40, 60), labels.cex = 1)
-circos.genomicTrack(te_f, track.height = 0.2,
-    panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
-})
-dev.off()
-circos.clear()
-```
 
-```{r}
-include_graphics("save/SixtoCircosAnnot.png")
-```
-
-```{r}
+```{r, eval=F}
 annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/sixto/annotation/sixto.annot.sqlite")
 orfs <- tbl(annotation, "ORF") %>% 
   mutate(start = str_sub(peptide, 1, 1)) %>% 
@@ -234,6 +186,74 @@ orfs %>%
   geom_bar() +
   facet_grid((length > 100) ~ variable) +
   ggtitle(paste("Sixto:", n, "ORFs"), "Start M, Stop *, length >= 100")
+```
+
+
+```{bash, eval=F}
+sqlite3 sixto.annot.sqlite
+sqlite> .headers on
+sqlite> .mode csv
+sqlite> .output sixto.orf.csv
+sqlite> SELECT * FROM ORF;
+sqlite> .quit
+```
+
+```{r circosAnnotSixto, eval=F}
+min_length <- 35*10^6
+window <- 100*10^3
+fai_f <- filter(fai, end > min_length)
+te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% fai_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+orfs <- vroom::vroom("data/mutations/sixto/annotation/sixto.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/sixto/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+   filter(name %in% fai_f$name) %>%
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+png("save/SixtoCircosAnnot.png", width = 1000, height = 1000, bg = NA)
+circos.par(gap.degree = c(rep(1, nrow(fai_f)-2), 5, rep(1, 1)),
+           track.height = 0.2,
+           points.overflow.warning = F)
+circos.initializeWithIdeogram(as.data.frame(fai_f),
+                              labels.cex = 4, axis.labels.cex = 1)
+circos.genomicTrack(gene_f, track.height = 0.2,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
+circos.genomicTrack(te_f, track.height = 0.2,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(100, 200, 300), labels.cex = 1)
+dev.off()
+circos.clear()
+```
+
+```{r}
+include_graphics("save/SixtoCircosAnnot.png")
 ```
 
 ### Mutations
@@ -266,7 +286,7 @@ transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xl
   mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
   dplyr::select(mutation, Type, SNV) %>% 
   left_join(candidates) %>% 
-  mutate(transmitted = ifelse(mutation %in% c(6, 13, 57, 94, 107, 128, 132, 133, 151, 160), "yes", "no")) %>% 
+  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>%
   filter(tree == "Sixto", transmitted == "yes") %>% 
   mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
   select(name, start, stop, snv)
@@ -280,11 +300,19 @@ te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAF
   mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
   mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
   separate(interval, c("start", "stop"), ",", convert = T)
-gene_f <- read_tsv("data/mutations/sixto/annotation/braker.gtf",
-                   col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+orfs <- vroom::vroom("data/mutations/sixto/annotation/sixto.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/sixto/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
   mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
-  filter(name %in% fai_f$name) %>% 
-  filter(type  == "gene") %>% 
+   filter(name %in% fai_f$name) %>%
   mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
   group_by(name, interval) %>% 
   summarise(gene = n()) %>% 
@@ -303,14 +331,14 @@ circos.initializeWithIdeogram(as.data.frame(fai_f),
                               labels.cex = 4, axis.labels.cex = 1)
 circos.genomicTrack(gene_f, track.height = 0.1,
     panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "#008000", border = "#008000", area = T, ...)
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
 })
-circos.yaxis(side = "left", at = c(20, 40, 60), labels.cex = 1)
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
 circos.genomicTrack(te_f, track.height = 0.1,
     panel.fun = function(region, value, ...) {
         circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
 })
-circos.yaxis(side = "left", at = c(150, 30), labels.cex = 1)
+circos.yaxis(side = "left", at = c(100, 200, 300), labels.cex = 1)
 circos.genomicTrack(mutation_f,
     panel.fun = function(region, value, ...) {
         circos.genomicLines(region, value, col = "#ffc000", border = "#ffc000", area = T, ...)

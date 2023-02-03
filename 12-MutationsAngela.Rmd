@@ -213,16 +213,53 @@ rm(busco_hs1, busco_hs2, cov_hs1, cov_hs2, covs, gc_hs1, gc_hs2, covs_files, hs2
 
 ### Annotation
 
+```{r, eval=F}
+annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/angela/annotation/angela.annot.sqlite")
+orfs <- tbl(annotation, "ORF") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  collect()
+DBI::dbDisconnect(annotation) ; rm(annotation)
+n <- orfs %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  nrow()
+orfs %>% 
+  dplyr::select(orf_id, start, stop, length) %>% 
+  reshape2::melt(c("orf_id", "length")) %>% 
+  ggplot(aes(value)) +
+  geom_bar() +
+  facet_grid((length > 100) ~ variable) +
+  ggtitle(paste("Angela:", n, "ORFs"), "Start M, Stop *, length >= 100")
+rm(orfs, n)
+```
+
+```{bash, eval=F}
+sqlite3 angela.annot.sqlite
+sqlite> .headers on
+sqlite> .mode csv
+sqlite> .output angela.orf.csv
+sqlite> SELECT * FROM ORF;
+sqlite> .quit
+```
+
 ```{r, circosAnnot, eval=F}
 min_length <- 20*10^6
 window <- 100*10^3
 hs1_f <- filter(hs1, end > min_length)
-gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+orfs <- vroom::vroom("data/mutations/angela/annotation/angela.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/angela/annotation/braker.gtf",
                    col_names = c("scf", "source", "type", "start", "end", 
                                  "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
   mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
   filter(name %in% hs1_f$name) %>% 
-  filter(type  == "gene") %>% 
   mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
   group_by(name, interval) %>% 
   summarise(gene = n()) %>% 
@@ -250,7 +287,7 @@ circos.genomicTrack(gene_f, track.height = 0.2,
     panel.fun = function(region, value, ...) {
         circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
 })
-circos.yaxis(side = "left", at = c(10, 20, 30, 40), labels.cex = 1)
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
 circos.genomicTrack(te_f, track.height = 0.2,
     panel.fun = function(region, value, ...) {
         circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
@@ -262,27 +299,6 @@ circos.clear()
 
 ```{r}
 include_graphics("save/AngelaCircosAnnot.png")
-```
-
-```{r}
-annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/angela/annotation/angela.annot.sqlite")
-orfs <- tbl(annotation, "ORF") %>% 
-  mutate(start = str_sub(peptide, 1, 1)) %>% 
-  mutate(stop = str_sub(peptide, -1, -1)) %>% 
-  mutate(length = rend - lend) %>% 
-  collect()
-DBI::dbDisconnect(annotation) ; rm(annotation)
-n <- orfs %>% 
-  filter(start == "M", stop == "*", length >= 100) %>% 
-  nrow()
-orfs %>% 
-  dplyr::select(orf_id, start, stop, length) %>% 
-  reshape2::melt(c("orf_id", "length")) %>% 
-  ggplot(aes(value)) +
-  geom_bar() +
-  facet_grid((length > 100) ~ variable) +
-  ggtitle(paste("Angela:", n, "ORFs"), "Start M, Stop *, length >= 100")
-rm(orfs, n)
 ```
 
 ### Mutations
@@ -315,16 +331,23 @@ transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xl
   mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
   dplyr::select(mutation, Type, SNV) %>% 
   left_join(candidates) %>% 
-  mutate(transmitted = ifelse(mutation %in% c(6, 13, 57, 94, 107, 128, 132, 133, 151, 160), "yes", "no")) %>% 
+  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   filter(tree == "Angela", transmitted == "yes") %>% 
   mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
   select(name, start, stop, snv)
-gene_f <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+orfs <- vroom::vroom("data/mutations/angela/annotation/angela.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/angela/annotation/braker.gtf",
                    col_names = c("scf", "source", "type", "start", "end", 
                                  "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
   mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
   filter(name %in% hs1_f$name) %>% 
-  filter(type  == "gene") %>% 
   mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
   group_by(name, interval) %>% 
   summarise(gene = n()) %>% 
@@ -353,9 +376,9 @@ circos.initializeWithIdeogram(as.data.frame(hs1_f),
                               labels.cex = 4, axis.labels.cex = 1)
 circos.genomicTrack(gene_f, track.height = 0.1,
     panel.fun = function(region, value, ...) {
-        circos.genomicLines(region, value, col = "#008000", border = "#008000", area = T, ...)
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
 })
-circos.yaxis(side = "left", at = c(10, 20, 30, 40), labels.cex = 1)
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
 circos.genomicTrack(te_f, track.height = 0.1,
     panel.fun = function(region, value, ...) {
         circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)

@@ -593,7 +593,7 @@ g1 <- ggplot(filter(mutations_hist, tree == "Angela"),
         axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         plot.margin = unit(c(0, 0, 0, 0), "cm"))
 g2 <- ggplot() +
-  geom_vline(aes(xintercept = mutation_AF), alpha = 0.5, col = "#ffc000",
+  geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Angela", transmitted == "no") %>% 
                select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
@@ -651,7 +651,7 @@ g1 <- ggplot(filter(mutations_hist, tree == "Sixto"),
         axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         plot.margin = unit(c(0, 0, 0, 0), "cm"))
 g2 <- ggplot() +
-  geom_vline(aes(xintercept = mutation_AF), alpha = 0.5, col = "#ffc000",
+  geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Sixto", transmitted == "no") %>% 
                select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
