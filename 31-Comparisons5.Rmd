@@ -591,7 +591,8 @@ g1 <- ggplot(filter(mutations_hist, tree == "Angela"),
   ylab("Count") +
   theme(axis.title.x = element_blank(), axis.line.x = element_blank(),
         axis.ticks.x = element_blank(), axis.text.x = element_blank(),
-        plot.margin = unit(c(0, 0, 0, 0), "cm"))
+        plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+  xlim(0, 0.52)
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Angela", transmitted == "no") %>% 
@@ -600,7 +601,8 @@ g2 <- ggplot() +
              data = filter(mutations, tree == "Angela", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.001)") +
   theme(axis.line.y = element_blank(),
-        plot.margin = unit(c(0, 0, 0, 0), "cm"))
+        plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+  xlim(0, 0.52)
 g3 <- cowplot::plot_grid(g1, g2, 
                    nrow = 2, align = "v", 
                    rel_heights = c(5,1))
@@ -649,7 +651,8 @@ g1 <- ggplot(filter(mutations_hist, tree == "Sixto"),
   ylab("Count") +
   theme(axis.title.x = element_blank(), axis.line.x = element_blank(),
         axis.ticks.x = element_blank(), axis.text.x = element_blank(),
-        plot.margin = unit(c(0, 0, 0, 0), "cm"))
+        plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+  xlim(0, 0.52)
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Sixto", transmitted == "no") %>% 
@@ -658,7 +661,8 @@ g2 <- ggplot() +
              data = filter(mutations, tree == "Sixto", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.001)") +
   theme(axis.line.y = element_blank(),
-        plot.margin = unit(c(0, 0, 0, 0), "cm"))
+        plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+  xlim(0, 0.52)
 g3 <- cowplot::plot_grid(g1, g2, 
                    nrow = 2, align = "v", 
                    rel_heights = c(5,1))
