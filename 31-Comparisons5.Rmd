@@ -1499,7 +1499,7 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
 
 *Angela and Sixto in progress.*
 
-## Figure
+## Figure 3
 
 ```{r histaf}
 library(readr)
@@ -1545,9 +1545,13 @@ mutations_hist_log <- mutations %>%
 make_plot_af <- function(name = "Angela") {
   g1.B <- ggplot(filter(mutations_hist, tree == name),
                  aes(mutation_AF_class, N+max(filter(mutations_hist, tree == name)$N)/100*5)) +
-    geom_col(fill = "#ffc000", col = NA) +
+    geom_col(fill = "#ffd659ff", col = NA, alpha = 0.8) +
     xlim(0, 0.52) +
-    xlab("Allelic fraction\n(bin of 0.001)")
+    xlab("Allelic fraction") +
+    theme(axis.line = element_line(color="#57504d"),
+          axis.ticks = element_line(color="#57504d"),
+          axis.title = element_text(color="#57504d"),
+          axis.text = element_text(color="#57504d"))
   g1.A <- ggplot(filter(mutations_hist_log, tree == name),
                  aes(mutation_AF_class, N+1)) +
     geom_col(fill = "#ffc000", col = NA) +
@@ -1642,7 +1646,7 @@ gd <- ggplot(data, aes(synonymy, mutation_AF, fill = synonymy)) +
   facet_wrap(~tree) +
   scale_y_log10(limits = c(NA, 0.20)) +
   geom_point(data = data_m, size = 3) +
-  ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
+  ggpubr::stat_compare_means(label = "p.format", method = "t.test",
                              bracket.size	= 1.2, tip.length	= 0,
                              label.y = log10(0.15), vjust = -0.5,
                              comparisons = list(c("NS", "S"))) +
@@ -1656,5 +1660,5 @@ gd <- ggplot(data, aes(synonymy, mutation_AF, fill = synonymy)) +
 ```{r}
 g <- cowplot::plot_grid(ga, gb, gc, gd, nrow = 2, labels = c("a", "b", "c", "d"),
                         rel_heights = c(1, 1))
-cowplot::save_plot(paste0("~/Téléchargements/af.png"), g, dpi = 1000, base_width = 8, base_height = 6, bg = "white")
+cowplot::save_plot(paste0("~/Téléchargements/Fig3.png"), g, dpi = 1000, base_width = 8, base_height = 6, bg = "white")
 ```

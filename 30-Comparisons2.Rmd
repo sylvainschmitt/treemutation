@@ -1127,93 +1127,14 @@ nano %>%
 
 ### Figure 1
 
-```{r figphyloangela}
-gc <- treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
-  ggtree() + 
-  geom_tippoint(aes(col = label), size = 8) + 
-  geom_tiplab(colour = "white", hjust = 0.6) +
-  geom_nodelab(aes(x=branch, label=label), nudge_y = 0, nudge_x = 0.06) +
-  scale_color_manual(
-    values = c("R" = "black",
-               "ES" = "#6B5336", "EL" = "#B8792E", 
-               "DS" = "#5D6B20", "DL" = "#A8B863",
-               "CS" = "#51346B", "CL" = "#752CB8",
-               "BS" = "#205D6B", "BL" = "#63A7B8",
-               "AS" = "#611C35", "AL" = "#BD3768"
-    )) + 
-  theme_tree2(legend.position = "none")
-# cowplot::save_plot(paste0("~/Téléchargements/AngelaPhylo.png"), g, dpi = 800, base_width = 4)
-```
-
-```{r figphylosixto}
-gd <- treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
-  ggtree() + 
-  geom_tippoint(aes(col = substr(label, 1, 2)), size = 8) + 
-  geom_tiplab(aes(label = substr(label, 1, 2)), colour = "white", hjust = 0.6) +
-  geom_nodelab(aes(x=branch, label=label), nudge_y = 0, nudge_x = 0.07) +
-  scale_color_manual(
-    values = c("R" = "black",
-               "I2" = "#B17323", "I1" = "#FFA630", 
-               "F2" = "#676F5A",
-               "E4" = "#4DA1A9", "E2" = "#73E3EE",
-               "C1" = "#2E5077", "C3" = "#5B9BE3",
-               "B1" = "#BD3768"
-    )) + 
-  theme_tree2(legend.position = "none")
-# cowplot::save_plot(paste0("~/Téléchargements/SixtoPhylo.png"), g, dpi = 800, base_width = 4)
-```
-
-```{r figlightn}
-make_plot_light <- function(name = "angela"){
-  t1 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
-                     show_col_types = FALSE) %>%   
-    dplyr::select(tip, tumor, Filter, SNV) %>% 
-    unique() %>% 
-    group_by(tip, tumor, Filter) %>% 
-    summarise(mutations = n()) %>% 
-    filter(Filter == "base") %>% 
-    mutate(type = "All") %>% 
-    select(-Filter)
-  t2 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
-                     show_col_types = FALSE) %>%   
-    dplyr::select(type, tip, tumor, SNV) %>% 
-    unique() %>% 
-    group_by(type, tip, tumor) %>% 
-    summarise(mutations = n()) %>% 
-    mutate(type = gsub("-", "", type))
-  m <- 10^(log10(max(t1$mutations))*1.1)
-  bind_rows(t1, t2) %>% 
-    mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
-    ggplot(aes(condition, mutations, fill = condition)) +
-    geom_boxplot() +
-    facet_wrap(~type, nrow = 1) +
-    ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
-                               bracket.size	= 1.2, tip.length	= 0,
-                               label.y = 0.925*log10(m), vjust = -0.5,
-                               comparisons = list(c("Light", "Shadow"))) +
-    xlab("") + ylab("Number of mutations") +
-    scale_fill_manual("", values = c("#FFDF00", "#8B8680")) +
-    theme(axis.text.x = element_blank(), axis.ticks = element_blank(), axis.title.x = element_blank(),
-          panel.spacing = unit(0, "lines"),
-          # legend.position = c(0.7, -0.15)) +
-          legend.position = "bottom", 
-          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.spacing = margin(0, unit = "pt"),
-          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.box.spacing = margin(0, unit = "pt")) +
-    scale_y_log10(limits = c(NA, m)) +
-    guides(fill = guide_legend(nrow = 1))
-  # cowplot::save_plot(paste0("~/Téléchargements/", name, "LightN.png"), g, dpi = 800, base_width = 2, base_height = 4)
-}
-ge <- make_plot_light("angela")
-gf <- make_plot_light("sixto")
-```
-
 ```{r}
-g0 <- ggplot() + theme_void()
-g <- cowplot::plot_grid(g0, g0, gc, gd, ge, gf, nrow = 3, labels = c("a", "b", "c", "d", "e", "f"),
-                        rel_heights = c(1.5, 1, 1))
-cowplot::save_plot(paste0("~/Téléchargements/archi.png"), g, dpi = 1000, base_width = 8, base_height = 9)
+# rsvg::rsvg_png("data/circlize/Circlize_angela_v130223_withannotations.svg", "data/circlize/AngelaCircos.png", width = 1311, height = 1311)
+# rsvg::rsvg_png("data/circlize/Circlize_sixto_v130223_withannotations.svg", "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
+ga <- grid::rasterGrob(png::readPNG("data/circlize/AngelaCircos.png"), interpolate = T)
+gb <- grid::rasterGrob(png::readPNG("data/circlize/SixtoCircos.png"), interpolate = T)
+g <- cowplot::plot_grid(ga, gb, nrow = 1, labels = c("a", "b"))
+cowplot::save_plot(paste0("~/Téléchargements/Fig1.png"), g, dpi = 1000, base_width = 20, base_height = 10, bg = "white")
+cowplot::save_plot(paste0("~/Téléchargements/Fig1_lr.png"), g, dpi = 1000, base_width = 10, base_height = 5, bg = "white")
 ```
 
 ### Figure 2
@@ -1347,6 +1268,6 @@ gf <- make_plot_light("sixto")
 ```{r}
 g <- cowplot::plot_grid(ga, gb, gc, gd, ge, gf, nrow = 3, labels = c("a", "b", "c", "d", "e", "f"),
                         rel_heights = c(1.5, 1, 1))
-cowplot::save_plot(paste0("~/Téléchargements/archi.png"), g, dpi = 1000, base_width = 8, base_height = 9, bg = "white")
+cowplot::save_plot(paste0("~/Téléchargements/Fig2.png"), g, dpi = 1000, base_width = 8, base_height = 9, bg = "white")
 ```
 

@@ -5,4 +5,5 @@ _bookdown_files
 .RData
 data
 save/*.png
+save/*.svg
 save/*.Rdata
