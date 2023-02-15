@@ -1542,6 +1542,16 @@ mutations_hist_log <- mutations %>%
   mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
   group_by(tree, mutation_AF_class) %>% 
   summarise(N = n())
+mutations_hist_log_tested <- mutations %>%
+  filter(transmitted != "unknown") %>% 
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
+mutations_hist_log_embryo <- mutations %>%
+  filter(transmitted == "yes") %>% 
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
 make_plot_af <- function(name = "Angela") {
   g1.B <- ggplot(filter(mutations_hist, tree == name),
                  aes(mutation_AF_class, N+max(filter(mutations_hist, tree == name)$N)/100*5)) +
@@ -1552,38 +1562,32 @@ make_plot_af <- function(name = "Angela") {
           axis.ticks = element_line(color="#57504d"),
           axis.title = element_text(color="#57504d"),
           axis.text = element_text(color="#57504d"))
-  g1.A <- ggplot(filter(mutations_hist_log, tree == name),
+  g1 <- ggplot(filter(mutations_hist_log, tree == name),
                  aes(mutation_AF_class, N+1)) +
-    geom_col(fill = "#ffc000", col = NA) +
-    ylab("Count") +
-    xlim(0, 0.52)
-  g1 <- g1.A + 
-    scale_y_log10(labels = scales::label_comma(), breaks = c(1, 10, 100, 1000),
+    geom_col(aes(fill = "crown"), col = NA) +
+    geom_col(aes(fill = "tested"), col = NA, 
+           data = filter(mutations_hist_log_tested, tree == name)) +
+    geom_col(aes(fill = "transmitted"), col = NA, 
+           data = filter(mutations_hist_log_embryo, tree == name)) +
+    ylab("Count") + xlab("Allelic fraction (bin of 0.02)") +
+    xlim(0, 0.52) +
+    scale_fill_manual("", values = c("#ffc000", "grey", "#cc0000")) +
+    scale_y_log10(breaks = c(2, 11, 101, 1001),
+                  labels = c("1", "10", "100", "1,000"), 
                   limits = c(1, 7000)) +
+    theme(legend.position = c(0.8, 0.8),
+          legend.text = element_text(size = 8),
+          legend.key.size = unit(1, "lines"),
+          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          legend.spacing = margin(0, unit = "pt"),
+          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          legend.box.spacing = margin(0, unit = "pt")) +
     annotation_custom(ggplotGrob(
       g1.B +
         theme(axis.title.y = element_blank(), text = element_text(size = 10))
     )
-    , xmin = 0.2, xmax = 0.52, ymin = log(2), ymax = log(50)) +
-    theme(axis.title.x = element_blank(), axis.line.x = element_blank(),
-          axis.ticks.x = element_blank(), axis.text.x = element_blank(),
-          plot.margin = unit(c(0, 0, 0, 0), "cm"))
-  g2 <- ggplot() +
-    geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
-               data = filter(mutations, tree == name, transmitted == "no") %>% 
-                 select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
-    geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
-               data = filter(mutations, tree == name, transmitted == "yes")) +
-    xlab("Allelic fraction (bin of 0.02)") +
-    theme(axis.line.y = element_blank(),
-          plot.margin = unit(c(0, 0, 0, 0), "cm")) +
-    xlim(0, 0.52)
-  g3 <- cowplot::plot_grid(g1, g2, 
-                           nrow = 2, align = "v", 
-                           # rel_heights = c(5,1))
-                           rel_heights = c(4,1))
-  return(g3)
-  # cowplot::save_plot(paste0("~/Téléchargements/", name, "AF.png"), g3, dpi = 800)
+    , xmin = 0.2, xmax = 0.52, ymin = log(2), ymax = log(50))
+  return(g1)
 }
 ga <- make_plot_af("Angela")
 gb <- make_plot_af("Sixto")
@@ -1627,34 +1631,56 @@ gc <- list("Napoleon (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.
 ```
 
 ```{r synaf}
-data <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+data_inter <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, transcript) %>% 
+  mutate(type = "All") %>% 
+  mutate(category = ifelse(is.na(transcript), "inter.", "gene")) %>% 
+  mutate(comparison = ifelse(is.na(transcript), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data_intron <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(transcript == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, CDS) %>% 
+  mutate(type = "Genic only") %>% 
+  mutate(category = ifelse(is.na(CDS), "intron", "exon")) %>% 
+  mutate(comparison = ifelse(is.na(CDS), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data_syn <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
              Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
   bind_rows(.id = "tree") %>% 
   filter(CDS == 1) %>% 
   filter(mutation_AF > 0.01) %>% 
   dplyr::select(tree, SNV, mutation_AF, nonsynonymous) %>% 
-  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
-  dplyr::select(tree, SNV, synonymy, mutation_AF) 
-data_m <- group_by(data, tree, synonymy) %>% 
+  mutate(type = "CDS only") %>% 
+  mutate(category = ifelse(is.na(nonsynonymous), "syn.", "non-syn.")) %>% 
+  mutate(comparison = ifelse(is.na(nonsynonymous), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data <- bind_rows(data_inter, data_intron, data_syn) %>% 
+  filter(category %in% c("inter.", "intron", "syn.", "non-syn.")) %>% 
+  mutate(comparison = factor(comparison, levels = c("yes", "no"))) %>% 
+  mutate(category = factor(category, levels = c("inter.", "intron",
+                                                "syn.", "non-syn."))) %>%
+    mutate(type = factor(type, levels = c("All", "Genic only", "CDS only"))) 
+data_m <- group_by(data, tree, type, category, comparison) %>% 
   summarise(mutation_AF = median(mutation_AF))
-gd <- ggplot(data, aes(synonymy, mutation_AF, fill = synonymy)) +
+gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
   geom_violin() +
+  geom_boxplot(width = 0.1, fill = 'white', alpha = 0.5, outlier.alpha = 0) +
+  facet_wrap(~ tree, nrow = 1) +
   ylab("Allelic fraction") +
-  scale_fill_manual(name = "",
-                    values = c("#FF7D7D", "#B3FFAE"), 
-                    labels = c("non-synonymous", "synonymous")) +
-  facet_wrap(~tree) +
-  scale_y_log10(limits = c(NA, 0.20)) +
-  geom_point(data = data_m, size = 3) +
-  ggpubr::stat_compare_means(label = "p.format", method = "t.test",
-                             bracket.size	= 1.2, tip.length	= 0,
-                             label.y = log10(0.15), vjust = -0.5,
-                             comparisons = list(c("NS", "S"))) +
-  theme(axis.text.x = element_blank(), axis.ticks = element_blank(), 
-        axis.title.x = element_blank(), axis.line.x = element_blank(),
-          panel.spacing = unit(0, "lines"), legend.position = c(0.7, 0.3), 
-        legend.text = element_text(size = 10)) +
-  guides(fill = guide_legend(nrow = 2))
+  ggpubr::stat_compare_means(method = "t.test",  bracket.size	= 1.2,
+                             label.y = c(log10(0.2), log10(0.3), log10(0.47)),
+                             comparisons = list(c("non-syn.", "syn."), 
+                                                c("non-syn.", "intron"),
+                                                c("inter.", "non-syn."))) +
+  scale_fill_manual(guide = "none", values  = c("#3581D8", "#28CC2D", "#FFE135", "#D82E3F")) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_text(size = 8), panel.spacing = unit(0.5, "lines")) +
+  scale_y_log10(limits = c(NA, 0.6))
 ```
 
 ```{r}
