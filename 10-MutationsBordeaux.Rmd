@@ -10,8 +10,6 @@ opts_chunk$set(
 
 # Mutations Bordeaux
 
-**The first run got wrong data (not enough reads), the results below are preliminary and will be updated soon.**
-
 This chapter describes the reanalyses of data from @Plomion2018 currently done in the [`bordeaux` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/bordeaux).
 
 ```{r datamutationsbdx}

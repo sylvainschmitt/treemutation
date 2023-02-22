@@ -1,9 +1,6 @@
 ```{r setupmutations, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
@@ -71,7 +68,11 @@ include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutatio
 
 ## *Sextonia rubra*
 
-*Waiting for data.*
+Genome, heterozygous sites, cambial mutations and leaf mutations from sequences of Sixto
+
+```{r detectMutationsSixto, fig.cap="Detect mutations workflow for Sixto."}
+include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/sixto/dag/dag.minimal.svg")
+```
 
 ## Hetre
 

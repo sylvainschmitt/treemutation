@@ -263,7 +263,7 @@ min_length <- 35*10^6
 window <- 100*10^3
 fai_f <- filter(fai, end > min_length)
 mutation_f <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
-  select(SNV, CHROM, POS) %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
   unique() %>% 
   mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
   filter(name %in% fai_f$name) %>% 
@@ -289,7 +289,7 @@ transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xl
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>%
   filter(tree == "Sixto", transmitted == "yes") %>% 
   mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
-  select(name, start, stop, snv)
+  dplyr::select(name, start, stop, snv)
 te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
                col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
   mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
@@ -833,7 +833,6 @@ treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>%
   geom_tiplab() +
   geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
   theme(legend.position = "none")
-  as_tibble(tree)
 ```
 
 ```{r angleatipsphyloSixto, fig.width=12}

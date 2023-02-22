@@ -490,7 +490,7 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
      Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
   bind_rows(.id = "tree") %>% 
-  select(tree, SNV) %>% 
+  dplyr::select(tree, SNV) %>% 
   unique() %>% 
   group_by(tree) %>% 
   summarise(N = n())
@@ -570,7 +570,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -617,7 +617,7 @@ make_plot <- function(name = "Angela") {
   g2 <- ggplot() +
     geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
                data = filter(mutations, tree == name, transmitted == "no") %>% 
-                 select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
+                 dplyr::select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
     geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
                data = filter(mutations, tree == name, transmitted == "yes")) +
     xlab("Allelic fraction (bin of 0.02)") +
@@ -655,7 +655,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -700,7 +700,7 @@ g1 <- g1.A +
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Angela", transmitted == "no") %>% 
-               select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
+               dplyr::select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
              data = filter(mutations, tree == "Angela", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.02)") +
@@ -733,7 +733,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -778,7 +778,7 @@ g1 <- g1.A +
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Sixto", transmitted == "no") %>% 
-               select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
+               dplyr::select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
              data = filter(mutations, tree == "Sixto", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.02)") +
@@ -812,7 +812,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -840,7 +840,7 @@ g1 <- ggplot(filter(mutations_hist, tree == "Angela"),
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Angela", transmitted == "no") %>% 
-               select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
+               dplyr::select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
              data = filter(mutations, tree == "Angela", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.001)") +
@@ -872,7 +872,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -900,7 +900,7 @@ g1 <- ggplot(filter(mutations_hist, tree == "Sixto"),
 g2 <- ggplot() +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, col = "#ffc000",
              data = filter(mutations, tree == "Sixto", transmitted == "no") %>% 
-               select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
+               dplyr::select(-SNV) %>% mutate(mutation_AF = round(mutation_AF, 3)) %>% unique()) +
   geom_vline(aes(xintercept = mutation_AF), alpha = 1, size = 1, col = "#cc0000",
              data = filter(mutations, tree == "Sixto", transmitted == "yes")) +
   xlab("Allelic fraction (bin of 0.001)") +
@@ -988,7 +988,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 57, 94, 107, 128, 132, 133, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -1044,7 +1044,7 @@ mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv
   left_join(candidates) %>% 
   mutate(transmitted = ifelse(mutation %in% c(6, 57, 94, 107, 128, 132, 133, 151, 160), "yes", "no")) %>% 
   mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
+  dplyr::select(SNV, transmitted)
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -1498,193 +1498,3 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
 ## Genes
 
 *Angela and Sixto in progress.*
-
-## Figure 3
-
-```{r histaf}
-library(readr)
-library(dplyr)
-library(ggplot2)
-theme_set(bayesplot::theme_default())
-candidates <- bind_rows(
-  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
-    mutate(mutation = 1:n(), tree = "Angela"),
-  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
-    mutate(mutation = 125:(124+n()), tree = "Sixto")
-) %>% 
-  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
-  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
-mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
-  mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
-  dplyr::select(mutation, Type) %>% 
-  left_join(candidates) %>% 
-  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
-  mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  select(SNV, transmitted)
-mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
-     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
-     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
-     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
-     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
-  bind_rows(.id = "tree") %>% 
-  group_by(tree, SNV) %>% 
-  summarise(mutation_AF = median(mutation_AF)) %>% 
-  left_join(mutations_fruits) %>% 
-  mutate(transmitted = ifelse(is.na(transmitted), "unknown", transmitted)) %>% 
-  mutate(transmitted = factor(transmitted, levels = c("yes", "no", "unknown")))
-br <- 0.001
-mutations_hist <- mutations %>%
-  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br), labels = seq(0,1-br,br)+br/2)))) %>% 
-  group_by(tree, mutation_AF_class) %>% 
-  summarise(N = n())
-br_log <- 0.02
-mutations_hist_log <- mutations %>%
-  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
-  group_by(tree, mutation_AF_class) %>% 
-  summarise(N = n())
-mutations_hist_log_tested <- mutations %>%
-  filter(transmitted != "unknown") %>% 
-  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
-  group_by(tree, mutation_AF_class) %>% 
-  summarise(N = n())
-mutations_hist_log_embryo <- mutations %>%
-  filter(transmitted == "yes") %>% 
-  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
-  group_by(tree, mutation_AF_class) %>% 
-  summarise(N = n())
-make_plot_af <- function(name = "Angela") {
-  g1.B <- ggplot(filter(mutations_hist, tree == name),
-                 aes(mutation_AF_class, N+max(filter(mutations_hist, tree == name)$N)/100*5)) +
-    geom_col(fill = "#ffd659ff", col = NA, alpha = 0.8) +
-    xlim(0, 0.52) +
-    xlab("Allelic fraction") +
-    theme(axis.line = element_line(color="#57504d"),
-          axis.ticks = element_line(color="#57504d"),
-          axis.title = element_text(color="#57504d"),
-          axis.text = element_text(color="#57504d"))
-  g1 <- ggplot(filter(mutations_hist_log, tree == name),
-                 aes(mutation_AF_class, N+1)) +
-    geom_col(aes(fill = "crown"), col = NA) +
-    geom_col(aes(fill = "tested"), col = NA, 
-           data = filter(mutations_hist_log_tested, tree == name)) +
-    geom_col(aes(fill = "transmitted"), col = NA, 
-           data = filter(mutations_hist_log_embryo, tree == name)) +
-    ylab("Count") + xlab("Allelic fraction (bin of 0.02)") +
-    xlim(0, 0.52) +
-    scale_fill_manual("", values = c("#ffc000", "grey", "#cc0000")) +
-    scale_y_log10(breaks = c(2, 11, 101, 1001),
-                  labels = c("1", "10", "100", "1,000"), 
-                  limits = c(1, 7000)) +
-    theme(legend.position = c(0.8, 0.8),
-          legend.text = element_text(size = 8),
-          legend.key.size = unit(1, "lines"),
-          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.spacing = margin(0, unit = "pt"),
-          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.box.spacing = margin(0, unit = "pt")) +
-    annotation_custom(ggplotGrob(
-      g1.B +
-        theme(axis.title.y = element_blank(), text = element_text(size = 10))
-    )
-    , xmin = 0.2, xmax = 0.52, ymin = log(2), ymax = log(50))
-  return(g1)
-}
-ga <- make_plot_af("Angela")
-gb <- make_plot_af("Sixto")
-```
-
-```{r cumaf}
-library(tidyr)
-# vroom::vroom("save/coverages_comparisons.tsv") %>% 
-#   filter(proportion > 0.49, proportion < 0.51) %>% 
-#   group_by(tree, library) %>% 
-#   summarise(coverage = median(coverage)) %>% 
-#   group_by(tree) %>% 
-#   summarise(coverage = median(coverage))
-cols <- c("#3e40b7", "#0264c5", "#01a99c", "#df2e36", "#f38d04")
-br <- 0.05
-gc <- list("Napoleon (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
-     "3P (160X)" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
-     "Verzy (64X)" = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
-    "Angela (138X)" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
-     "Sixto (73X)" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
-  bind_rows(.id = "tree") %>% 
-  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
-  separate_rows(Filter) %>% 
-  group_by(tree, Filter) %>% 
-  arrange(desc(mutation_AF)) %>% 
-  mutate(mutations = 1) %>% 
-  mutate(cummulated_mutations = cumsum(mutations)) %>% 
-  filter(Filter == "base") %>% 
-  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br), labels = seq(0,1-br,br)+br/2)))) %>% 
-  group_by(tree, mutation_AF_class) %>% 
-  summarise(l = min(cummulated_mutations), m = median(cummulated_mutations), h = max(cummulated_mutations)) %>% 
-  mutate(tree = factor(tree, levels = c("Verzy (64X)", "Napoleon (60X)", "3P (160X)", "Sixto (73X)", "Angela (138X)"))) %>% 
-  ggplot(aes(x = mutation_AF_class, m, col = tree, fill = tree)) +
-  geom_ribbon(aes(ymin = l, ymax = h), col = NA, alpha = 0.5) +
-  geom_line(aes(y = m)) +
-  scale_y_log10(labels = scales::label_comma()) + 
-  scale_color_manual("", values = cols) +
-  xlab("Allelic fraction") + ylab("Cummulated mutations\nwith decreasing fraction") +
-  theme(legend.position = c(0.7, 0.7), legend.text = element_text(size = 10)) +
-  scale_fill_manual(guide = "none", values = cols)
-```
-
-```{r synaf}
-data_inter <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
-             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
-  bind_rows(.id = "tree") %>% 
-  filter(mutation_AF > 0.01) %>% 
-  dplyr::select(tree, SNV, mutation_AF, transcript) %>% 
-  mutate(type = "All") %>% 
-  mutate(category = ifelse(is.na(transcript), "inter.", "gene")) %>% 
-  mutate(comparison = ifelse(is.na(transcript), "yes", "no")) %>% 
-  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
-data_intron <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
-             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
-  bind_rows(.id = "tree") %>% 
-  filter(transcript == 1) %>% 
-  filter(mutation_AF > 0.01) %>% 
-  dplyr::select(tree, SNV, mutation_AF, CDS) %>% 
-  mutate(type = "Genic only") %>% 
-  mutate(category = ifelse(is.na(CDS), "intron", "exon")) %>% 
-  mutate(comparison = ifelse(is.na(CDS), "yes", "no")) %>% 
-  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
-data_syn <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
-             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
-  bind_rows(.id = "tree") %>% 
-  filter(CDS == 1) %>% 
-  filter(mutation_AF > 0.01) %>% 
-  dplyr::select(tree, SNV, mutation_AF, nonsynonymous) %>% 
-  mutate(type = "CDS only") %>% 
-  mutate(category = ifelse(is.na(nonsynonymous), "syn.", "non-syn.")) %>% 
-  mutate(comparison = ifelse(is.na(nonsynonymous), "yes", "no")) %>% 
-  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
-data <- bind_rows(data_inter, data_intron, data_syn) %>% 
-  filter(category %in% c("inter.", "intron", "syn.", "non-syn.")) %>% 
-  mutate(comparison = factor(comparison, levels = c("yes", "no"))) %>% 
-  mutate(category = factor(category, levels = c("inter.", "intron",
-                                                "syn.", "non-syn."))) %>%
-    mutate(type = factor(type, levels = c("All", "Genic only", "CDS only"))) 
-data_m <- group_by(data, tree, type, category, comparison) %>% 
-  summarise(mutation_AF = median(mutation_AF))
-gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
-  geom_violin() +
-  geom_boxplot(width = 0.1, fill = 'white', alpha = 0.5, outlier.alpha = 0) +
-  facet_wrap(~ tree, nrow = 1) +
-  ylab("Allelic fraction") +
-  ggpubr::stat_compare_means(method = "t.test",  bracket.size	= 1.2,
-                             label.y = c(log10(0.2), log10(0.3), log10(0.47)),
-                             comparisons = list(c("non-syn.", "syn."), 
-                                                c("non-syn.", "intron"),
-                                                c("inter.", "non-syn."))) +
-  scale_fill_manual(guide = "none", values  = c("#3581D8", "#28CC2D", "#FFE135", "#D82E3F")) +
-  theme(axis.title.x = element_blank(), axis.text.x = element_text(size = 8), panel.spacing = unit(0.5, "lines")) +
-  scale_y_log10(limits = c(NA, 0.6))
-```
-
-```{r}
-g <- cowplot::plot_grid(ga, gb, gc, gd, nrow = 2, labels = c("a", "b", "c", "d"),
-                        rel_heights = c(1, 1))
-cowplot::save_plot(paste0("~/Téléchargements/Fig3.png"), g, dpi = 1000, base_width = 8, base_height = 6, bg = "white")
-```

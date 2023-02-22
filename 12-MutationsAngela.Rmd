@@ -308,7 +308,7 @@ min_length <- 20*10^6
 window <- 100*10^3
 hs1_f <- filter(hs1, end > min_length)
 mutation_f <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
-  select(SNV, CHROM, POS) %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
   unique() %>% 
   mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
   filter(name %in% hs1_f$name) %>% 
@@ -334,7 +334,7 @@ transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xl
   mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
   filter(tree == "Angela", transmitted == "yes") %>% 
   mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
-  select(name, start, stop, snv)
+  dplyr::select(name, start, stop, snv)
 orfs <- vroom::vroom("data/mutations/angela/annotation/angela.orf.csv") %>% 
   mutate(start = str_sub(peptide, 1, 1)) %>% 
   mutate(stop = str_sub(peptide, -1, -1)) %>% 
@@ -405,7 +405,7 @@ min_length <- 10*10^6
 window <- 100*10^3
 hs1_f <- filter(hs1, end > min_length)
 mutation_f <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
-  select(SNV, CHROM, POS) %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
   unique() %>% 
   mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
   filter(name %in% hs1_f$name) %>% 
@@ -432,7 +432,7 @@ t1 <- hs1_f %>%
   mutate(name = paste0("Sc", name)) %>% 
   mutate(start = as.numeric(start+1),
          end = as.numeric(end+1)) %>%
-  select(name, start, end) %>% 
+  dplyr::select(name, start, end) %>% 
   as.data.frame()
 t2 <- mutation_f %>%   
   # left_join(gene_f) %>% 
@@ -441,7 +441,7 @@ t2 <- mutation_f %>%
     mutate(start = as.numeric(start+1),
          end = as.numeric(stop+1),
          mutations = as.numeric(mutations)) %>%
-  select(annot, name, start, end, mutations) %>% 
+  dplyr::select(annot, name, start, end, mutations) %>% 
   as.data.frame()
 chromoMap(list(t1), list(t2), data_based_color_map = T,
           data_type = "numeric", legend = T)

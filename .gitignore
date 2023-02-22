@@ -7,3 +7,4 @@ data
 save/*.png
 save/*.svg
 save/*.Rdata
+figs/*.png

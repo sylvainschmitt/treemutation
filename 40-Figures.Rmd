@@ -1,0 +1,366 @@
+```{r setupfigurefinal, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(tidyverse)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(
+  echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
+  cache = T, cache.lazy = F)
+```
+
+# Figures
+
+This chapter develop the code for figure preparation for the final manuscript.
+
+### Figure 1
+
+```{r}
+# rsvg::rsvg_png("data/circlize/Circlize_angela_v130223_withannotations.svg", "data/circlize/AngelaCircos.png", width = 1311, height = 1311)
+# rsvg::rsvg_png("data/circlize/Circlize_sixto_v130223_withannotations.svg", "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
+ga <- grid::rasterGrob(png::readPNG("data/circlize/AngelaCircos.png"), interpolate = T)
+gb <- grid::rasterGrob(png::readPNG("data/circlize/SixtoCircos.png"), interpolate = T)
+g <- cowplot::plot_grid(ga, gb, nrow = 1, labels = c("a", "b"))
+cowplot::save_plot(paste0("figs/Fig1.png"), g, dpi = 1000, base_width = 20, base_height = 10, bg = "white")
+# cowplot::save_plot(paste0("~/Téléchargements/Fig1_lr.png"), g, dpi = 1000, base_width = 10, base_height = 5, bg = "white")
+```
+
+```{r fig1final, fig.cap="Fig. 1 | Crown mutations and transmitted mutations in the genomic landscape of Angela and Sixto assembled pseudo-chromosomes. The genomic landscape is similarly portrayed for the two tropical trees: the Dicorynia guianensis tree named Angela (a), and the Sextonia rubra tree named Sixto (b). The first (most external) track represents the percentage of GC in the whole genome with the black line and in the transposable elements with the green line. The second (least external) track represents the percentage of transposable elements with purple bars. The third track (middle) represents the percentage of genes with blue bars. The fourth (least internal) track represents the number of somatic mutations detected in the tree crown with yellow bars. The fifth (innermost) track represents the allelic fraction of the somatic mutations detected in the tree crown in yellow and the somatic mutations transmitted to the embryos in red. The inner labels indicate the type of mutations for somatic mutations transmitted to embryos. All measurements are calculated in non-overlapping windows of 100 kb. A ruler is drawn on each pseudo-chromosome, with tick marks every 2 Mb."}
+include_graphics("figs/Fig1.png")
+```
+
+
+### Figure 2
+
+```{r figarchi}
+# rsvg::rsvg_png("save/Angela.svg", "save/Angela.png", width = 1123, height = 1123)
+# rsvg::rsvg_png("save/Sixto.svg", "save/Sixto.png", width = 1123, height = 1123)
+ga <- grid::rasterGrob(png::readPNG("save/Angela.png"), interpolate = T)
+gb <- grid::rasterGrob(png::readPNG("save/Sixto.png"), interpolate = T)
+```
+
+```{r figphyloangela, fig.width=4, fig.height=2.57, include=F}
+library(dendextend)
+library(ape)
+library(ggtree)
+cols <- c("ES" = "#6B5336", "EL" = "#B8792E", 
+          "DS" = "#5D6B20", "DL" = "#A8B863",
+          "CS" = "#51346B", "CL" = "#752CB8",
+          "BS" = "#205D6B", "BL" = "#63A7B8",
+          "AS" = "#611C35", "AL" = "#BD3768")
+angela_archi <- "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);"
+angela_archi <- read.tree(text = angela_archi) %>% 
+  phylogram::as.dendrogram() %>% 
+  prune("R") %>% 
+  set("labels_col", cols[labels(.)])
+angela_phylo <- treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
+  as.phylo() %>% 
+  root(outgroup = "R", resolve.root = TRUE) %>% 
+  phylogram::as.dendrogram() %>% 
+  prune("R") %>% 
+  set("labels_col", cols[labels(.)])
+svg("save/AngelaTanglegram.svg", width = 4, height = 2.57)
+dendlist(angela_archi, angela_phylo) %>%
+  set("labels_cex", 1.5) %>% 
+  untangle(method = "ladderize") %>%
+  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
+             highlight_branches_lwd = F, edge.root = TRUE, 
+             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
+             cex_main = 1, margin_outer = 1, columns_width = c(5,2,5))
+dev.off()
+rsvg::rsvg_png("save/AngelaTanglegram.svg", "save/AngelaTanglegram.png", width = 800, height = 500)
+gc <- grid::rasterGrob(png::readPNG("save/AngelaTanglegram.png"), interpolate = T)
+```
+
+```{r figphylosixto, fig.width=4, fig.height=2.57, include=F}
+cols <- c("I2" = "#B17323", "I1" = "#FFA630", 
+          "F2" = "#676F5A",
+          "E4" = "#4DA1A9", "E2" = "#73E3EE",
+          "C1" = "#2E5077", "C3" = "#5B9BE3",
+          "B1" = "#BD3768")
+sixto_archi <- "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);"
+sixto_archi <- read.tree(text = sixto_archi) %>% 
+  phylogram::as.dendrogram() %>% 
+  prune("R") %>% 
+  set("labels", str_sub(labels(.), 1, 2)) %>% 
+  set("labels_col", cols[labels(.)])
+sixto_phylo <- treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
+  as.phylo() %>% 
+  root(outgroup = "R", resolve.root = TRUE) %>% 
+  phylogram::as.dendrogram() %>% 
+  prune("R") %>% 
+  set("labels", str_sub(labels(.), 1, 2)) %>% 
+  set("labels_col", cols[labels(.)])
+dendlist(sixto_archi, sixto_phylo) %>%
+  set("labels_cex", 1.5) %>% 
+  untangle(method = "ladderize") %>%
+  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
+             highlight_branches_lwd = F, edge.root = TRUE, 
+             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
+             cex_main = 1)
+
+svg("save/SixtoTanglegram.svg", width = 4, height = 2.5)
+dendlist(sixto_archi, sixto_phylo) %>%
+  set("labels_cex", 1.5) %>% 
+  untangle(method = "ladderize") %>%
+  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
+             highlight_branches_lwd = F, edge.root = TRUE, 
+             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
+             cex_main = 1, margin_outer = 1, columns_width = c(5,2,5))
+dev.off()
+rsvg::rsvg_png("save/SixtoTanglegram.svg", "save/SixtoTanglegram.png", width = 800, height = 500)
+gd <- grid::rasterGrob(png::readPNG("save/SixtoTanglegram.png"), interpolate = T)
+```
+
+```{r figlightn}
+make_plot_light <- function(name = "angela"){
+  t1 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
+                     show_col_types = FALSE) %>%   
+    dplyr::select(tip, tumor, Filter, SNV) %>% 
+    unique() %>% 
+    group_by(tip, tumor, Filter) %>% 
+    summarise(mutations = n()) %>% 
+    filter(Filter == "base") %>% 
+    mutate(type = "All") %>% 
+    dplyr::select(-Filter)
+  t2 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
+                     show_col_types = FALSE) %>%   
+    dplyr::select(type, tip, tumor, SNV) %>% 
+    unique() %>% 
+    group_by(type, tip, tumor) %>% 
+    summarise(mutations = n()) %>% 
+    mutate(type = gsub("-", "", type))
+  m <- 10^(log10(max(t1$mutations))*1.1)
+  bind_rows(t1, t2) %>% 
+    mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+    ggplot(aes(condition, mutations, fill = condition)) +
+    geom_boxplot() +
+    facet_wrap(~type, nrow = 1) +
+    ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
+                               bracket.size	= 1.2, tip.length	= 0,
+                               label.y = 0.925*log10(m), vjust = -0.5,
+                               comparisons = list(c("Light", "Shadow"))) +
+    xlab("") + ylab("Number of mutations") +
+    scale_fill_manual("", values = c("#FFDF00", "#8B8680")) +
+    theme(axis.text.x = element_blank(), axis.ticks = element_blank(), axis.title.x = element_blank(),
+          panel.spacing = unit(0, "lines"),
+          # legend.position = c(0.7, -0.15)) +
+          legend.position = "bottom", 
+          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          legend.spacing = margin(0, unit = "pt"),
+          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          legend.box.spacing = margin(0, unit = "pt")) +
+    scale_y_log10(limits = c(NA, m)) +
+    guides(fill = guide_legend(nrow = 1))
+  # cowplot::save_plot(paste0("~/Téléchargements/", name, "LightN.png"), g, dpi = 800, base_width = 2, base_height = 4)
+}
+ge <- make_plot_light("angela")
+gf <- make_plot_light("sixto")
+```
+
+```{r}
+g <- cowplot::plot_grid(ga, gb, gc, gd, ge, gf, nrow = 3, labels = c("a", "b", "c", "d", "e", "f"),
+                        rel_heights = c(1.5, 1, 1))
+cowplot::save_plot(paste0("figs/Fig2.png"), g, dpi = 1000, base_width = 8, base_height = 9, bg = "white")
+```
+
+```{r fig2final, fig.cap="Fig. 2 | Somatic mutation distributions through physical trees, phylogenies, and with light. Somatic mutation distributions through physical trees, phylogenies, and with light are similarly portrayed for the two tropical trees: the Dicorynia guianensis tree named Angela (a,c,e), and the Sextonia rubra tree named Sixto (b,d,f). (a-b) The physical architecture of the tree is shown in black with the bough names in white boxes. The number of somatic mutations through the crown is indicated in the yellow boxes before the original branching event. The balloons circles indicate the sample points of three leaves in the light-exposed branches (light colours) and in the shaded branches (dark colours). Fruit sampling points are represented by red fruits, with the number of fruits sampled indicated in black. The red boxes with white labels indicate the transmission of mutations to fruit embryos out of the total number of mutations tested. (c-d) A side-by-side comparison of the physical tree (left, branch length in metres) and the maximum likelihood phylogeny (right, branch length in substitutions per site). The letters on the ends of the branches indicate the sample points with unique colours. (e-f) The effect of light exposure on the accumulation of somatic mutations as a function of mutation type is represented in yellow and grey boxes. The yellow boxes represent the number of mutations accumulated in all leaves of light exposed branches and the grey boxes in all leaves of shaded branches. The 'ns' labels indicate non-significant differences in Student's t-tests. Mutation types include all mutations and all types of transitions and transversions. The y-axis has been scaled logarithmically to facilitate reading of low values."}
+include_graphics("figs/Fig2.png")
+```
+
+## Figure 3
+
+```{r histaf}
+library(readr)
+library(dplyr)
+library(ggplot2)
+theme_set(bayesplot::theme_default())
+candidates <- bind_rows(
+  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 1:n(), tree = "Angela"),
+  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 125:(124+n()), tree = "Sixto")
+) %>% 
+  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
+  mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
+  dplyr::select(mutation, Type) %>% 
+  left_join(candidates) %>% 
+  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
+  mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
+  dplyr::select(SNV, transmitted)
+mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+     Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  group_by(tree, SNV) %>% 
+  summarise(mutation_AF = median(mutation_AF)) %>% 
+  left_join(mutations_fruits) %>% 
+  mutate(transmitted = ifelse(is.na(transmitted), "unknown", transmitted)) %>% 
+  mutate(transmitted = factor(transmitted, levels = c("yes", "no", "unknown")))
+br <- 0.001
+mutations_hist <- mutations %>%
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br), labels = seq(0,1-br,br)+br/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
+br_log <- 0.02
+mutations_hist_log <- mutations %>%
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
+mutations_hist_log_tested <- mutations %>%
+  filter(transmitted != "unknown") %>% 
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
+mutations_hist_log_embryo <- mutations %>%
+  filter(transmitted == "yes") %>% 
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br_log), labels = seq(0,1-br_log,br_log)+br_log/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(N = n())
+make_plot_af <- function(name = "Angela") {
+  g1.B <- ggplot(filter(mutations_hist, tree == name),
+                 aes(mutation_AF_class, N+max(filter(mutations_hist, tree == name)$N)/100*5)) +
+    geom_col(fill = "#ffd659ff", col = NA, alpha = 0.8) +
+    xlim(0, 0.52) +
+    xlab("Allelic fraction") +
+    theme(axis.line = element_line(color="#57504d"),
+          axis.ticks = element_line(color="#57504d"),
+          axis.title = element_text(color="#57504d"),
+          axis.text = element_text(color="#57504d"))
+  g1 <- ggplot(filter(mutations_hist_log, tree == name),
+                 aes(mutation_AF_class, N+1)) +
+    geom_col(aes(fill = "mutation"), col = NA) +
+    geom_col(aes(fill = "non-transmitted"), col = NA, 
+           data = filter(mutations_hist_log_tested, tree == name)) +
+    geom_col(aes(fill = "transmitted"), col = NA, 
+           data = filter(mutations_hist_log_embryo, tree == name)) +
+    ylab("Count") + xlab("Allelic fraction") +
+    xlim(0, 0.52) +
+    scale_fill_manual("", values = c("#ffc000", "grey", "#cc0000")) +
+    scale_y_log10(breaks = c(2, 11, 101, 1001),
+                  labels = c("1", "10", "100", "1,000"), 
+                  limits = c(1, 7000)) +
+    theme(legend.position = c(0.8, 0.8),
+          legend.text = element_text(size = 6),
+          legend.key.size = unit(1, "lines"),
+          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          legend.spacing.y = unit(5, "pt"),
+          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
+          # legend.box.spacing = margin(0, unit = "pt")
+          ) +
+    annotation_custom(ggplotGrob(
+      g1.B +
+        theme(axis.title.y = element_blank(), text = element_text(size = 10))
+    )
+    , xmin = 0.2, xmax = 0.52, ymin = log(2), ymax = log(50))
+  return(g1)
+}
+ga <- make_plot_af("Angela")
+gb <- make_plot_af("Sixto")
+```
+
+```{r cumaf}
+library(tidyr)
+# vroom::vroom("save/coverages_comparisons.tsv") %>% 
+#   filter(proportion > 0.49, proportion < 0.51) %>% 
+#   group_by(tree, library) %>% 
+#   summarise(coverage = median(coverage)) %>% 
+#   group_by(tree) %>% 
+#   summarise(coverage = median(coverage))
+cols <- c("#3e40b7", "#0264c5", "#01a99c", "#df2e36", "#f38d04")
+br <- 0.05
+gc <- list("Napoleon (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+     "3P (160X)" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+     "Verzy (64X)" = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+    "Angela (138X)" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+     "Sixto (73X)" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+  bind_rows(.id = "tree") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  group_by(tree, Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  filter(Filter == "base") %>% 
+  mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br), labels = seq(0,1-br,br)+br/2)))) %>% 
+  group_by(tree, mutation_AF_class) %>% 
+  summarise(l = min(cummulated_mutations), m = median(cummulated_mutations), h = max(cummulated_mutations)) %>% 
+  mutate(tree = factor(tree, levels = c("Verzy (64X)", "Napoleon (60X)", "3P (160X)", "Sixto (73X)", "Angela (138X)"))) %>% 
+  ggplot(aes(x = mutation_AF_class, m, col = tree, fill = tree)) +
+  geom_ribbon(aes(ymin = l, ymax = h), col = NA, alpha = 0.5) +
+  geom_line(aes(y = m)) +
+  scale_y_log10(labels = scales::label_comma()) + 
+  scale_color_manual("", values = cols) +
+  xlab("Allelic fraction") + ylab("Cumulative number\nof mutations") +
+  theme(legend.position = c(0.7, 0.7), legend.text = element_text(size = 10)) +
+  scale_fill_manual(guide = "none", values = cols)
+```
+
+```{r synaf}
+data_inter <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, transcript) %>% 
+  mutate(type = "All") %>% 
+  mutate(category = ifelse(is.na(transcript), "intergenic   ", "gene")) %>% 
+  mutate(comparison = ifelse(is.na(transcript), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data_intron <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(transcript == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, CDS) %>% 
+  mutate(type = "Genic only") %>% 
+  mutate(category = ifelse(is.na(CDS), "intron   ", "exon")) %>% 
+  mutate(comparison = ifelse(is.na(CDS), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data_syn <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
+             Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  filter(CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(tree, SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(type = "CDS only") %>% 
+  mutate(category = ifelse(is.na(nonsynonymous), "synonymous      ", "non-synonymous")) %>% 
+  mutate(comparison = ifelse(is.na(nonsynonymous), "yes", "no")) %>% 
+  dplyr::select(tree, SNV, type, category, comparison, mutation_AF)
+data <- bind_rows(data_inter, data_intron, data_syn) %>% 
+  filter(category %in% c("intergenic   ", "intron   ", "synonymous      ", "non-synonymous")) %>% 
+  mutate(comparison = factor(comparison, levels = c("yes", "no"))) %>% 
+  mutate(category = factor(category, levels = c("intergenic   ", "intron   ",
+                                                "synonymous      ", "non-synonymous"))) %>%
+    mutate(type = factor(type, levels = c("All", "Genic only", "CDS only"))) 
+data_m <- group_by(data, tree, type, category, comparison) %>% 
+  summarise(mutation_AF = median(mutation_AF))
+gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1, fill = 'white', alpha = 0.5, outlier.alpha = 0) +
+  facet_wrap(~ tree, nrow = 1) +
+  ylab("Allelic fraction") +
+  ggpubr::stat_compare_means(method = "t.test",  bracket.size	= 1.2,
+                             label.y = c(log10(0.2), log10(0.3), log10(0.5)),
+                             comparisons = list(c("non-synonymous", "synonymous      "), 
+                                                c("non-synonymous", "intron   "),
+                                                c("intergenic   ", "non-synonymous"))) +
+  scale_fill_manual("", values  = c("#3581D8", "#28CC2D", "#FFE135", "#D82E3F")) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(), panel.spacing = unit(0.5, "lines")) +
+  scale_y_log10(limits = c(NA, 0.65)) +
+  theme(legend.position = c(0.5, 0), legend.direction = "horizontal", 
+        legend.text = element_text(size = 6), legend.key.size = unit(0.8, "lines"), legend.spacing.y = unit(10, "points"))
+```
+
+```{r}
+g <- cowplot::plot_grid(ga, gb, gc, gd, nrow = 2, labels = c("a", "b", "c", "d"),
+                        rel_heights = c(1, 1))
+cowplot::save_plot(paste0("figs/Fig3.png"), g, dpi = 1000, base_width = 8, base_height = 6, bg = "white")
+```
+
+```{r fig3final, fig.cap="Fig. 3 | Allelic fractions of somatic mutations among trees and among genomic elements. Histogram of allelic fractions of mutations detected in the crown of the two tropical trees: the Dicorynia guianensis tree named Angela (a), and the Sextonia rubra tree named Sixto (b). The main histogram shows the allelic fractions of the somatic mutations using a bin of 0.02 and a log-transformed count with the mutations detected in the crown in yellow, the mutations tested for transmission in grey, and the mutations transmitted to the embryos in red. The inner histogram shows the allelic fractions of the somatic mutations using a bin of 0.001 and a natural count. (c) Cumulative number of somatic mutations per branch with decreasing allelic fraction for five trees reanalysed with the same pipeline. The five trees include the two tropical trees studied, the Dicorynia guianensis tree named Angela in orange and the Sextonia rubra tree named Sixto in red, and three temperate trees, two pedunculate oaks Quercus robur named 3P in green and Napoleon in blue and a tortuous beech Fagus sylvatica named Verzy in purple. All trees were analysed with the same pipeline (see methods) but were sequenced with a different depth indicated in brackets. The line represents the median value while the area represents the minimum and maximum values on the 2 to 10 branches per tree. (d) Comparisons of allelic fractions for non-synonymous mutations in red with synonymous mutations in yellow, intronic mutations in green and intergenic mutations in blue for the two tropical trees: the Dicorynia guianensis tree named Angela (left panel), and the Sextonia rubra tree named Sixto (right panel). The p-value above the bars indicates the significance of the Student's T-test for the pairs of groups."}
+include_graphics("figs/Fig3.png")
+```

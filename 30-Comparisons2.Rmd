@@ -444,15 +444,6 @@ dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.8
                          main_right = "Angela - Phylogeny", main_left = " Angela - Architecture") 
 ```
 
-
-```{r angelaphyloarchi, fig.cap="Caption."}
-dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);")), 
-                     phylogram::as.dendrogram(phytools::midpoint.root(ape::chronos(angela_phylo)))) %>%
-  dendextend::untangle(method = "ladderize") %>%
-  dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE, highlight_distinct_edges = F,
-                         main_right = "Angela - Phylogeny", main_left = " Angela - Architecture") 
-```
-
 ```{r sixtophyloarchi, fig.cap="Caption.", eval=F}
 dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);")), 
                      treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree")) %>%
@@ -482,27 +473,6 @@ list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
   scale_fill_manual("", values = c("gold", "gray83"))
 ```
 
-```{r lightComp2base, fig.cap="Caption."}
-make_plot <- function(name = "angela"){
-  g <- vroom::vroom(paste0("data/mutations/", name, "/filters/leaf_mutations.tsv")) %>%   
-    dplyr::select(tip, tumor, Filter, SNV) %>% 
-    unique() %>% 
-    group_by(tip, tumor, Filter) %>% 
-    summarise(mutations = n()) %>% 
-    mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
-    filter(Filter == "base") %>% 
-    ggplot(aes(condition, mutations, fill = condition)) +
-    geom_boxplot() +
-    ggpubr::stat_compare_means(label = "p.signif", method = "t.test", bracket.size	= 2, tip.length	= 0,
-                               comparisons = list(c("Light", "Shadow"))) +
-    xlab("") + ylab("Number of mutations") +
-    scale_fill_manual(guide = "none", values = c("#FFDF00", "#8B8680")) +
-  theme(axis.text.x = element_text(angle = 90), panel.spacing = unit(0, "lines"))
-  cowplot::save_plot(paste0("~/Téléchargements/", name, "LightN.png"), g, dpi = 800, base_width = 2, base_height = 4)
-}
-lapply(c("angela", "sixto"), make_plot)
-```
-
 ```{r lightComp2baseKS, fig.cap="Caption."}
 t <- list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
           Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
@@ -529,27 +499,6 @@ ggplot(t, aes(mutations, col = condition)) +
 ```
 
 ```{r lightComp2type, fig.cap="Caption."}
-make_plot <- function(name = "angela"){
-  g <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv")) %>%   
-  dplyr::select(type, tip, tumor, SNV) %>% 
-  unique() %>% 
-  group_by(type, tip, tumor) %>% 
-  summarise(mutations = n()) %>% 
-  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
-  ggplot(aes(condition, mutations, fill = condition)) +
-  geom_boxplot() +
-  facet_wrap(~type, nrow = 1) +
-  ggpubr::stat_compare_means(label = "p.signif", method = "t.test", bracket.size	= 2, tip.length	= 0,
-                             comparisons = list(c("Light", "Shadow"))) +
-  xlab("") + ylab("Number of mutations") +
-  scale_fill_manual(guide = "none", values = c("#FFDF00", "#8B8680")) +
-  theme(axis.text.x = element_text(angle = 90), panel.spacing = unit(0, "lines"))
-  cowplot::save_plot(paste0("~/Téléchargements/", name, "LightType.png"), g, dpi = 800, base_width = 4, base_height = 4)
-}
-lapply(c("angela", "sixto"), make_plot)
-```
-
-```{r lightComp2type, fig.cap="Caption."}
 list(Angela = vroom::vroom("data/mutations/angela//filters/filtered_tip_mutations_spectra.tsv"),
      Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
   bind_rows(.id = "tree") %>% 
@@ -570,7 +519,7 @@ list(Angela = vroom::vroom("data/mutations/angela//filters/filtered_tip_mutation
 
 ```{r lightComp2spectraAngela, fig.cap="Caption.", fig.height=5, fig.width=8}
 vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv") %>% 
-  select(type, spectra, tumor, tip, SNV) %>% 
+  dplyr::select(type, spectra, tumor, tip, SNV) %>% 
   unique() %>% 
   group_by(type, spectra, tip, tumor) %>% 
   summarise(mutatinos = n()) %>% 
@@ -590,7 +539,7 @@ vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv")
 
 ```{r lightComp2spectraSixto, fig.cap="Caption.", fig.height=5, fig.width=8}
 vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") %>% 
-  select(type, spectra, tumor, tip, SNV) %>% 
+  dplyr::select(type, spectra, tumor, tip, SNV) %>% 
   unique() %>% 
   group_by(type, spectra, tip, tumor) %>% 
   summarise(mutatinos = n()) %>% 
@@ -929,18 +878,13 @@ all %>%
 ```
 #### Tissues
 
-```{r}
-all
-```
-
-
-```{r}
+```{r , eval=F}
 readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
   mutate(Tree = ifelse(as.numeric(gsub("SNV", "", SNV)) > 124, "Sixto", "Angela")) %>% 
   filter(Type %in% c("mutation", "reference only")) %>% 
   mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
   left_join(candidates) %>% 
-  select(tree, SNV, CHROM, POS, af) %>% 
+  dplyr::select(tree, SNV, CHROM, POS, af) %>% 
   unique() %>% 
   mutate(transmission_embryo = ifelse((SNV %in% transmitted$SNV), T, F)) %>% 
   write_tsv("transmission.tsv")
@@ -975,12 +919,12 @@ transmitted <- fruits %>%
   left_join(candidates %>% 
               mutate(SNV = paste0("SNV", sprintf("%03d", mutation))) %>% 
               mutate(mutation = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-              select(SNV, mutation)) %>% 
+              dplyr::select(SNV, mutation)) %>% 
   left_join(lapply(list(Angela = "data/mutations/angela/filters/leaf_mutations.tsv",
                         Sixto = "data/mutations/sixto/filters/leaf_mutations.tsv"), vroom::vroom) %>% 
               bind_rows(.id = "tree") %>% 
               mutate(mutation = SNV) %>% 
-              select(tree, tumor, mutation, mutation_AF) %>% 
+              dplyr::select(tree, tumor, mutation, mutation_AF) %>% 
               mutate(branch_fruit = str_sub(tumor, 1, 1)) %>% 
               group_by(tree, mutation) %>% 
               mutate(AF_crown_med = median(mutation_AF),
@@ -992,18 +936,12 @@ transmitted <- fruits %>%
 
 ```{r}
 transmitted %>% 
-  select(tree, SNV, branch, branch_fruit, fruits, transmission, AF_branch_med)
-```
-
-
-```{r}
-transmitted %>% 
   ungroup() %>% 
   filter(!is.na(AF_crown_med)) %>% 
   mutate(AF_branch_sd = ifelse(is.na(AF_branch_sd), 0, AF_branch_sd)) %>% 
   mutate(AFcrown = paste(AF_crown_med, AF_crown_sd),
          AFbranch = paste(AF_branch_med, AF_branch_sd)) %>% 
-  select(SNV, total_fruits, branch_fruit, transmission, AFcrown, AFbranch) %>% 
+  dplyr::select(SNV, total_fruits, branch_fruit, transmission, AFcrown, AFbranch) %>% 
   reshape2::melt(c("SNV",  "total_fruits", "branch_fruit", "transmission"), 
                  variable.name = "level", value.name = "AF") %>% 
   separate(AF, c("median", "sd"), " ", convert = T) %>% 
@@ -1040,20 +978,7 @@ fruits %>%
   reshape2::dcast(fruit ~ tissue, value = "genotype")
 ```
 
-```{r}
-transmitted %>% 
-  select(tree, SNV, branch, branch_fruit, fruits, transmission, AF_branch_med) %>% 
-  mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
-  left_join(select(agreement, SNV, agreement))
-```
-
-```{r}
-transmitted %>% 
-  group_by(tree, branch_fruit) %>% 
-  summarise(N = n())
-```
-
-```{r}
+```{r , eval=F}
 transmitted %>% 
   mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
   left_join(select(agreement, SNV, agreement)) %>% 
@@ -1062,8 +987,8 @@ transmitted %>%
               bind_rows(.id = "tree") %>% 
               filter(SNV %in% transmitted$mutation) %>% 
               mutate(mutation = SNV, origin = origin1) %>% 
-              select(mutation, origin)) %>% 
-  select(tree, SNV, branch, branch_fruit, fruits, transmission, 
+              dplyr::select(mutation, origin)) %>% 
+  dplyr::select(tree, SNV, branch, branch_fruit, fruits, transmission, 
          AF_branch_med, agreement, origin) %>% 
   write_tsv("~/Téléchargements/mutations.tsv")
 ```
@@ -1124,150 +1049,3 @@ nano %>%
   scale_fill_manual(expression(frac(A260,A280)), values = c("darkorange", "brown2", "chartreuse3")) +
   xlab(expression(ADN~ng.µL^-1))
 ```
-
-### Figure 1
-
-```{r}
-# rsvg::rsvg_png("data/circlize/Circlize_angela_v130223_withannotations.svg", "data/circlize/AngelaCircos.png", width = 1311, height = 1311)
-# rsvg::rsvg_png("data/circlize/Circlize_sixto_v130223_withannotations.svg", "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
-ga <- grid::rasterGrob(png::readPNG("data/circlize/AngelaCircos.png"), interpolate = T)
-gb <- grid::rasterGrob(png::readPNG("data/circlize/SixtoCircos.png"), interpolate = T)
-g <- cowplot::plot_grid(ga, gb, nrow = 1, labels = c("a", "b"))
-cowplot::save_plot(paste0("~/Téléchargements/Fig1.png"), g, dpi = 1000, base_width = 20, base_height = 10, bg = "white")
-cowplot::save_plot(paste0("~/Téléchargements/Fig1_lr.png"), g, dpi = 1000, base_width = 10, base_height = 5, bg = "white")
-```
-
-### Figure 2
-
-```{r figarchi}
-# rsvg::rsvg_png("save/Angela.svg", "save/Angela.png", width = 1123, height = 1123)
-# rsvg::rsvg_png("save/Sixto.svg", "save/Sixto.png", width = 1123, height = 1123)
-ga <- grid::rasterGrob(png::readPNG("save/Angela.png"), interpolate = T)
-gb <- grid::rasterGrob(png::readPNG("save/Sixto.png"), interpolate = T)
-```
-
-```{r figphyloangela, fig.width=4, fig.height=2.57}
-library(dendextend)
-library(ape)
-library(ggtree)
-cols <- c("ES" = "#6B5336", "EL" = "#B8792E", 
-          "DS" = "#5D6B20", "DL" = "#A8B863",
-          "CS" = "#51346B", "CL" = "#752CB8",
-          "BS" = "#205D6B", "BL" = "#63A7B8",
-          "AS" = "#611C35", "AL" = "#BD3768")
-angela_archi <- "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);"
-angela_archi <- read.tree(text = angela_archi) %>% 
-  phylogram::as.dendrogram() %>% 
-  prune("R") %>% 
-  set("labels_col", cols[labels(.)])
-angela_phylo <- treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
-  as.phylo() %>% 
-  root(outgroup = "R", resolve.root = TRUE) %>% 
-  phylogram::as.dendrogram() %>% 
-  prune("R") %>% 
-  set("labels_col", cols[labels(.)])
-svg("save/AngelaTanglegram.svg", width = 4, height = 2.57)
-dendlist(angela_archi, angela_phylo) %>%
-  set("labels_cex", 1.5) %>% 
-  untangle(method = "ladderize") %>%
-  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
-             highlight_branches_lwd = F, edge.root = TRUE, 
-             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
-             cex_main = 1, margin_outer = 1, columns_width = c(5,2,5))
-dev.off()
-rsvg::rsvg_png("save/AngelaTanglegram.svg", "save/AngelaTanglegram.png", width = 800, height = 500)
-gc <- grid::rasterGrob(png::readPNG("save/AngelaTanglegram.png"), interpolate = T)
-```
-
-```{r figphylosixto, fig.width=4, fig.height=2.57}
-cols <- c("I2" = "#B17323", "I1" = "#FFA630", 
-          "F2" = "#676F5A",
-          "E4" = "#4DA1A9", "E2" = "#73E3EE",
-          "C1" = "#2E5077", "C3" = "#5B9BE3",
-          "B1" = "#BD3768")
-sixto_archi <- "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);"
-sixto_archi <- read.tree(text = sixto_archi) %>% 
-  phylogram::as.dendrogram() %>% 
-  prune("R") %>% 
-  set("labels", str_sub(labels(.), 1, 2)) %>% 
-  set("labels_col", cols[labels(.)])
-sixto_phylo <- treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
-  as.phylo() %>% 
-  root(outgroup = "R", resolve.root = TRUE) %>% 
-  phylogram::as.dendrogram() %>% 
-  prune("R") %>% 
-  set("labels", str_sub(labels(.), 1, 2)) %>% 
-  set("labels_col", cols[labels(.)])
-dendlist(sixto_archi, sixto_phylo) %>%
-  set("labels_cex", 1.5) %>% 
-  untangle(method = "ladderize") %>%
-  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
-             highlight_branches_lwd = F, edge.root = TRUE, 
-             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
-             cex_main = 1)
-
-svg("save/SixtoTanglegram.svg", width = 4, height = 2.5)
-dendlist(sixto_archi, sixto_phylo) %>%
-  set("labels_cex", 1.5) %>% 
-  untangle(method = "ladderize") %>%
-  tanglegram(sort = T, common_subtrees_color_branches = F, highlight_distinct_edges = F, 
-             highlight_branches_lwd = F, edge.root = TRUE, 
-             main_left = "physical tree (m)", main_right = "phylogeny (subs/site)",
-             cex_main = 1, margin_outer = 1, columns_width = c(5,2,5))
-dev.off()
-rsvg::rsvg_png("save/SixtoTanglegram.svg", "save/SixtoTanglegram.png", width = 800, height = 500)
-gd <- grid::rasterGrob(png::readPNG("save/SixtoTanglegram.png"), interpolate = T)
-```
-
-```{r figlightn}
-make_plot_light <- function(name = "angela"){
-  t1 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
-                     show_col_types = FALSE) %>%   
-    dplyr::select(tip, tumor, Filter, SNV) %>% 
-    unique() %>% 
-    group_by(tip, tumor, Filter) %>% 
-    summarise(mutations = n()) %>% 
-    filter(Filter == "base") %>% 
-    mutate(type = "All") %>% 
-    select(-Filter)
-  t2 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
-                     show_col_types = FALSE) %>%   
-    dplyr::select(type, tip, tumor, SNV) %>% 
-    unique() %>% 
-    group_by(type, tip, tumor) %>% 
-    summarise(mutations = n()) %>% 
-    mutate(type = gsub("-", "", type))
-  m <- 10^(log10(max(t1$mutations))*1.1)
-  bind_rows(t1, t2) %>% 
-    mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
-    ggplot(aes(condition, mutations, fill = condition)) +
-    geom_boxplot() +
-    facet_wrap(~type, nrow = 1) +
-    ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
-                               bracket.size	= 1.2, tip.length	= 0,
-                               label.y = 0.925*log10(m), vjust = -0.5,
-                               comparisons = list(c("Light", "Shadow"))) +
-    xlab("") + ylab("Number of mutations") +
-    scale_fill_manual("", values = c("#FFDF00", "#8B8680")) +
-    theme(axis.text.x = element_blank(), axis.ticks = element_blank(), axis.title.x = element_blank(),
-          panel.spacing = unit(0, "lines"),
-          # legend.position = c(0.7, -0.15)) +
-          legend.position = "bottom", 
-          legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.spacing = margin(0, unit = "pt"),
-          legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt"),
-          legend.box.spacing = margin(0, unit = "pt")) +
-    scale_y_log10(limits = c(NA, m)) +
-    guides(fill = guide_legend(nrow = 1))
-  # cowplot::save_plot(paste0("~/Téléchargements/", name, "LightN.png"), g, dpi = 800, base_width = 2, base_height = 4)
-}
-ge <- make_plot_light("angela")
-gf <- make_plot_light("sixto")
-```
-
-```{r}
-g <- cowplot::plot_grid(ga, gb, gc, gd, ge, gf, nrow = 3, labels = c("a", "b", "c", "d", "e", "f"),
-                        rel_heights = c(1.5, 1, 1))
-cowplot::save_plot(paste0("~/Téléchargements/Fig2.png"), g, dpi = 1000, base_width = 8, base_height = 9, bg = "white")
-```
-

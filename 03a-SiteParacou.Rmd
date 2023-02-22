@@ -1,9 +1,6 @@
 ```{r setupsiteparacou, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
 library(raster)
 library(leaflet)
@@ -15,16 +12,16 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-```{r datasiteparacou, include = F, eval=F}
+```{r datasiteparacou, include = F}
 crs <- '+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0' # global crs definition
 p <- read_csv(file = "data/Paracou/trees/Paracou TREEMUTATION candidates.csv") %>% 
   st_as_sf(coords = c("lon", "lat"),
                  crs = '+proj=utm +zone=22 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0') %>% 
   mutate(name = `ns1:name`) # some columns with the name need to be named `name`
-p %>% 
-  dplyr::select(name, geometry) %>%
-  st_write(dsn = "data/Paracou/trees/Paracou TREEMUTATION candidates.gpx",
-           delete_dsn = T, driver = "GPX", layer = "waypoints")
+# p %>% 
+#   dplyr::select(name, geometry) %>%
+#   st_write(dsn = "data/Paracou/trees/Paracou TREEMUTATION candidates.gpx",
+#            delete_dsn = T, driver = "GPX", layer = "waypoints")
 limits <- shapefile("data/Paracou/limits/OverallPlots.shp")
 limits <- spTransform(limits, CRSobj = crs)
 dcm2004 <- raster("data/Paracou/lidar/Paracou2004_MNC1m.asc")
@@ -36,11 +33,11 @@ projection(dcm2004) <- projection(dem)
 projection(dcm2009) <- projection(dem)
 projection(dcm2013) <- projection(dem)
 projection(dcm2015) <- projection(dem)
-dcm2004 <- projectRaster(dcm2004, crs = crs)
-dcm2009 <- projectRaster(dcm2009, crs = crs)
-dcm2013 <- projectRaster(dcm2013, crs = crs)
-dcm2015 <- projectRaster(dcm2015, crs = crs)
-rm(dem) 
+# dcm2004 <- projectRaster(dcm2004, crs = crs)
+# dcm2009 <- projectRaster(dcm2009, crs = crs)
+# dcm2013 <- projectRaster(dcm2013, crs = crs)
+# dcm2015 <- projectRaster(dcm2015, crs = crs)
+rm(dem)
 ```
 
 # Site
@@ -60,7 +57,7 @@ Cons:
 * Non destructive sampling
 * Avoid trunk
 
-```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns.", eval=F}
+```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns."}
 leaflet() %>%
   addTiles() %>% 
   addRasterImage(aggregate(dcm2004, 4), colors = "Greys", group = "DCM 2004") %>%
@@ -71,5 +68,5 @@ leaflet() %>%
   addCircles(data = p, group = "Individuals", col = "red", radius =  30) %>% 
   addLayersControl(overlayGroups = c("DCM 2004", "DCM 2009", "DCM 2013", "DCM 2015",
                                      'Plots', 'Individuals'),
-                   options = layersControlOptions(collapsed = T)) 
+                   options = layersControlOptions(collapsed = T))
 ```

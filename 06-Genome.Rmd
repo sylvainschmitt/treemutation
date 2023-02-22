@@ -1,14 +1,10 @@
 ```{r setupgenome, include=FALSE}
 rm(list = ls()) ; invisible(gc()) ; set.seed(42)
 library(knitr)
-library(kableExtra)
-if(knitr:::is_html_output()) options(knitr.table.format = "html") 
-if(knitr:::is_latex_output()) options(knitr.table.format = "latex") 
 library(tidyverse)
 library(raster)
 library(leaflet)
 library(sf)
-knit_hooks$set(webgl = hook_webgl)
 theme_set(bayesplot::theme_default())
 opts_chunk$set(
   echo = F, message = F, warning = F, fig.height = 6, fig.width = 8,
@@ -54,7 +50,7 @@ The wrokflow uses the following steps:
 
 ## Annotation workflow
 
-Have a look to @Plomion2018.
+Automatic singularity & snakemake workflow to annotate genomes: https://github.com/sylvainschmitt/genomeAnnotation .
 
 ## Project description
 
