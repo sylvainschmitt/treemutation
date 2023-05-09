@@ -1086,7 +1086,7 @@ fruit_mutations %>%
   dplyr::select(-SNV) %>% 
   mutate(af = round(af, 2)) %>% 
   dplyr::select(CHROM, POS, branch, replicate, af, rank) %>% 
-  DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank"))   
+  DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank"))
 ```
 
 ## Genes

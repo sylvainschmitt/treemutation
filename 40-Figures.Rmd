@@ -233,13 +233,13 @@ make_plot_af <- function(name = "Angela") {
   g1 <- ggplot(filter(mutations_hist_log, tree == name),
                  aes(mutation_AF_class, N+1)) +
     geom_col(aes(fill = "mutation"), col = NA) +
-    geom_col(aes(fill = "non-transmitted"), col = NA, 
+    geom_col(aes(fill = "tested for transmition"), col = NA, 
            data = filter(mutations_hist_log_tested, tree == name)) +
-    geom_col(aes(fill = "transmitted"), col = NA, 
+    geom_col(aes(fill = "found transmitted"), col = NA, 
            data = filter(mutations_hist_log_embryo, tree == name)) +
     ylab("Count") + xlab("Allelic fraction") +
     xlim(0, 0.52) +
-    scale_fill_manual("", values = c("#ffc000", "grey", "#cc0000")) +
+    scale_fill_manual("", values = c("#cc0000", "#ffc000", "grey")) +
     scale_y_log10(breaks = c(2, 11, 101, 1001),
                   labels = c("1", "10", "100", "1,000"), 
                   limits = c(1, 7000)) +
@@ -272,11 +272,11 @@ library(tidyr)
 #   summarise(coverage = median(coverage))
 cols <- c("#3e40b7", "#0264c5", "#01a99c", "#df2e36", "#f38d04")
 br <- 0.05
-gc <- list("Napoleon (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
-     "3P (160X)" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
-     "Verzy (64X)" = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
-    "Angela (138X)" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
-     "Sixto (73X)" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
+gc <- list("Q. robur - Lausanne (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
+           "Q. robur - Bordeaux (160X)" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
+           "F. sylvatica (64X)" = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
+           "D. guianensis (138X)" = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
+           "S. rubra (73X)" = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>%
   bind_rows(.id = "tree") %>% 
   mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
   separate_rows(Filter) %>% 
@@ -288,14 +288,19 @@ gc <- list("Napoleon (60X)" = vroom::vroom("data/mutations/swiss/leaf_mutations.
   mutate(mutation_AF_class = as.numeric(as.character(cut(mutation_AF, breaks = seq(0,1,br), labels = seq(0,1-br,br)+br/2)))) %>% 
   group_by(tree, mutation_AF_class) %>% 
   summarise(l = min(cummulated_mutations), m = median(cummulated_mutations), h = max(cummulated_mutations)) %>% 
-  mutate(tree = factor(tree, levels = c("Verzy (64X)", "Napoleon (60X)", "3P (160X)", "Sixto (73X)", "Angela (138X)"))) %>% 
+  mutate(tree = factor(tree, levels = c("F. sylvatica (64X)", 
+                                        "Q. robur - Lausanne (60X)", 
+                                        "Q. robur - Bordeaux (160X)", 
+                                        "S. rubra (73X)",
+                                        "D. guianensis (138X)"))) %>% 
   ggplot(aes(x = mutation_AF_class, m, col = tree, fill = tree)) +
   geom_ribbon(aes(ymin = l, ymax = h), col = NA, alpha = 0.5) +
   geom_line(aes(y = m)) +
   scale_y_log10(labels = scales::label_comma()) + 
   scale_color_manual("", values = cols) +
   xlab("Allelic fraction") + ylab("Cumulative number\nof mutations") +
-  theme(legend.position = c(0.7, 0.7), legend.text = element_text(size = 10)) +
+  theme(legend.position = c(0.7, 0.8), 
+        legend.text = element_text(size = 8, face = "italic")) +
   scale_fill_manual(guide = "none", values = cols)
 ```
 
@@ -334,7 +339,8 @@ data <- bind_rows(data_inter, data_intron, data_syn) %>%
   mutate(comparison = factor(comparison, levels = c("yes", "no"))) %>% 
   mutate(category = factor(category, levels = c("intergenic   ", "intron   ",
                                                 "synonymous      ", "non-synonymous"))) %>%
-    mutate(type = factor(type, levels = c("All", "Genic only", "CDS only"))) 
+    mutate(type = factor(type, levels = c("All", "Genic only", "CDS only")))  %>% 
+  mutate(tree = recode(tree, "Angela" = "D. guianensis", "Sixto" = "S. rubra"))
 data_m <- group_by(data, tree, type, category, comparison) %>% 
   summarise(mutation_AF = median(mutation_AF))
 gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
@@ -348,11 +354,13 @@ gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
                                                 c("non-synonymous", "intron   "),
                                                 c("intergenic   ", "non-synonymous"))) +
   scale_fill_manual("", values  = c("#3581D8", "#28CC2D", "#FFE135", "#D82E3F")) +
+  # guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         axis.line.x = element_blank(), panel.spacing = unit(0.5, "lines")) +
   scale_y_log10(limits = c(NA, 0.65)) +
   theme(legend.position = c(0.5, 0), legend.direction = "horizontal", 
-        legend.text = element_text(size = 6), legend.key.size = unit(0.8, "lines"), legend.spacing.y = unit(10, "points"))
+        legend.text = element_text(size = 7), legend.key.size = unit(1, "lines"), 
+        legend.spacing.y = unit(8, "points"), strip.text = element_text(face = "italic"))
 ```
 
 ```{r}

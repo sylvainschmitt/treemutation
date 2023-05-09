@@ -8,9 +8,9 @@ bookdown::gitbook:
       collapse: section
       scroll_highlight: yes
     info: yes
-  includes:
-    in_header: hypothesis.html
-    before_body: open_review_block.html
+#  includes:
+#    in_header: hypothesis.html
+#    before_body: open_review_block.html
 # bookdown::pdf_book:
 #  includes:
 #    in_header: latex/preamble.tex

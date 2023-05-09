@@ -2,6 +2,14 @@
 
 This appendix keeps literature review up-to-date.
 
+### Bergeron2023
+
+* difficulty of com-paring GMR estimates derived using different methodologies
+* alternative bioinformatic pipelines used in different studies can yield GMR estimates that vary by a factor of two
+* a stronger effect of paternal than maternal age on the mutation rate seems to be universal for birds and mammals due to more germline mutations accumulating throughout the life of the male
+* male-driven evolution hypothesis
+* hominoid slowdown hypothesis
+
 ## Genome assembly
 
 ### @Johnson2020

@@ -150,3 +150,19 @@
 * Follow mutations sharing along architecture (cell surfing idea)
 * Add architecture when comparing phylogenies
 * Add comparisons with oka if possible
+
+## 20-21/03 Mutations days
+
+* Collection Chêne Saint-Malo
+* mutasom limitée
+* majoritairement neutre
+* rare dans la population donc lente à se répandre
+* minmap for pangenome graph => Verzy ?
+* Karst et al. 2023 overinterpretation myccorhizal
+* 
+
+
+
+
+
+
