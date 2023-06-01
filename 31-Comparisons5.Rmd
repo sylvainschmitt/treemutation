@@ -493,7 +493,7 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
   dplyr::select(tree, SNV) %>% 
   unique() %>% 
   group_by(tree) %>% 
-  summarise(N = n())
+  summarise(N = n()) %>% kable()
 ```
 
 
@@ -508,8 +508,6 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
   geom_histogram(aes(y = ..count..+1, fill = tree), position = "dodge", binwidth = 0.01) +
   scale_y_log10()
 ```
-
-#### V0
 
 ```{r }
 library(dplyr)
@@ -549,9 +547,10 @@ g2 <- ggplot(filter(mutations_hist, tree == "Sixto"),
 ggsave(g1, filename = "~/Téléchargements/AngelaAF.png", width = 4, height = 2, dpi = 800)
 ggsave(g2, filename = "~/Téléchargements/SixtoAF.png", width = 4, height = 2, dpi = 800)
 ```
+
 #### V3
 
-```{r }
+```{r, eval=FALSE}
 library(readr)
 library(dplyr)
 library(ggplot2)
@@ -913,7 +912,7 @@ g3 <- cowplot::plot_grid(g1, g2,
 cowplot::save_plot("~/Téléchargements/SixtoAF.png", g3, dpi = 800)
 ```
 
-#### Old
+#### Other versions
 
 ```{r }
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
@@ -1490,11 +1489,3 @@ list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
   xlab("Mean sequencing depth per library (X)") +
   ylab("Parameters of the power-distribution of AF")
 ```
-
-## Annotations
-
-*Angela and Sixto in progress.*
-
-## Genes
-
-*Angela and Sixto in progress.*

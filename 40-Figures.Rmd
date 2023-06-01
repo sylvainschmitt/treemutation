@@ -8,7 +8,7 @@ opts_chunk$set(
   cache = T, cache.lazy = F)
 ```
 
-# Figures
+# Manuscript figures
 
 This chapter develop the code for figure preparation for the final manuscript.
 
@@ -19,8 +19,8 @@ This chapter develop the code for figure preparation for the final manuscript.
 # rsvg::rsvg_png("data/circlize/Circlize_sixto_v130223_withannotations.svg", "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
 ga <- grid::rasterGrob(png::readPNG("data/circlize/AngelaCircos.png"), interpolate = T)
 gb <- grid::rasterGrob(png::readPNG("data/circlize/SixtoCircos.png"), interpolate = T)
-g <- cowplot::plot_grid(ga, gb, nrow = 1, labels = c("a", "b"))
-cowplot::save_plot(paste0("figs/Fig1.png"), g, dpi = 1000, base_width = 20, base_height = 10, bg = "white")
+g <- cowplot::plot_grid(ga, gb, nrow = 2, labels = c("a", "b"))
+cowplot::save_plot(paste0("figs/Fig1.png"), g, dpi = 1000, base_width = 10, base_height = 20, bg = "white")
 # cowplot::save_plot(paste0("~/Téléchargements/Fig1_lr.png"), g, dpi = 1000, base_width = 10, base_height = 5, bg = "white")
 ```
 
@@ -49,6 +49,7 @@ cols <- c("ES" = "#6B5336", "EL" = "#B8792E",
           "AS" = "#611C35", "AL" = "#BD3768")
 angela_archi <- "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);"
 angela_archi <- read.tree(text = angela_archi) %>% 
+  # ape::chronos() %>% 
   phylogram::as.dendrogram() %>% 
   prune("R") %>% 
   set("labels_col", cols[labels(.)])
@@ -131,14 +132,14 @@ make_plot_light <- function(name = "angela"){
     mutate(type = gsub("-", "", type))
   m <- 10^(log10(max(t1$mutations))*1.1)
   bind_rows(t1, t2) %>% 
-    mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+    mutate(condition = recode(tip, "L" = "Light", "S" = "Shade")) %>% 
     ggplot(aes(condition, mutations, fill = condition)) +
     geom_boxplot() +
     facet_wrap(~type, nrow = 1) +
     ggpubr::stat_compare_means(label = "p.signif", method = "t.test",
                                bracket.size	= 1.2, tip.length	= 0,
                                label.y = 0.925*log10(m), vjust = -0.5,
-                               comparisons = list(c("Light", "Shadow"))) +
+                               comparisons = list(c("Light", "Shade"))) +
     xlab("") + ylab("Number of mutations") +
     scale_fill_manual("", values = c("#FFDF00", "#8B8680")) +
     theme(axis.text.x = element_blank(), axis.ticks = element_blank(), axis.title.x = element_blank(),
@@ -168,6 +169,18 @@ include_graphics("figs/Fig2.png")
 ```
 
 ## Figure 3
+
+```{r pval3ab, eval=F}
+t.test(
+  log(filter(mutations, tree == "Angela")$mutation_AF),
+  log(filter(mutations, tree == "Angela", transmitted == "yes")$mutation_AF)
+)
+t.test(
+  log(filter(mutations, tree == "Sixto")$mutation_AF),
+  log(filter(mutations, tree == "Sixto", transmitted == "yes")$mutation_AF)
+)
+```
+
 
 ```{r histaf}
 library(readr)
@@ -344,11 +357,11 @@ data <- bind_rows(data_inter, data_intron, data_syn) %>%
 data_m <- group_by(data, tree, type, category, comparison) %>% 
   summarise(mutation_AF = median(mutation_AF))
 gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
-  geom_violin() +
+  geom_violin(col = NA) +
   geom_boxplot(width = 0.1, fill = 'white', alpha = 0.5, outlier.alpha = 0) +
   facet_wrap(~ tree, nrow = 1) +
   ylab("Allelic fraction") +
-  ggpubr::stat_compare_means(method = "t.test",  bracket.size	= 1.2,
+  ggpubr::stat_compare_means(method = "t.test",  bracket.size	= 1.2, size = 3,
                              label.y = c(log10(0.2), log10(0.3), log10(0.5)),
                              comparisons = list(c("non-synonymous", "synonymous      "), 
                                                 c("non-synonymous", "intron   "),

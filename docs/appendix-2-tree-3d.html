@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>B Appendix 2: Tree 3D | TreeMutation</title>
+  <meta name="description" content="Mutation in the tropical tree canopy." />
+  <meta name="generator" content="bookdown 0.32 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="B Appendix 2: Tree 3D | TreeMutation" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="Mutation in the tropical tree canopy." />
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="B Appendix 2: Tree 3D | TreeMutation" />
+  
+  <meta name="twitter:description" content="Mutation in the tropical tree canopy." />
+  
+
+<meta name="author" content="Sylvain Schmitt" />
+
+
+<meta name="date" content="2023-06-01" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="appendix-1-meetings.html"/>
+<link rel="next" href="appendix-3-literature.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<script src="libs/htmlwidgets-1.6.1/htmlwidgets.js"></script>
+<link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-1.3.1/leaflet.js"></script>
+<link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
+<script src="libs/proj4-2.6.2/proj4.min.js"></script>
+<script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
+<link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-binding-2.1.1/leaflet.js"></script>
+<link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="libs/datatables-binding-0.28/datatables.js"></script>
+<link href="libs/dt-core-1.13.4/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="libs/dt-core-1.13.4/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="libs/dt-core-1.13.4/js/jquery.dataTables.min.js"></script>
+<link href="libs/crosstalk-1.2.0/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.2.0/js/crosstalk.min.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">TreeMutation</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Preface</a></li>
+<li class="chapter" data-level="" data-path="introduction.html"><a href="introduction.html"><i class="fa fa-check"></i>Introduction</a></li>
+<li class="chapter" data-level="1" data-path="species.html"><a href="species.html"><i class="fa fa-check"></i><b>1</b> Species</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="species.html"><a href="species.html#dicorynia-guianensis"><i class="fa fa-check"></i><b>1.1</b> <em>Dicorynia guianensis</em></a></li>
+<li class="chapter" data-level="1.2" data-path="species.html"><a href="species.html#sextonia-rubra"><i class="fa fa-check"></i><b>1.2</b> <em>Sextonia rubra</em></a></li>
+<li class="chapter" data-level="1.3" data-path="species.html"><a href="species.html#eschweilera-coriacea"><i class="fa fa-check"></i><b>1.3</b> <em>Eschweilera coriacea</em></a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="site.html"><a href="site.html"><i class="fa fa-check"></i><b>2</b> Site</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="site.html"><a href="site.html#paracou"><i class="fa fa-check"></i><b>2.1</b> Paracou</a></li>
+<li class="chapter" data-level="2.2" data-path="site.html"><a href="site.html#régina"><i class="fa fa-check"></i><b>2.2</b> Régina</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="individuals.html"><a href="individuals.html"><i class="fa fa-check"></i><b>3</b> Individuals</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="individuals.html"><a href="individuals.html#angela---dicorynia-guyanensis"><i class="fa fa-check"></i><b>3.1</b> <strong>Angela</strong> - <em>Dicorynia guyanensis</em></a></li>
+<li class="chapter" data-level="3.2" data-path="individuals.html"><a href="individuals.html#sextonia-rubra-1"><i class="fa fa-check"></i><b>3.2</b> <em>Sextonia rubra</em></a></li>
+<li class="chapter" data-level="3.3" data-path="individuals.html"><a href="individuals.html#eschweilera-sp."><i class="fa fa-check"></i><b>3.3</b> <em>Eschweilera sp.</em></a>
+<ul>
+<li class="chapter" data-level="3.3.1" data-path="individuals.html"><a href="individuals.html#mn5505---regina"><i class="fa fa-check"></i><b>3.3.1</b> MN5505 - Regina</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="sampling.html"><a href="sampling.html"><i class="fa fa-check"></i><b>4</b> Sampling</a></li>
+<li class="chapter" data-level="5" data-path="genome-assembly.html"><a href="genome-assembly.html"><i class="fa fa-check"></i><b>5</b> Genome assembly</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="genome-assembly.html"><a href="genome-assembly.html#sequencing"><i class="fa fa-check"></i><b>5.1</b> Sequencing</a></li>
+<li class="chapter" data-level="5.2" data-path="genome-assembly.html"><a href="genome-assembly.html#assembly-workflow"><i class="fa fa-check"></i><b>5.2</b> Assembly workflow</a>
+<ul>
+<li class="chapter" data-level="5.2.1" data-path="genome-assembly.html"><a href="genome-assembly.html#v1"><i class="fa fa-check"></i><b>5.2.1</b> V1</a></li>
+<li class="chapter" data-level="5.2.2" data-path="genome-assembly.html"><a href="genome-assembly.html#v2"><i class="fa fa-check"></i><b>5.2.2</b> V2</a></li>
+</ul></li>
+<li class="chapter" data-level="5.3" data-path="genome-assembly.html"><a href="genome-assembly.html#annotation-workflow"><i class="fa fa-check"></i><b>5.3</b> Annotation workflow</a></li>
+<li class="chapter" data-level="5.4" data-path="genome-assembly.html"><a href="genome-assembly.html#project-description"><i class="fa fa-check"></i><b>5.4</b> Project description</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="mutations-detection.html"><a href="mutations-detection.html"><i class="fa fa-check"></i><b>6</b> Mutations detection</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="mutations-detection.html"><a href="mutations-detection.html#in-silico-experiment"><i class="fa fa-check"></i><b>6.1</b> <em>In silico</em> experiment</a></li>
+<li class="chapter" data-level="6.2" data-path="mutations-detection.html"><a href="mutations-detection.html#swiss-data---schmid-siegert2017"><i class="fa fa-check"></i><b>6.2</b> Swiss data - <span class="citation">Schmid-Siegert <em>et al.</em> (2017)</span></a></li>
+<li class="chapter" data-level="6.3" data-path="mutations-detection.html"><a href="mutations-detection.html#bordeaux-data---plomion2018"><i class="fa fa-check"></i><b>6.3</b> Bordeaux data - <span class="citation">Plomion <em>et al.</em> (2018)</span></a></li>
+<li class="chapter" data-level="6.4" data-path="mutations-detection.html"><a href="mutations-detection.html#angela"><i class="fa fa-check"></i><b>6.4</b> Angela</a></li>
+<li class="chapter" data-level="6.5" data-path="mutations-detection.html"><a href="mutations-detection.html#sextonia-rubra-2"><i class="fa fa-check"></i><b>6.5</b> <em>Sextonia rubra</em></a></li>
+<li class="chapter" data-level="6.6" data-path="mutations-detection.html"><a href="mutations-detection.html#hetre"><i class="fa fa-check"></i><b>6.6</b> Hetre</a></li>
+<li class="chapter" data-level="6.7" data-path="mutations-detection.html"><a href="mutations-detection.html#project-description-1"><i class="fa fa-check"></i><b>6.7</b> Project description</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="mutations-in-silico.html"><a href="mutations-in-silico.html"><i class="fa fa-check"></i><b>7</b> Mutations <em>in silico</em></a></li>
+<li class="chapter" data-level="8" data-path="mutations-swiss.html"><a href="mutations-swiss.html"><i class="fa fa-check"></i><b>8</b> Mutations Swiss</a>
+<ul>
+<li class="chapter" data-level="8.1" data-path="mutations-swiss.html"><a href="mutations-swiss.html#mutations-from-schmid-siegert-on-3p"><i class="fa fa-check"></i><b>8.1</b> Mutations from Schmid-Siegert on 3P</a></li>
+<li class="chapter" data-level="8.2" data-path="mutations-swiss.html"><a href="mutations-swiss.html#strelka2"><i class="fa fa-check"></i><b>8.2</b> <code>Strelka2</code></a>
+<ul>
+<li class="chapter" data-level="8.2.1" data-path="mutations-swiss.html"><a href="mutations-swiss.html#overlap-with-mutations-from-schmid-siegert"><i class="fa fa-check"></i><b>8.2.1</b> Overlap with mutations from Schmid-Siegert</a></li>
+<li class="chapter" data-level="8.2.2" data-path="mutations-swiss.html"><a href="mutations-swiss.html#filtering"><i class="fa fa-check"></i><b>8.2.2</b> Filtering</a></li>
+</ul></li>
+<li class="chapter" data-level="8.3" data-path="mutations-swiss.html"><a href="mutations-swiss.html#gatk"><i class="fa fa-check"></i><b>8.3</b> <code>GATK</code></a>
+<ul>
+<li class="chapter" data-level="8.3.1" data-path="mutations-swiss.html"><a href="mutations-swiss.html#overlap-with-mutations-from-schmid-siegert-1"><i class="fa fa-check"></i><b>8.3.1</b> Overlap with mutations from Schmid-Siegert</a></li>
+<li class="chapter" data-level="8.3.2" data-path="mutations-swiss.html"><a href="mutations-swiss.html#filtering-1"><i class="fa fa-check"></i><b>8.3.2</b> Filtering</a></li>
+</ul></li>
+<li class="chapter" data-level="8.4" data-path="mutations-swiss.html"><a href="mutations-swiss.html#conclusion"><i class="fa fa-check"></i><b>8.4</b> Conclusion</a></li>
+</ul></li>
+<li class="chapter" data-level="9" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html"><i class="fa fa-check"></i><b>9</b> Mutations Bordeaux</a>
+<ul>
+<li class="chapter" data-level="9.1" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#original-mutations-on-3p"><i class="fa fa-check"></i><b>9.1</b> Original mutations on 3P</a></li>
+<li class="chapter" data-level="9.2" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#coverage"><i class="fa fa-check"></i><b>9.2</b> Coverage</a></li>
+<li class="chapter" data-level="9.3" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#strelka2-1"><i class="fa fa-check"></i><b>9.3</b> <code>Strelka2</code></a>
+<ul>
+<li class="chapter" data-level="9.3.1" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#overlap-with-original-mutations"><i class="fa fa-check"></i><b>9.3.1</b> Overlap with original mutations</a></li>
+<li class="chapter" data-level="9.3.2" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#filtering-2"><i class="fa fa-check"></i><b>9.3.2</b> Filtering</a></li>
+</ul></li>
+<li class="chapter" data-level="9.4" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#mutect2"><i class="fa fa-check"></i><b>9.4</b> <code>Mutect2</code></a>
+<ul>
+<li class="chapter" data-level="9.4.1" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#overlap-with-original-mutations-1"><i class="fa fa-check"></i><b>9.4.1</b> Overlap with original mutations</a></li>
+<li class="chapter" data-level="9.4.2" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#filtering-3"><i class="fa fa-check"></i><b>9.4.2</b> Filtering</a></li>
+</ul></li>
+<li class="chapter" data-level="9.5" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#conclusion-1"><i class="fa fa-check"></i><b>9.5</b> Conclusion</a></li>
+<li class="chapter" data-level="9.6" data-path="mutations-bordeaux.html"><a href="mutations-bordeaux.html#swiss-bordeaux"><i class="fa fa-check"></i><b>9.6</b> Swiss &amp; Bordeaux</a></li>
+</ul></li>
+<li class="chapter" data-level="10" data-path="mutations-angela.html"><a href="mutations-angela.html"><i class="fa fa-check"></i><b>10</b> Mutations Angela</a>
+<ul>
+<li class="chapter" data-level="10.1" data-path="mutations-angela.html"><a href="mutations-angela.html#quality-check"><i class="fa fa-check"></i><b>10.1</b> Quality check</a></li>
+<li class="chapter" data-level="10.2" data-path="mutations-angela.html"><a href="mutations-angela.html#genome"><i class="fa fa-check"></i><b>10.2</b> Genome</a>
+<ul>
+<li class="chapter" data-level="10.2.1" data-path="mutations-angela.html"><a href="mutations-angela.html#annotation"><i class="fa fa-check"></i><b>10.2.1</b> Annotation</a></li>
+<li class="chapter" data-level="10.2.2" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations"><i class="fa fa-check"></i><b>10.2.2</b> Mutations</a></li>
+</ul></li>
+<li class="chapter" data-level="10.3" data-path="mutations-angela.html"><a href="mutations-angela.html#heterozygosity"><i class="fa fa-check"></i><b>10.3</b> Heterozygosity</a></li>
+<li class="chapter" data-level="10.4" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations-filters"><i class="fa fa-check"></i><b>10.4</b> Mutations filters</a></li>
+<li class="chapter" data-level="10.5" data-path="mutations-angela.html"><a href="mutations-angela.html#leaf-mutations"><i class="fa fa-check"></i><b>10.5</b> Leaf mutations</a></li>
+<li class="chapter" data-level="10.6" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations-architecture"><i class="fa fa-check"></i><b>10.6</b> Mutations architecture</a></li>
+<li class="chapter" data-level="10.7" data-path="mutations-angela.html"><a href="mutations-angela.html#phylogeny"><i class="fa fa-check"></i><b>10.7</b> Phylogeny</a></li>
+<li class="chapter" data-level="10.8" data-path="mutations-angela.html"><a href="mutations-angela.html#light-annotation"><i class="fa fa-check"></i><b>10.8</b> Light &amp; annotation</a></li>
+<li class="chapter" data-level="10.9" data-path="mutations-angela.html"><a href="mutations-angela.html#rate"><i class="fa fa-check"></i><b>10.9</b> Rate</a></li>
+<li class="chapter" data-level="10.10" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations-for-fruits"><i class="fa fa-check"></i><b>10.10</b> Mutations for Fruits</a></li>
+<li class="chapter" data-level="10.11" data-path="mutations-angela.html"><a href="mutations-angela.html#genes"><i class="fa fa-check"></i><b>10.11</b> Genes</a></li>
+</ul></li>
+<li class="chapter" data-level="11" data-path="mutations-sixto.html"><a href="mutations-sixto.html"><i class="fa fa-check"></i><b>11</b> Mutations Sixto</a>
+<ul>
+<li class="chapter" data-level="11.1" data-path="mutations-sixto.html"><a href="mutations-sixto.html#quality-check-1"><i class="fa fa-check"></i><b>11.1</b> Quality check</a></li>
+<li class="chapter" data-level="11.2" data-path="mutations-sixto.html"><a href="mutations-sixto.html#genome-1"><i class="fa fa-check"></i><b>11.2</b> Genome</a>
+<ul>
+<li class="chapter" data-level="11.2.1" data-path="mutations-sixto.html"><a href="mutations-sixto.html#annotation-1"><i class="fa fa-check"></i><b>11.2.1</b> Annotation</a></li>
+<li class="chapter" data-level="11.2.2" data-path="mutations-sixto.html"><a href="mutations-sixto.html#mutations-1"><i class="fa fa-check"></i><b>11.2.2</b> Mutations</a></li>
+</ul></li>
+<li class="chapter" data-level="11.3" data-path="mutations-sixto.html"><a href="mutations-sixto.html#rubrynolide-enzymes"><i class="fa fa-check"></i><b>11.3</b> Rubrynolide enzymes</a></li>
+<li class="chapter" data-level="11.4" data-path="mutations-sixto.html"><a href="mutations-sixto.html#heterozygosity-1"><i class="fa fa-check"></i><b>11.4</b> Heterozygosity</a></li>
+<li class="chapter" data-level="11.5" data-path="mutations-sixto.html"><a href="mutations-sixto.html#mutations-filters-1"><i class="fa fa-check"></i><b>11.5</b> Mutations filters</a></li>
+<li class="chapter" data-level="11.6" data-path="mutations-sixto.html"><a href="mutations-sixto.html#leaf-mutations-1"><i class="fa fa-check"></i><b>11.6</b> Leaf mutations</a></li>
+<li class="chapter" data-level="11.7" data-path="mutations-sixto.html"><a href="mutations-sixto.html#mutations-architecture-1"><i class="fa fa-check"></i><b>11.7</b> Mutations architecture</a></li>
+<li class="chapter" data-level="11.8" data-path="mutations-sixto.html"><a href="mutations-sixto.html#phylogeny-1"><i class="fa fa-check"></i><b>11.8</b> Phylogeny</a></li>
+<li class="chapter" data-level="11.9" data-path="mutations-sixto.html"><a href="mutations-sixto.html#light-annotation-1"><i class="fa fa-check"></i><b>11.9</b> Light &amp; annotation</a></li>
+<li class="chapter" data-level="11.10" data-path="mutations-sixto.html"><a href="mutations-sixto.html#rate-1"><i class="fa fa-check"></i><b>11.10</b> Rate</a></li>
+<li class="chapter" data-level="11.11" data-path="mutations-sixto.html"><a href="mutations-sixto.html#mutations-for-fruits-1"><i class="fa fa-check"></i><b>11.11</b> Mutations for Fruits</a></li>
+<li class="chapter" data-level="11.12" data-path="mutations-sixto.html"><a href="mutations-sixto.html#genes-1"><i class="fa fa-check"></i><b>11.12</b> Genes</a></li>
+</ul></li>
+<li class="chapter" data-level="12" data-path="comparisons-2.html"><a href="comparisons-2.html"><i class="fa fa-check"></i><b>12</b> Comparisons 2</a>
+<ul>
+<li class="chapter" data-level="12.1" data-path="comparisons-2.html"><a href="comparisons-2.html#genomes"><i class="fa fa-check"></i><b>12.1</b> Genomes</a></li>
+<li class="chapter" data-level="12.2" data-path="comparisons-2.html"><a href="comparisons-2.html#libraries"><i class="fa fa-check"></i><b>12.2</b> Libraries</a></li>
+<li class="chapter" data-level="12.3" data-path="comparisons-2.html"><a href="comparisons-2.html#mutations-2"><i class="fa fa-check"></i><b>12.3</b> Mutations</a></li>
+<li class="chapter" data-level="12.4" data-path="comparisons-2.html"><a href="comparisons-2.html#frequencies"><i class="fa fa-check"></i><b>12.4</b> Frequencies</a></li>
+<li class="chapter" data-level="12.5" data-path="comparisons-2.html"><a href="comparisons-2.html#phylogeny-2"><i class="fa fa-check"></i><b>12.5</b> Phylogeny</a></li>
+<li class="chapter" data-level="12.6" data-path="comparisons-2.html"><a href="comparisons-2.html#light"><i class="fa fa-check"></i><b>12.6</b> Light</a></li>
+<li class="chapter" data-level="12.7" data-path="comparisons-2.html"><a href="comparisons-2.html#type"><i class="fa fa-check"></i><b>12.7</b> Type</a></li>
+<li class="chapter" data-level="12.8" data-path="comparisons-2.html"><a href="comparisons-2.html#spectra"><i class="fa fa-check"></i><b>12.8</b> Spectra</a></li>
+<li class="chapter" data-level="12.9" data-path="comparisons-2.html"><a href="comparisons-2.html#rates"><i class="fa fa-check"></i><b>12.9</b> Rates</a></li>
+<li class="chapter" data-level="12.10" data-path="comparisons-2.html"><a href="comparisons-2.html#annotations"><i class="fa fa-check"></i><b>12.10</b> Annotations</a></li>
+<li class="chapter" data-level="12.11" data-path="comparisons-2.html"><a href="comparisons-2.html#genes-2"><i class="fa fa-check"></i><b>12.11</b> Genes</a></li>
+<li class="chapter" data-level="12.12" data-path="comparisons-2.html"><a href="comparisons-2.html#fruits"><i class="fa fa-check"></i><b>12.12</b> Fruits</a>
+<ul>
+<li class="chapter" data-level="12.12.1" data-path="comparisons-2.html"><a href="comparisons-2.html#from-ssrseq-olivier"><i class="fa fa-check"></i><b>12.12.1</b> From SSRseq Olivier</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="13" data-path="comparisons-5.html"><a href="comparisons-5.html"><i class="fa fa-check"></i><b>13</b> Comparisons 5</a>
+<ul>
+<li class="chapter" data-level="13.1" data-path="comparisons-5.html"><a href="comparisons-5.html#genomes-1"><i class="fa fa-check"></i><b>13.1</b> Genomes</a></li>
+<li class="chapter" data-level="13.2" data-path="comparisons-5.html"><a href="comparisons-5.html#libraries-1"><i class="fa fa-check"></i><b>13.2</b> Libraries</a></li>
+<li class="chapter" data-level="13.3" data-path="comparisons-5.html"><a href="comparisons-5.html#mutations-3"><i class="fa fa-check"></i><b>13.3</b> Mutations</a></li>
+<li class="chapter" data-level="13.4" data-path="comparisons-5.html"><a href="comparisons-5.html#frequencies-1"><i class="fa fa-check"></i><b>13.4</b> Frequencies</a></li>
+<li class="chapter" data-level="13.5" data-path="comparisons-5.html"><a href="comparisons-5.html#types"><i class="fa fa-check"></i><b>13.5</b> Types</a></li>
+<li class="chapter" data-level="13.6" data-path="comparisons-5.html"><a href="comparisons-5.html#spectra-1"><i class="fa fa-check"></i><b>13.6</b> Spectra</a></li>
+<li class="chapter" data-level="13.7" data-path="comparisons-5.html"><a href="comparisons-5.html#rates-1"><i class="fa fa-check"></i><b>13.7</b> Rates</a>
+<ul>
+<li class="chapter" data-level="13.7.1" data-path="comparisons-5.html"><a href="comparisons-5.html#cummulated-distributions"><i class="fa fa-check"></i><b>13.7.1</b> Cummulated distributions</a></li>
+<li class="chapter" data-level="13.7.2" data-path="comparisons-5.html"><a href="comparisons-5.html#lognormal-distributions"><i class="fa fa-check"></i><b>13.7.2</b> Lognormal distributions</a></li>
+<li class="chapter" data-level="13.7.3" data-path="comparisons-5.html"><a href="comparisons-5.html#exponential-distrbutions"><i class="fa fa-check"></i><b>13.7.3</b> Exponential distrbutions</a></li>
+<li class="chapter" data-level="13.7.4" data-path="comparisons-5.html"><a href="comparisons-5.html#power-law-distribution"><i class="fa fa-check"></i><b>13.7.4</b> Power law distribution</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="14" data-path="manuscript-figures.html"><a href="manuscript-figures.html"><i class="fa fa-check"></i><b>14</b> Manuscript figures</a>
+<ul>
+<li class="chapter" data-level="14.0.1" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-1"><i class="fa fa-check"></i><b>14.0.1</b> Figure 1</a></li>
+<li class="chapter" data-level="14.0.2" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-2"><i class="fa fa-check"></i><b>14.0.2</b> Figure 2</a></li>
+<li class="chapter" data-level="14.1" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-3"><i class="fa fa-check"></i><b>14.1</b> Figure 3</a></li>
+</ul></li>
+<li class="appendix"><span><b>Appendix</b></span></li>
+<li class="chapter" data-level="A" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html"><i class="fa fa-check"></i><b>A</b> Appendix 1: Meetings</a>
+<ul>
+<li class="chapter" data-level="A.1" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#sylvains-kick-off"><i class="fa fa-check"></i><b>A.1</b> 11/02/2021 Sylvain’s Kick-off</a>
+<ul>
+<li class="chapter" data-level="A.1.1" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#funding"><i class="fa fa-check"></i><b>A.1.1</b> Funding</a></li>
+<li class="chapter" data-level="A.1.2" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#site-1"><i class="fa fa-check"></i><b>A.1.2</b> Site</a></li>
+<li class="chapter" data-level="A.1.3" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#species-1"><i class="fa fa-check"></i><b>A.1.3</b> Species</a></li>
+<li class="chapter" data-level="A.1.4" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#field-work"><i class="fa fa-check"></i><b>A.1.4</b> Field work</a></li>
+<li class="chapter" data-level="A.1.5" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#genomics"><i class="fa fa-check"></i><b>A.1.5</b> Genomics</a></li>
+</ul></li>
+<li class="chapter" data-level="A.2" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#william-marrande"><i class="fa fa-check"></i><b>A.2</b> 27/05/2021 William Marrande</a>
+<ul>
+<li class="chapter" data-level="A.2.1" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#sampling-1"><i class="fa fa-check"></i><b>A.2.1</b> Sampling</a></li>
+<li class="chapter" data-level="A.2.2" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#assembly"><i class="fa fa-check"></i><b>A.2.2</b> Assembly</a></li>
+</ul></li>
+<li class="chapter" data-level="A.3" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#mutation-detection"><i class="fa fa-check"></i><b>A.3</b> 06/07/2021 Mutation detection</a>
+<ul>
+<li class="chapter" data-level="A.3.1" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#virtual-experiment"><i class="fa fa-check"></i><b>A.3.1</b> Virtual experiment</a></li>
+<li class="chapter" data-level="A.3.2" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#swiss-data"><i class="fa fa-check"></i><b>A.3.2</b> Swiss data</a></li>
+<li class="chapter" data-level="A.3.3" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#angela-1"><i class="fa fa-check"></i><b>A.3.3</b> Angela</a></li>
+</ul></li>
+<li class="chapter" data-level="A.4" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#mid-project-meeting"><i class="fa fa-check"></i><b>A.4</b> 21/01/2022 Mid-project meeting</a>
+<ul>
+<li class="chapter" data-level="A.4.1" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#notes"><i class="fa fa-check"></i><b>A.4.1</b> Notes</a></li>
+<li class="chapter" data-level="A.4.2" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#follow-up"><i class="fa fa-check"></i><b>A.4.2</b> Follow-up</a></li>
+</ul></li>
+<li class="chapter" data-level="A.5" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#carrotage"><i class="fa fa-check"></i><b>A.5</b> 10/02 Carrotage</a></li>
+<li class="chapter" data-level="A.6" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#sixtos-results"><i class="fa fa-check"></i><b>A.6</b> 05/05 Sixto’s results</a></li>
+<li class="chapter" data-level="A.7" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html#mutations-days"><i class="fa fa-check"></i><b>A.7</b> 20-21/03 Mutations days</a></li>
+</ul></li>
+<li class="chapter" data-level="B" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html"><i class="fa fa-check"></i><b>B</b> Appendix 2: Tree 3D</a>
+<ul>
+<li class="chapter" data-level="B.1" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#tree-segmentation"><i class="fa fa-check"></i><b>B.1</b> Tree Segmentation</a></li>
+<li class="chapter" data-level="B.2" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#tree-architecture"><i class="fa fa-check"></i><b>B.2</b> Tree architecture</a></li>
+<li class="chapter" data-level="B.3" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#tree-light"><i class="fa fa-check"></i><b>B.3</b> Tree light</a></li>
+<li class="chapter" data-level="B.4" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#tree-segmentation-1"><i class="fa fa-check"></i><b>B.4</b> Tree Segmentation</a>
+<ul>
+<li class="chapter" data-level="B.4.1" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#treeseg"><i class="fa fa-check"></i><b>B.4.1</b> <code>treeseg</code></a></li>
+<li class="chapter" data-level="B.4.2" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#computree"><i class="fa fa-check"></i><b>B.4.2</b> <code>Computree</code></a></li>
+<li class="chapter" data-level="B.4.3" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#tree-segmentation-with-lidr"><i class="fa fa-check"></i><b>B.4.3</b> Tree Segmentation with <code>lidr</code></a></li>
+<li class="chapter" data-level="B.4.4" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#forest-metrics"><i class="fa fa-check"></i><b>B.4.4</b> Forest Metrics</a></li>
+<li class="chapter" data-level="B.4.5" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#sp4e"><i class="fa fa-check"></i><b>B.4.5</b> sp4e</a></li>
+<li class="chapter" data-level="B.4.6" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#treeqsm"><i class="fa fa-check"></i><b>B.4.6</b> TreeQSM</a></li>
+<li class="chapter" data-level="B.4.7" data-path="appendix-2-tree-3d.html"><a href="appendix-2-tree-3d.html#google-search"><i class="fa fa-check"></i><b>B.4.7</b> Google Search</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="C" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html"><i class="fa fa-check"></i><b>C</b> Appendix 3: Literature</a>
+<ul>
+<li class="chapter" data-level="C.0.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#bergeron2023"><i class="fa fa-check"></i><b>C.0.1</b> Bergeron2023</a></li>
+<li class="chapter" data-level="C.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#genome-assembly-1"><i class="fa fa-check"></i><b>C.1</b> Genome assembly</a>
+<ul>
+<li class="chapter" data-level="C.1.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#johnson2020"><i class="fa fa-check"></i><b>C.1.1</b> <span class="citation">Johnson <em>et al.</em> (2020)</span></a></li>
+<li class="chapter" data-level="C.1.2" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#plomion2018"><i class="fa fa-check"></i><b>C.1.2</b> <span class="citation">Plomion <em>et al.</em> (2018)</span></a></li>
+<li class="chapter" data-level="C.1.3" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#msc"><i class="fa fa-check"></i><b>C.1.3</b> Msc</a></li>
+<li class="chapter" data-level="C.1.4" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#si"><i class="fa fa-check"></i><b>C.1.4</b> SI</a></li>
+<li class="chapter" data-level="C.1.5" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#httpswww.oakgenome.frpage_id587"><i class="fa fa-check"></i><b>C.1.5</b> https://www.oakgenome.fr/?page_id=587</a></li>
+</ul></li>
+<li class="chapter" data-level="C.2" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#mutation-detection-1"><i class="fa fa-check"></i><b>C.2</b> Mutation detection</a>
+<ul>
+<li class="chapter" data-level="C.2.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#orr2019"><i class="fa fa-check"></i><b>C.2.1</b> <span class="citation">Orr <em>et al.</em> (2019)</span></a></li>
+<li class="chapter" data-level="C.2.2" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#ramu2013"><i class="fa fa-check"></i><b>C.2.2</b> <span class="citation">Ramu <em>et al.</em> (2013)</span></a></li>
+<li class="chapter" data-level="C.2.3" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#hanlon2019"><i class="fa fa-check"></i><b>C.2.3</b> <span class="citation">Hanlon <em>et al.</em> (2019)</span></a></li>
+<li class="chapter" data-level="C.2.4" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#cibulskis2013"><i class="fa fa-check"></i><b>C.2.4</b> <span class="citation">Cibulskis <em>et al.</em> (2013)</span></a></li>
+<li class="chapter" data-level="C.2.5" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#nicholson2018"><i class="fa fa-check"></i><b>C.2.5</b> <span class="citation">Nicholson <em>et al.</em> (2018)</span></a></li>
+<li class="chapter" data-level="C.2.6" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#alioto2015"><i class="fa fa-check"></i><b>C.2.6</b> <span class="citation">Alioto <em>et al.</em> (2015)</span></a></li>
+</ul></li>
+<li class="chapter" data-level="C.3" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#unclassified"><i class="fa fa-check"></i><b>C.3</b> Unclassified</a>
+<ul>
+<li class="chapter" data-level="C.3.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#michael2020"><i class="fa fa-check"></i><b>C.3.1</b> <span class="citation">Michael &amp; VanBuren (2020)</span></a></li>
+</ul></li>
+<li class="chapter" data-level="C.4" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#to-read"><i class="fa fa-check"></i><b>C.4</b> To read</a>
+<ul>
+<li class="chapter" data-level="C.4.1" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#belser2018"><i class="fa fa-check"></i><b>C.4.1</b> <span class="citation">Belser <em>et al.</em> (2018)</span></a></li>
+<li class="chapter" data-level="C.4.2" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#edwards1990"><i class="fa fa-check"></i><b>C.4.2</b> <span class="citation">Edwards <em>et al.</em> (1990)</span></a></li>
+<li class="chapter" data-level="C.4.3" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#leebens-mack2019"><i class="fa fa-check"></i><b>C.4.3</b> <span class="citation">Leebens-Mack <em>et al.</em> (2019)</span></a></li>
+<li class="chapter" data-level="C.4.4" data-path="appendix-3-literature.html"><a href="appendix-3-literature.html#links"><i class="fa fa-check"></i><b>C.4.4</b> links</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">TreeMutation</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="appendix-2-tree-3d" class="section level1 hasAnchor" number="16">
+<h1><span class="header-section-number">B</span> Appendix 2: Tree 3D<a href="appendix-2-tree-3d.html#appendix-2-tree-3d" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>The aim of this appendix is to test tree segmentation and light on the las cloud from <em>Dicorynia guyanensis</em> in Paracou.</p>
+<div id="tree-segmentation" class="section level2 hasAnchor" number="16.1">
+<h2><span class="header-section-number">B.1</span> Tree Segmentation<a href="appendix-2-tree-3d.html#tree-segmentation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Using <a href="https://github.com/redfoxgis/tree_segmentation"><code>lidr</code></a>.
+Works well to delineate the tree cloud but not build back architecture.
+Can be a good step for AMAPvox.</p>
+<div class="figure"><span style="display:block;" id="fig:DguiSegmented"></span>
+<img src="data/Paracou/AG/YSsegmented.gif.gif" alt="Individual segmented with lidR."  />
+<p class="caption">
+Figure B.1: Individual segmented with lidR.
+</p>
+</div>
+</div>
+<div id="tree-architecture" class="section level2 hasAnchor" number="16.2">
+<h2><span class="header-section-number">B.2</span> Tree architecture<a href="appendix-2-tree-3d.html#tree-architecture" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>The reconstruction of the architecture, i.e. rebuilding the trunk and the branches. On this point there are plenty of poorly documented, impossible to install and not so open tools. But after a long battle I managed to make <code>treeseg</code> work a bit despite its lack of real documentation. And as I suspected unfortunately the data doesn’t seem to be good enough for this task. Indeed, besides the fact that we are in a complex rainforest, this reconstruction is normally done from high resolution LiDAR TLS data. But here I have only few points that represent the trunk or the main branches. The algorithm is therefore unable to reconstruct the cylinders.</p>
+</div>
+<div id="tree-light" class="section level2 hasAnchor" number="16.3">
+<h2><span class="header-section-number">B.3</span> Tree light<a href="appendix-2-tree-3d.html#tree-light" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>For this part I am still waiting for Nicolas to share with me the trajectos (3D path of the drone) to use AMAPvox. Nevertheless I don’t see how this will orientate more the sampling than using a device on the spot like with the <em>Sextonia</em>, especially if we can’t reconstruct the architecture beforehand. So I think I’ll stop here and wait for the postdoc to face this calculation for the <em>a posteriori</em> analysis of the mutations.</p>
+</div>
+<div id="tree-segmentation-1" class="section level2 hasAnchor" number="16.4">
+<h2><span class="header-section-number">B.4</span> Tree Segmentation<a href="appendix-2-tree-3d.html#tree-segmentation-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>This v explored tree segmentation with QSM on the las cloud from <em>Dicorynia guyanensis</em> in Paracou.</p>
+<div id="treeseg" class="section level3 hasAnchor" number="16.4.1">
+<h3><span class="header-section-number">B.4.1</span> <a href="https://github.com/apburt/treeseg"><code>treeseg</code></a><a href="appendix-2-tree-3d.html#treeseg" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Failed, and no further documentation, dropping thus <code>treeseg</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="appendix-2-tree-3d.html#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">## Convert </span></span>
+<span id="cb14-2"><a href="appendix-2-tree-3d.html#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co"># las to pcd</span></span>
+<span id="cb14-3"><a href="appendix-2-tree-3d.html#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pdal</span> translate YS-20201123-130625classclipDycorinia.las test.pcd <span class="at">--writers.pcd.order</span><span class="op">=</span><span class="st">&quot;X=Float:2,Y=Float:2,Z=Float:2&quot;</span> <span class="co"># to avoid float issue</span></span>
+<span id="cb14-4"><a href="appendix-2-tree-3d.html#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># visualize in cloud compare</span></span>
+<span id="cb14-5"><a href="appendix-2-tree-3d.html#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n</span> +11 test.pcd <span class="op">&gt;</span> test.xyz</span>
+<span id="cb14-6"><a href="appendix-2-tree-3d.html#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># computing bounding box</span></span>
+<span id="cb14-7"><a href="appendix-2-tree-3d.html#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">&#39;summary(readr::read_delim(&quot;test.xyz&quot;, col_names = F, delim = &quot; &quot;)[1:2])&#39;</span></span>
+<span id="cb14-8"><a href="appendix-2-tree-3d.html#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 286791 286811 583888 583910 <span class="op">&gt;</span> test.dat</span>
+<span id="cb14-9"><a href="appendix-2-tree-3d.html#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># fixing variables</span></span>
+<span id="cb14-10"><a href="appendix-2-tree-3d.html#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co"># open with geany and replace X Y Z by x y z (should be further automated)</span></span>
+<span id="cb14-11"><a href="appendix-2-tree-3d.html#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="appendix-2-tree-3d.html#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co">## downsample </span></span>
+<span id="cb14-13"><a href="appendix-2-tree-3d.html#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. resoluation in meters</span></span>
+<span id="cb14-14"><a href="appendix-2-tree-3d.html#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/downsample</span> 0.001 test.pcd <span class="co"># 0.04 online</span></span>
+<span id="cb14-15"><a href="appendix-2-tree-3d.html#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/pcdPointTreeseg2txt</span> test.tile.downsample.test.pcd</span>
+<span id="cb14-16"><a href="appendix-2-tree-3d.html#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-17"><a href="appendix-2-tree-3d.html#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="co">## getdemslice</span></span>
+<span id="cb14-18"><a href="appendix-2-tree-3d.html#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. the resolution of the DEM in meters</span></span>
+<span id="cb14-19"><a href="appendix-2-tree-3d.html#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 2) the percentile which is considered to constitute the ground (i.e., if all the points inside each DEM tile are lined up by their z coordinate - the point closest to the Nth percentile is considered the ground - sometimes useful for noisy data). </span></span>
+<span id="cb14-20"><a href="appendix-2-tree-3d.html#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="co"># 3)&amp;4) The zmin and zmax of the slice. So e.g.,:</span></span>
+<span id="cb14-21"><a href="appendix-2-tree-3d.html#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/getdemslice</span> 1 1 0 5 test.tile.downsample.test.pcd <span class="co"># 2 3 3 6</span></span>
+<span id="cb14-22"><a href="appendix-2-tree-3d.html#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/pcdPointTreeseg2txt</span> test.slice.pcd</span>
+<span id="cb14-23"><a href="appendix-2-tree-3d.html#cb14-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-24"><a href="appendix-2-tree-3d.html#cb14-24" aria-hidden="true" tabindex="-1"></a><span class="co">## Find stems</span></span>
+<span id="cb14-25"><a href="appendix-2-tree-3d.html#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/findstems</span> 15 0.2 2 test.dat test.slice.pcd</span>
+<span id="cb14-26"><a href="appendix-2-tree-3d.html#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/pcdPointTreeseg2txt</span> test.intermediate.slice.clusters.pcd</span>
+<span id="cb14-27"><a href="appendix-2-tree-3d.html#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/pcdPointTreeseg2txt</span> test.intermediate.slice.clusters.regions.pcd</span>
+<span id="cb14-28"><a href="appendix-2-tree-3d.html#cb14-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="appendix-2-tree-3d.html#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="co">## Segments stems</span></span>
+<span id="cb14-30"><a href="appendix-2-tree-3d.html#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="ex">~/Tools/treeseg/build/segmentstem</span> 12.5 test.tile.downsample.test.pcd test.intermediate.slice.clusters.regions.pcd</span></code></pre></div>
+</div>
+<div id="computree" class="section level3 hasAnchor" number="16.4.2">
+<h3><span class="header-section-number">B.4.2</span> <code>Computree</code><a href="appendix-2-tree-3d.html#computree" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="windows-version" class="section level4 hasAnchor" number="16.4.2.1">
+<h4><span class="header-section-number">B.4.2.1</span> <a href="http://rdinnovation.onf.fr/projects/computree/wiki/Fr_installation_v5">Windows version</a><a href="appendix-2-tree-3d.html#windows-version" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p>Not working with wine when calling downsampling with SimpleTree plugin.
+Test on voncyane windows validated the software, to be tested on Niklas computer thursday afternoon.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="appendix-2-tree-3d.html#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/Tools/Computree</span>
+<span id="cb15-2"><a href="appendix-2-tree-3d.html#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> http://rdinnovation.onf.fr/attachments/download/2788/SimpleForest_v5.1.3_computree_v5.0.221b.zip</span>
+<span id="cb15-3"><a href="appendix-2-tree-3d.html#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> SimpleForest_v5.1.3_computree_v5.0.221b.zip </span>
+<span id="cb15-4"><a href="appendix-2-tree-3d.html#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> SimpleForest_v5.1.3_computree_v5.0.221b/</span>
+<span id="cb15-5"><a href="appendix-2-tree-3d.html#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">wine</span> CompuTreeGui.exe </span></code></pre></div>
+<p><a href="https://www.youtube.com/watch?v=1crJUgVnXB0">Overview</a>:</p>
+<ol style="list-style-type: decimal">
+<li>Import the cloud</li>
+<li>Reduce points density</li>
+<li>Classify ground points (TLS)</li>
+<li>Ground point filter</li>
+<li>Statistical outlier filter</li>
+<li>Dtm pyramidal Mlesac fit</li>
+<li>Cut cloud above DTM</li>
+<li>Cut cloud above DTM</li>
+<li>Cut cloud above DTM</li>
+<li>Stem filter</li>
+<li>Statistical outlier filter</li>
+<li>Radius outlier filter</li>
+<li>Segmentation euclidean clustering</li>
+<li>Dikstra based tree segmentation</li>
+<li>Voroni based tree segmentation</li>
+<li>Height based tree identification from segmented clouds</li>
+<li>Height based tree identification from segmented clouds</li>
+<li>Cut cloud above dtm</li>
+<li>Cut cloud above dtm</li>
+<li>Stem filter</li>
+<li>Euclidean clustering filter</li>
+<li>Merge clouds from two groups</li>
+<li>Statistical outlier filter</li>
+<li>Euclidean clustering filter</li>
+<li>Sphere following</li>
+<li>QSM median filter</li>
+<li>QSM based tree clustering</li>
+<li>Sphere following advanced</li>
+<li>QSM median filter</li>
+<li>QSM correct shoots</li>
+<li>QSM allometric correction</li>
+<li>QSM to ground exploration</li>
+<li>QSM list exporter</li>
+</ol>
+</div>
+<div id="linux-version" class="section level4 hasAnchor" number="16.4.2.2">
+<h4><span class="header-section-number">B.4.2.2</span> <a href="http://rdinnovation.onf.fr/projects/computreedevtools/wiki/Fr_Ubuntu_1804">Linux version</a><a href="appendix-2-tree-3d.html#linux-version" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p>Still failing, waiting for Alexandre Piboule feedbacks.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="appendix-2-tree-3d.html#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/Tools/Computree</span>
+<span id="cb16-2"><a href="appendix-2-tree-3d.html#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get update</span>
+<span id="cb16-3"><a href="appendix-2-tree-3d.html#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install subversion</span>
+<span id="cb16-4"><a href="appendix-2-tree-3d.html#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install build-essential qtcreator qt5-default qt5-doc qt5-doc-html qtbase5-doc-html qtbase5-examples</span>
+<span id="cb16-5"><a href="appendix-2-tree-3d.html#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> http://rdinnovation.onf.fr/attachments/download/2378/kit_dev_linux.zip</span>
+<span id="cb16-6"><a href="appendix-2-tree-3d.html#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> kit_dev_linux.zip</span>
+<span id="cb16-7"><a href="appendix-2-tree-3d.html#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> kit_dev_linux</span>
+<span id="cb16-8"><a href="appendix-2-tree-3d.html#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./recuperer_depots.sh</span></span>
+<span id="cb16-9"><a href="appendix-2-tree-3d.html#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libopencv-dev </span>
+<span id="cb16-10"><a href="appendix-2-tree-3d.html#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libpcl-dev <span class="co"># pcl 1.10 need pcl 1.8</span></span>
+<span id="cb16-11"><a href="appendix-2-tree-3d.html#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libgdal-dev</span>
+<span id="cb16-12"><a href="appendix-2-tree-3d.html#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libgsl-dev</span>
+<span id="cb16-13"><a href="appendix-2-tree-3d.html#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="ex">qtcreator</span></span>
+<span id="cb16-14"><a href="appendix-2-tree-3d.html#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; open &gt; all.pro</span></span>
+<span id="cb16-15"><a href="appendix-2-tree-3d.html#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; projet &gt; unactivate shadow build</span></span>
+<span id="cb16-16"><a href="appendix-2-tree-3d.html#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; projet/run &gt; “Environnement d’exécution” &gt; rajouter ” ;. ” à la fin de la variables LD_LIBRARY_PATH</span></span>
+<span id="cb16-17"><a href="appendix-2-tree-3d.html#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="fu">qmake</span> all.pro</span>
+<span id="cb16-18"><a href="appendix-2-tree-3d.html#cb16-18" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; pcl1.8 to pcl1.10 in code</span></span>
+<span id="cb16-19"><a href="appendix-2-tree-3d.html#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ln <span class="at">-s</span> /usr/local/include/opencv4/opencv2/ /usr/local/include/opencv2 <span class="co"># fix opencv2/core/core.hpp issue</span></span>
+<span id="cb16-20"><a href="appendix-2-tree-3d.html#cb16-20" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; compile</span></span>
+<span id="cb16-21"><a href="appendix-2-tree-3d.html#cb16-21" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; run</span></span></code></pre></div>
+</div>
+</div>
+<div id="tree-segmentation-with-lidr" class="section level3 hasAnchor" number="16.4.3">
+<h3><span class="header-section-number">B.4.3</span> <a href="https://github.com/redfoxgis/tree_segmentation">Tree Segmentation with <code>lidr</code></a><a href="appendix-2-tree-3d.html#tree-segmentation-with-lidr" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Works well to delineate the tree cloud but not to segment it. Can be a good step for AMAPvox.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="appendix-2-tree-3d.html#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(lidR)</span>
+<span id="cb17-2"><a href="appendix-2-tree-3d.html#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(rlas) <span class="co"># Necessary for writelax</span></span>
+<span id="cb17-3"><a href="appendix-2-tree-3d.html#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(rgdal) <span class="co"># Writing to shp or raster</span></span>
+<span id="cb17-4"><a href="appendix-2-tree-3d.html#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(tictoc) <span class="co"># for tic() toc() function</span></span>
+<span id="cb17-5"><a href="appendix-2-tree-3d.html#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(rgl)</span>
+<span id="cb17-6"><a href="appendix-2-tree-3d.html#cb17-6" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="st">&quot;data/Paracou/AG/YS-20201123-130625classclipDycorinia.las&quot;</span></span>
+<span id="cb17-7"><a href="appendix-2-tree-3d.html#cb17-7" aria-hidden="true" tabindex="-1"></a>las <span class="ot">&lt;-</span> <span class="fu">readLAS</span>(data) </span>
+<span id="cb17-8"><a href="appendix-2-tree-3d.html#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co"># lascheck(las)</span></span>
+<span id="cb17-9"><a href="appendix-2-tree-3d.html#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co"># summary(las)</span></span>
+<span id="cb17-10"><a href="appendix-2-tree-3d.html#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># sort(unique(las@data$Classification))</span></span>
+<span id="cb17-11"><a href="appendix-2-tree-3d.html#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(las, color = &quot;Classification&quot;)</span></span>
+<span id="cb17-12"><a href="appendix-2-tree-3d.html#cb17-12" aria-hidden="true" tabindex="-1"></a>las_class <span class="ot">&lt;-</span> <span class="fu">lasfilter</span>(las, Classification <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb17-13"><a href="appendix-2-tree-3d.html#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(las_class)</span></span>
+<span id="cb17-14"><a href="appendix-2-tree-3d.html#cb17-14" aria-hidden="true" tabindex="-1"></a>dtm <span class="ot">&lt;-</span> <span class="fu">grid_terrain</span>(las, <span class="at">algorithm =</span> <span class="fu">knnidw</span>(<span class="at">k =</span> <span class="dv">8</span>, <span class="at">p =</span> <span class="dv">2</span>))</span>
+<span id="cb17-15"><a href="appendix-2-tree-3d.html#cb17-15" aria-hidden="true" tabindex="-1"></a>las_normalized <span class="ot">&lt;-</span> <span class="fu">lasnormalize</span>(las, dtm)</span>
+<span id="cb17-16"><a href="appendix-2-tree-3d.html#cb17-16" aria-hidden="true" tabindex="-1"></a>lasfilternoise <span class="ot">=</span> <span class="cf">function</span>(las, sensitivity)</span>
+<span id="cb17-17"><a href="appendix-2-tree-3d.html#cb17-17" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb17-18"><a href="appendix-2-tree-3d.html#cb17-18" aria-hidden="true" tabindex="-1"></a>  p95 <span class="ot">&lt;-</span> <span class="fu">grid_metrics</span>(las, <span class="sc">~</span><span class="fu">quantile</span>(Z, <span class="at">probs =</span> <span class="fl">0.95</span>), <span class="dv">10</span>)</span>
+<span id="cb17-19"><a href="appendix-2-tree-3d.html#cb17-19" aria-hidden="true" tabindex="-1"></a>  las <span class="ot">&lt;-</span> <span class="fu">lasmergespatial</span>(las, p95, <span class="st">&quot;p95&quot;</span>)</span>
+<span id="cb17-20"><a href="appendix-2-tree-3d.html#cb17-20" aria-hidden="true" tabindex="-1"></a>  las <span class="ot">&lt;-</span> <span class="fu">lasfilter</span>(las, Z <span class="sc">&lt;</span> p95<span class="sc">*</span>sensitivity)</span>
+<span id="cb17-21"><a href="appendix-2-tree-3d.html#cb17-21" aria-hidden="true" tabindex="-1"></a>  las<span class="sc">$</span>p95 <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb17-22"><a href="appendix-2-tree-3d.html#cb17-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(las)</span>
+<span id="cb17-23"><a href="appendix-2-tree-3d.html#cb17-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-24"><a href="appendix-2-tree-3d.html#cb17-24" aria-hidden="true" tabindex="-1"></a>las_denoised <span class="ot">&lt;-</span> <span class="fu">lasfilternoise</span>(las_normalized, <span class="at">sensitivity =</span> <span class="fl">1.2</span>)</span>
+<span id="cb17-25"><a href="appendix-2-tree-3d.html#cb17-25" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(las_denoised)</span></span>
+<span id="cb17-26"><a href="appendix-2-tree-3d.html#cb17-26" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(las_normalized)</span></span>
+<span id="cb17-27"><a href="appendix-2-tree-3d.html#cb17-27" aria-hidden="true" tabindex="-1"></a>chm <span class="ot">&lt;-</span> <span class="fu">grid_canopy</span>(las_denoised, <span class="fl">0.5</span>, <span class="fu">pitfree</span>(<span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">5</span>,<span class="dv">10</span>,<span class="dv">15</span>), <span class="fu">c</span>(<span class="dv">3</span>,<span class="fl">1.5</span>), <span class="at">subcircle =</span> <span class="fl">0.2</span>))</span>
+<span id="cb17-28"><a href="appendix-2-tree-3d.html#cb17-28" aria-hidden="true" tabindex="-1"></a><span class="co"># plot_dtm3d(chm)</span></span>
+<span id="cb17-29"><a href="appendix-2-tree-3d.html#cb17-29" aria-hidden="true" tabindex="-1"></a>ker <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>,<span class="dv">5</span>,<span class="dv">5</span>)</span>
+<span id="cb17-30"><a href="appendix-2-tree-3d.html#cb17-30" aria-hidden="true" tabindex="-1"></a>chm_s <span class="ot">&lt;-</span> <span class="fu">focal</span>(chm, <span class="at">w =</span> ker, <span class="at">fun =</span> median)</span>
+<span id="cb17-31"><a href="appendix-2-tree-3d.html#cb17-31" aria-hidden="true" tabindex="-1"></a>algo <span class="ot">&lt;-</span> <span class="fu">watershed</span>(chm_s, <span class="at">th =</span> <span class="dv">10</span>, <span class="at">tol =</span> <span class="fl">0.7</span>, <span class="at">ext =</span> <span class="dv">1</span>)</span>
+<span id="cb17-32"><a href="appendix-2-tree-3d.html#cb17-32" aria-hidden="true" tabindex="-1"></a>las_watershed  <span class="ot">&lt;-</span> <span class="fu">lastrees</span>(las_denoised, algo)</span>
+<span id="cb17-33"><a href="appendix-2-tree-3d.html#cb17-33" aria-hidden="true" tabindex="-1"></a>trees <span class="ot">&lt;-</span> <span class="fu">lasfilter</span>(las_watershed, <span class="sc">!</span><span class="fu">is.na</span>(treeID))</span>
+<span id="cb17-34"><a href="appendix-2-tree-3d.html#cb17-34" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(trees, <span class="at">color =</span> <span class="st">&quot;treeID&quot;</span>, <span class="at">colorPalette =</span> <span class="fu">pastel.colors</span>(<span class="dv">100</span>))</span>
+<span id="cb17-35"><a href="appendix-2-tree-3d.html#cb17-35" aria-hidden="true" tabindex="-1"></a>path <span class="ot">&lt;-</span> <span class="st">&quot;/home/sylvain/Documents/ECOFOG/treemutation/data/Paracou/AG/YSsegmented.gif&quot;</span></span>
+<span id="cb17-36"><a href="appendix-2-tree-3d.html#cb17-36" aria-hidden="true" tabindex="-1"></a><span class="fu">movie3d</span>(<span class="fu">spin3d</span>(), <span class="at">duration =</span> <span class="dv">5</span>, <span class="at">movie =</span> path)</span></code></pre></div>
+<p><img src="data/Paracou/AG/YSsegmented.gif.gif" /><!-- --></p>
+</div>
+<div id="forest-metrics" class="section level3 hasAnchor" number="16.4.4">
+<h3><span class="header-section-number">B.4.4</span> <a href="https://github.com/yurithefury/ForestMetrics">Forest Metrics</a><a href="appendix-2-tree-3d.html#forest-metrics" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Hard to install and no better than lidR as it does not segment the crown.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="appendix-2-tree-3d.html#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get update</span>
+<span id="cb18-2"><a href="appendix-2-tree-3d.html#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install git build-essential linux-libc-dev</span>
+<span id="cb18-3"><a href="appendix-2-tree-3d.html#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install cmake cmake-gui </span>
+<span id="cb18-4"><a href="appendix-2-tree-3d.html#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libeigen3-dev</span>
+<span id="cb18-5"><a href="appendix-2-tree-3d.html#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libboost-all-dev</span>
+<span id="cb18-6"><a href="appendix-2-tree-3d.html#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libflann-dev</span>
+<span id="cb18-7"><a href="appendix-2-tree-3d.html#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libvtk6-qt-dev</span>
+<span id="cb18-8"><a href="appendix-2-tree-3d.html#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libqhull-dev</span>
+<span id="cb18-9"><a href="appendix-2-tree-3d.html#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libproj-dev </span>
+<span id="cb18-10"><a href="appendix-2-tree-3d.html#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt autoremove</span>
+<span id="cb18-11"><a href="appendix-2-tree-3d.html#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co"># pcl skipping 1.10</span></span>
+<span id="cb18-12"><a href="appendix-2-tree-3d.html#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://github.com/PointCloudLibrary/pcl/archive/pcl-1.8.1.tar.gz</span>
+<span id="cb18-13"><a href="appendix-2-tree-3d.html#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xf</span> pcl-1.8.1.tar.gz</span>
+<span id="cb18-14"><a href="appendix-2-tree-3d.html#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> pcl-pcl-1.8.1 <span class="kw">&amp;&amp;</span> <span class="fu">mkdir</span> build <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> build</span>
+<span id="cb18-15"><a href="appendix-2-tree-3d.html#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> ..</span>
+<span id="cb18-16"><a href="appendix-2-tree-3d.html#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span></span>
+<span id="cb18-17"><a href="appendix-2-tree-3d.html#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> make install</span>
+<span id="cb18-18"><a href="appendix-2-tree-3d.html#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="co"># ForestMetrics</span></span>
+<span id="cb18-19"><a href="appendix-2-tree-3d.html#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone <span class="at">--recursive</span> https://github.com/yurithefury/ForestMetrics.git ForestMetrics</span>
+<span id="cb18-20"><a href="appendix-2-tree-3d.html#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ForestMetrics</span>
+<span id="cb18-21"><a href="appendix-2-tree-3d.html#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> build</span>
+<span id="cb18-22"><a href="appendix-2-tree-3d.html#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> build</span>
+<span id="cb18-23"><a href="appendix-2-tree-3d.html#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> ..</span>
+<span id="cb18-24"><a href="appendix-2-tree-3d.html#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span></span></code></pre></div>
+</div>
+<div id="sp4e" class="section level3 hasAnchor" number="16.4.5">
+<h3><span class="header-section-number">B.4.5</span> <a href="https://github.com/mparkan/sp4e_project">sp4e</a><a href="appendix-2-tree-3d.html#sp4e" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Segmenting cloud but no QSM.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="appendix-2-tree-3d.html#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/Tools</span>
+<span id="cb19-2"><a href="appendix-2-tree-3d.html#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/mparkan/sp4e_project.git</span>
+<span id="cb19-3"><a href="appendix-2-tree-3d.html#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> sp4e_project</span></code></pre></div>
+</div>
+<div id="treeqsm" class="section level3 hasAnchor" number="16.4.6">
+<h3><span class="header-section-number">B.4.6</span> <a href="https://github.com/InverseTampere/TreeQSM">TreeQSM</a><a href="appendix-2-tree-3d.html#treeqsm" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Mathlab, giving this one up.</p>
+</div>
+<div id="google-search" class="section level3 hasAnchor" number="16.4.7">
+<h3><span class="header-section-number">B.4.7</span> Google Search<a href="appendix-2-tree-3d.html#google-search" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<ul>
+<li><a href="https://www.google.com/search?channel=fs&amp;client=ubuntu&amp;q=GitHub+tree+segmentatuion+lidar">GitHub tree segmentatuion lidar</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="appendix-1-meetings.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="appendix-3-literature.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "section",
+"scroll_highlight": true
+},
+"info": true
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

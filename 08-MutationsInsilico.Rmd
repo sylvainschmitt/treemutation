@@ -25,10 +25,7 @@ stats <- read_tsv("data/mutations/insilico/stats.experiment4.tsv") %>%
 ```
 # Mutations *in silico*
 
-This chapter described the *in silico* experiment using the [generateMutations](https://github.com/sylvainschmitt/generateMutations) and the [detectMutations](https://github.com/sylvainschmitt/detectMutations) workflows to test the effect of coverage/sequencing depth and allelic frequency on the performance of 7 tools to detect mutations either generalist or specific to mutations. Report to the manuscript in preparation for description:
-
-* [manuscript](https://drive.google.com/file/d/1wKsOdGNDb1m1tBbbdIJYAinK1Ekrbs6p/view?usp=sharing)
-* [SI](https://drive.google.com/file/d/13GgYO3wpa1iEgP-iwz11W6GGxBKLDFEe/view?usp=sharing)
+This chapter described the *in silico* experiment using the [generateMutations](https://github.com/sylvainschmitt/generateMutations) and the [detectMutations](https://github.com/sylvainschmitt/detectMutations) workflows to test the effect of coverage/sequencing depth and allelic frequency on the performance of 7 tools to detect mutations either generalist or specific to mutations. Report to the published manuscript: https://peercommunityjournal.org/articles/10.24072/pcjournal.187/
 
 ```{r mutissf1, fig.cap="Performance of mutation detection tools  with allelic fraction and coverage. The inferno, black to yellow, colour scale indicates the recall and the precision rates for each tool to detect mutations."}
 stats %>% 

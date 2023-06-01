@@ -16,15 +16,11 @@ This chapter briefly introduced the next chapters on the detection of mutations:
 * Using an *in silico* virtual experiment
 * Using swiss data from @Schmid-Siegert2017
 * Using french data from @Plomion2018
-* Using virtual data for Angela
 * Using Angela sequences
 * Using sequences from the *Sextonia rubra*
 * Using sequences from the ["Faux de Verzy"](https://en.wikipedia.org/wiki/Faux_de_Verzy)
 
-The three first analyses resulted in the manuscript in preparation:
-
-* [manuscript](https://drive.google.com/file/d/1wKsOdGNDb1m1tBbbdIJYAinK1Ekrbs6p/view?usp=sharing)
-* [SI](https://drive.google.com/file/d/13GgYO3wpa1iEgP-iwz11W6GGxBKLDFEe/view?usp=sharing)
+The three first analyses resulted in a published manuscript: https://peercommunityjournal.org/articles/10.24072/pcjournal.187/
 
 ## *In silico* experiment
 
@@ -53,10 +49,6 @@ We re-analyzed mutations from @Plomion2018 with `Strelka2` and  `Mutect2` to com
 ```{r detectMutationsBdx, fig.cap="Detect mutations workflow for Swiss data."}
 include_graphics("https://raw.githubusercontent.com/sylvainschmitt/detectMutations/bordeaux/dag/dag.minimal.svg")
 ```
-
-## Angela virtual
-
-We generated fake data corresponding to Angela architecture and sampling design, and tested our workflow ability to detect them back.
 
 ## Angela
 

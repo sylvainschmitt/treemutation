@@ -5,16 +5,14 @@ author: "Sylvain Schmitt"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 documentclass: book
-csl: /home/sschmitt/Documents/biblio/csl/mee.csl
-bibliography: /home/sschmitt/Documents/biblio/library.bib
+csl: biblio/mee.csl
+bibliography: biblio/library.bib
 link-citations: yes
 colorlinks: yes
 description: "Mutation in the tropical tree canopy."
 ---
 
 `r if (knitr:::is_html_output()) '# Preface {-}'`
-
-`r if (knitr:::is_html_output()) '![stability-wip](https://img.shields.io/badge/stability-work_in_progress-lightgrey.svg)'`
 
 `r if (knitr:::is_html_output()) 'Mutation in the tropical tree canopy.'`
 

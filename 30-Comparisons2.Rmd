@@ -798,6 +798,68 @@ names(geno)[1+seq(1, ncol(geno)-2, 2)] <- paste0(loci_names, "_Locus1")
 names(geno)[2+seq(1, ncol(geno)-2, 2)] <- paste0(loci_names, "_Locus2")
 ```
 
+```{r srafruits, eval=FALSE}
+library(tidyverse)
+refs <- bind_rows(readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Sixto") %>% 
+            mutate(tree = "Sixto"),
+          readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Angela") %>% 
+            mutate(tree = "Angela")) %>% 
+  mutate(library = paste0(Code_Espece, Tube), tissue = Tissu) %>%
+  dplyr::select(library, tree, tissue, Echantillon) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Angela.xlsx", "libraries") %>% 
+              mutate(tissue = paste("branch", branch), library = idOld, tree = "Angela") %>% 
+              dplyr::select(library, tree, tissue)) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Sixto.xlsx", "samples") %>% 
+              mutate(tissue = paste("branch", Branch), library = id, tree = "Sixto") %>% 
+              dplyr::select(library, tree, tissue))
+libs <- data.frame(file = list.files("~/Téléchargements/fruits/")) %>% 
+  mutate(library = gsub(".fastq.gz", "", file)) %>% 
+  separate(library, c("library", "cell", "lane", "strand", "X"), "_") %>% 
+  separate(library, c("library", "repetition"), "-") %>% 
+  select(-cell, -lane, -X) %>% 
+  left_join(refs) %>% 
+    separate(Echantillon, c("tree2", "branch", "fruit", "tissue2"), 
+             remove = FALSE) %>% 
+  select(-tree2, -tissue2)
+sra1 <- libs %>% 
+  select(Echantillon, tree, branch, fruit, tissue, library, repetition) %>% 
+  rename(sample = Echantillon, isolate = tree) %>% 
+  mutate(organism = ifelse(isolate == "Angela", "Dicorynia guyanensis", 
+                           "Sextonia rubra")) %>% 
+  mutate(dev_stage = "Adult", geo_loc_name = "French Guiana",
+         biomaterial_provider = "UMR ECOFOG") %>% 
+    mutate(collected_by = ifelse(isolate == "Angela", 
+                             "Jocelyn Cazal, Laetitia Brechet, Valerie Troispoux, Saint Omer Cazal, Sylvain Schmitt", 
+                             "Jocelyn Cazal, Valerie Troispoux, Saint Omer Cazal, Niklas Tysklind")) %>% 
+      mutate(collection_date = ifelse(isolate == "Angela", 
+                             "2021-04-21", 
+                             "2020-10-13")) %>% 
+  unique()
+write_tsv(sra1, "~/Téléchargements/sra1.tsv")
+sra2 <- libs %>% 
+  select(Echantillon, library, tree, file) %>% 
+  rename(sample_name = Echantillon, library_ID = library) %>% 
+  group_by(sample_name, library_ID, tree) %>% 
+  mutate(filename = c("filename", "filename2")) %>% 
+  pivot_wider(values_from = file, names_from = filename) %>% 
+  ungroup() %>% 
+  mutate(title = ifelse(tree == "Angela", 
+                           "SSRseq of Dicorynia guyanensis fruits: adult tree", 
+                           "SSRseq of Sextonia rubra fruits: adult tree")) %>% 
+  mutate(library_strategy = "AMPLICON") %>% 
+  mutate(library_source = "GENOMIC") %>% 
+  mutate(library_selection = "PCR") %>% 
+  mutate(library_layout = "paired") %>% 
+  mutate(platform = "ILLUMINA") %>% 
+  mutate(instrument_model = "Illumina MiSeq") %>% 
+  mutate(design_description = "Extraction CTAB and preparation of amplicons with PCR") %>% 
+  mutate(filetype = "fastq") %>% 
+  select(sample_name, library_ID, title, library_strategy, library_source, 
+         library_selection, library_layout, platform, instrument_model,
+         design_description, filetype, filename, filename2)
+write_tsv(sra2, "~/Téléchargements/sra2.tsv")
+```
+
 ```{r allfruitsolivier}
 all <- geno %>% 
   reshape2::melt(id.vars = "Indiv", variable.name = "locus", value.name = "genotype") %>% 
@@ -972,10 +1034,10 @@ agreement <- fruits %>%
   mutate(`FALSE` = ifelse(is.na(`FALSE`), 0, `FALSE`)) %>% 
   mutate(agreement = round(`TRUE` / (`TRUE` + `FALSE`) * 100))
 agreement %>% 
-  filter(SNV %in% filter(fruits, type == "heterozygous")$SNV)
+  filter(SNV %in% filter(fruits, type == "heterozygous")$SNV) %>% kable()
 fruits %>% 
   filter(SNV == "SNV057") %>% 
-  reshape2::dcast(fruit ~ tissue, value = "genotype")
+  reshape2::dcast(fruit ~ tissue, value = "genotype") %>% kable()
 ```
 
 ```{r , eval=F}
@@ -1005,47 +1067,5 @@ all %>%
   filter(type != "homozygous") %>% 
   group_by(SNV, tissue) %>% 
   summarise(mutation = length(unique(fruit))) %>% 
-  reshape2::dcast(SNV ~ tissue)
-```
-
-### Old
-
-```{r}
-list(
-  angela = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"),
-           count = c(152, 41, 19, 17, 0)),
-  sixto = data.frame(type = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"),
-           count = c(36, 0, 0, 0, 0))
-) %>% bind_rows(.id = "tree") %>% 
-  mutate(type = factor(type, levels = c("all", "transcripts with genes", "within CDS", "non-synonymous", "GO-enriched"))) %>% 
-  ggplot(aes(type, count, fill = tree)) +
-  geom_col(position = "dodge") +
-  coord_flip() +
-  geom_text(aes(y = 2, label = format(count, big.mark = " "), group = tree), 
-            position = position_dodge(width = .9), col = "white") +
-  xlab("") +
-  ggtitle("Fruit mutations")
-```
-
-
-
-
-```{r, eval=F}
-library(tidyverse)
-library(googlesheets4)
-theme_set(bayesplot::theme_default())
-nano <- list(
-  Sixto = read_sheet(ss = "https://docs.google.com/spreadsheets/d/1w9KauZ_XFGkEZoZcLbVywD1UK2FwJMtmzoNymsLEc4k/edit?usp=sharing", sheet = "Sixto_Nano"),
-  Angela = read_sheet(ss = "https://docs.google.com/spreadsheets/d/1w9KauZ_XFGkEZoZcLbVywD1UK2FwJMtmzoNymsLEc4k/edit?usp=sharing", sheet = "Angela_Nano")
-) %>% bind_rows(.id = "Tree")
-nano %>% 
-  mutate(A260_A280_ratio = "ok") %>% 
-  mutate(A260_A280_ratio = ifelse(A260_A280 < 1.8, "low", A260_A280_ratio)) %>% 
-  mutate(A260_A280_ratio = ifelse(A260_A280 > 2, "high", A260_A280_ratio)) %>% 
-  mutate(ADN_ng_uL = ifelse(ADN_ng_uL < 0, 0, ADN_ng_uL)) %>% 
-  ggplot(aes(ADN_ng_uL, fill = A260_A280_ratio)) +
-  geom_histogram() +
-  facet_wrap(~ Tree, scales = "free") +
-  scale_fill_manual(expression(frac(A260,A280)), values = c("darkorange", "brown2", "chartreuse3")) +
-  xlab(expression(ADN~ng.µL^-1))
+  reshape2::dcast(SNV ~ tissue) %>% kable()
 ```

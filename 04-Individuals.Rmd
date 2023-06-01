@@ -39,11 +39,3 @@ include_graphics("data/Regina/pictures/TreeMutation20210308/MN5505/_0018436.jpg"
 ```{r MN5505drone, fig.cap="MN5505 from the drone."}
 include_graphics("data/Regina/drone/MN5505/DJI_1550.JPG")
 ``` 
-
-### Paracou
-
-**To be explored.**
-
-## Other species
-
-* *Parkia* (flowering mosaic)

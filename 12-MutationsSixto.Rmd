@@ -1,0 +1,1230 @@
+```{r setupmutationssixto, include=FALSE}
+rm(list = ls()) ; invisible(gc()) ; set.seed(42)
+library(knitr)
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tibble)
+library(circlize)
+library(ComplexHeatmap)
+theme_set(bayesplot::theme_default())
+opts_chunk$set(echo = F, message = F, warning = F, fig.height = 6, fig.width = 8, cache = T, cache.lazy = F)
+```
+
+
+```{r renamesixto, eval=F, echo=F}
+sampleRef <- read_delim("data/mutations/sixto/prep/sampleRef.txt", delim = " ", 
+                        col_names = c("idGeno", "id")) %>% 
+  mutate(idGeno = gsub("DBR_", "", idGeno)) %>% 
+  separate(id, c("sample", "leaf", "replicate"), remove = F)
+libraries <- read_table("data/mutations/sixto/prep/raw_libraries.txt", col_names = "files") %>% 
+  separate(files, c("idGeno", "file"), "/") %>% 
+  left_join(sampleRef) %>% 
+  left_join(read_tsv("data/mutations/angela/prep/idBordeaux.tsv"), by = c("sample" = "id"))
+rm(sampleRef)
+libraries %>% 
+  mutate(strand = rep(1:2, nrow(.)/2)) %>% 
+  mutate(light = recode(Lumiere, "soleil" = "L", "ombre" = "S")) %>% 
+  mutate(branch = recode(Branch, "X" = "T")) %>% 
+  mutate(leaf = ifelse(branch == "T", "", leaf)) %>% 
+  mutate(light = ifelse(is.na(light), "", light)) %>% 
+  mutate(branch = ifelse(Code_label_TM == "C2.E", "T1", branch)) %>% 
+  mutate(branch = ifelse(Code_label_TM == "C2.N", "T2", branch)) %>% 
+  mutate(branch = ifelse(Code_label_TM == "C2.SO", "T3", branch)) %>% 
+  mutate(fileOld = file) %>% 
+  mutate(file = paste0(branch, light, leaf, "_", strand, ".fq.gz")) %>% 
+  write_tsv("data/mutations/sixto/prep/samples_sixto.tsv", col_names = T)
+read_tsv("data/mutations/sixto/prep/samples_sixto.tsv") %>% 
+  mutate(command = paste("mv", fileOld, file)) %>% 
+  dplyr::select(command) %>% 
+  write_tsv("data/mutations/sixto/prep/rename.sh", col_names = F)
+# sarray -J sixto -o sixto.out -e sixto.err -t 01:00:00 --mail-type=ALL rename.sh
+read_tsv("data/mutations/sixto/prep/samples_sixto.tsv") %>% 
+  mutate(command = paste("touch", file)) %>% 
+  dplyr::select(command) %>% 
+  write_tsv("data/mutations/sixto/prep/dummy.sh", col_names = F)
+```
+
+```{r sixtomd5, eval=F, echo=F}
+read_table("data/mutations/sixto/prep/fileMD5.txt", col_names = c("file", "md5genoscope")) %>% 
+  separate(file, c("idGeno", "file"), "/") %>% 
+  left_join(read_table("data/mutations/sixto/prep/md5sum.txt", col_names = c("md5genologin", "file"))) %>% 
+  mutate(transfer = ifelse(md5genoscope == md5genologin, "success", "fail")) %>% 
+  group_by(transfer) %>% 
+  summarise(N = n())
+```
+
+# Mutations Sixto
+
+This chapter describes the analyses of Sixto mutations currently done in the the [`sixto` branch of the `detectMutations` repository](https://github.com/sylvainschmitt/detectMutations/tree/sixto).
+
+## Quality check
+
+The results of multiQC are available for the haplotypes HS1 [here](data/mutations/sixto/qc/multiqc_report.html). 
+They globally all gave a green light for subsequent analyses.
+
+## Genome
+
+```{r SixtoGenomeData}
+fai <- read_tsv("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.fai", 
+         col_names = c("name", "length", "bytesindex", "basesperline", "bytesperline")) %>% 
+  dplyr::select(name, length) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", name)) %>% 
+  mutate(start = 0, end = length) %>% 
+  dplyr::select(-length) %>%  
+  mutate(trsc = letters[1:nrow(.)], exon = LETTERS[1:nrow(.)])
+gc <- vroom::vroom("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.gc", skip = 1,
+             col_names = c("chrom", "start", "stop", "AT", "GC", "A", "C", "G", "T", "N", "other", "length")) %>% 
+  mutate(pos = start + 500) %>% 
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+cov <- vroom::vroom("data/mutations/sixto/alns/B1L.regions.bed", col_names = c("chrom", "start", "stop", "coverage")) %>%
+  mutate(chrom = gsub("Super-Scaffold_", "", chrom))
+busco <- read_tsv("data/mutations/sixto/genome/short_summary.specific.viridiplantae_odb10.HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD_busco.txt",
+                  skip = 10, n_max = 4, col_names = c("X1", "N", "Type")) %>% 
+  dplyr::select(-X1)
+covs_files <- list.files("data/mutations/sixto/genome/dists/", full.names = T)
+names(covs_files) <- list.files("data/mutations/sixto/genome/dists/")
+covs <- lapply(covs_files, read_tsv, col_names = c("chromosome", "coverage", "proportion"), cols(
+  chromosome = col_character(),
+  coverage = col_double(),
+  proportion = col_double()
+)) %>%
+  bind_rows(.id = "file") %>%
+  mutate(library = gsub(".mosdepth.global.dist.txt", "", file)) %>%
+  filter(chromosome == "total")
+cov_lims <- covs %>%
+  filter(proportion == 0.05 | proportion == 0.95 | proportion == 0.5) %>%
+  group_by(library, proportion) %>%
+  summarise(coverage = mean(coverage)) %>%
+  mutate(proportion = recode(as.character(proportion), "0.05" = "high_cov", "0.95" = "low_cov", "0.5" = "med_cov")) %>%
+  reshape2::dcast(library ~ proportion) 
+```
+
+```{r SixtoGenomFig, fig.cap="Quality assesment of Sixto's genome. A. Anchored scaffolds size-distribution for anchored haplotypes HS1 in Sixto's genome. B. BUSCO results for haplotypes HS1 and HS2."}
+cowplot::plot_grid(
+  ggplot(fai, aes(reorder(name, end), end/10^6, fill = end > 10*10^6)) +
+  geom_col() +
+  coord_flip() +
+  ylab("Length (mb)") + 
+  xlab("Anchored super-scaffold") + 
+  scale_fill_discrete(">10Mb") +
+  theme(legend.position = "bottom"),
+  busco %>% 
+  mutate(Type = factor(Type, levels= c("Complete and single-copy BUSCOs (S)",
+                                       'Complete and duplicated BUSCOs (D)',
+                                       "Fragmented BUSCOs (F)",
+                                       "Missing BUSCOs (M)"))) %>% 
+  ggplot(aes(1, N, fill = Type)) +
+  geom_col() +
+  geom_text(aes(y = N, label = N), col = "white", position = position_stack(vjust = .5)) +
+  scale_y_sqrt() +
+  scale_fill_discrete("", guide = guide_legend(nrow = 4)) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), 
+        axis.line.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = "bottom"),
+  labels = c("A.", "B.")
+)
+```
+
+```{r SixtoCovs, fig.cap="Coverage distribution. Distribution of the number of locations in the reference genome with a given depth of coverage."}
+ggplot(covs, aes(coverage, proportion*100, col = library)) +
+  geom_line() +
+  xlim(0, 200) +
+  geom_hline(yintercept = 5, col = "red", linetype = "dashed") +
+  geom_hline(yintercept = 95, col = "red", linetype = "dashed") +
+  scale_color_discrete("") + 
+  xlab("Coverage (X)") +
+  ylab("% of base in the genome with at least X reads") 
+```
+
+```{r circosSixto, eval=F}
+fai_f <- fai
+gc_f <- filter(gc, chrom %in% fai_f$name)
+cov_f <- filter(cov, chrom %in% fai_f$name) %>% 
+  mutate(coverage = ifelse(coverage > 300, 300, coverage))
+png("save/SixtoCircosCovGC.png", width = 1000, height = 1000)
+circos.initializeWithIdeogram(as.data.frame(fai_f))
+circos.genomicTrack(cov_f,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "blue", ...)
+})
+circos.genomicTrack(select(gc_f, chrom, start, stop, GC), 
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "red", ...)
+})
+legend("bottomleft", pch = 16, col = c("blue", "red"), legend = c("coverage", "GC"), bty = "n")
+dev.off()
+```
+
+```{r circosSixtog, fig.cap="Genome coverage and GC-content on a 10-kb windows for the HS1 haplotype (all anchored scaffolds)."}
+include_graphics("save/SixtoCircosCovGC.png") 
+```
+
+```{r}
+rm(busco, cov, covs, gc, covs_files)
+```
+
+### Annotation
+
+
+```{r, eval=F}
+annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/sixto/annotation/sixto.annot.sqlite")
+orfs <- tbl(annotation, "ORF") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  collect()
+DBI::dbDisconnect(annotation) ; rm(annotation)
+n <- orfs %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  nrow()
+orfs %>% 
+  dplyr::select(orf_id, start, stop, length) %>% 
+  reshape2::melt(c("orf_id", "length")) %>% 
+  ggplot(aes(value)) +
+  geom_bar() +
+  facet_grid((length > 100) ~ variable) +
+  ggtitle(paste("Sixto:", n, "ORFs"), "Start M, Stop *, length >= 100")
+```
+
+
+```{bash, eval=F}
+sqlite3 sixto.annot.sqlite
+sqlite> .headers on
+sqlite> .mode csv
+sqlite> .output sixto.orf.csv
+sqlite> SELECT * FROM ORF;
+sqlite> .quit
+```
+
+```{r circosAnnotSixto, eval=F}
+min_length <- 35*10^6
+window <- 100*10^3
+fai_f <- filter(fai, end > min_length)
+te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% fai_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+orfs <- vroom::vroom("data/mutations/sixto/annotation/sixto.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/sixto/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+   filter(name %in% fai_f$name) %>%
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+png("save/SixtoCircosAnnot.png", width = 1000, height = 1000, bg = NA)
+circos.par(gap.degree = c(rep(1, nrow(fai_f)-2), 5, rep(1, 1)),
+           track.height = 0.2,
+           points.overflow.warning = F)
+circos.initializeWithIdeogram(as.data.frame(fai_f),
+                              labels.cex = 4, axis.labels.cex = 1)
+circos.genomicTrack(gene_f, track.height = 0.2,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
+circos.genomicTrack(te_f, track.height = 0.2,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(100, 200, 300), labels.cex = 1)
+dev.off()
+circos.clear()
+```
+
+```{r}
+include_graphics("save/SixtoCircosAnnot.png")
+```
+
+### Mutations
+
+```{r}
+min_length <- 35*10^6
+window <- 100*10^3
+fai_f <- filter(fai, end > min_length)
+mutation_f <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
+  unique() %>% 
+  mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
+  filter(name %in% fai_f$name) %>% 
+  mutate(interval = cut(POS, breaks = seq(0, max(POS)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+candidates <- bind_rows(
+  read_tsv("data/mutations/fruits/angela_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 1:n(), tree = "Angela"),
+  read_tsv("data/mutations/fruits/sixto_fruits_candidate_mutations.tsv") %>% 
+    mutate(mutation = 125:(124+n()), tree = "Sixto")
+) %>% 
+  dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
+transmitted_f <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
+  mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
+  dplyr::select(mutation, Type, SNV) %>% 
+  left_join(candidates) %>% 
+  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>%
+  filter(tree == "Sixto", transmitted == "yes") %>% 
+  mutate(name = as.character(CHROM), start = POS, stop = POS, snv = SNV) %>% 
+  dplyr::select(name, start, stop, snv)
+te_f <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  filter(name %in% fai_f$name) %>% 
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(TE = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T)
+orfs <- vroom::vroom("data/mutations/sixto/annotation/sixto.orf.csv") %>% 
+  mutate(start = str_sub(peptide, 1, 1)) %>% 
+  mutate(stop = str_sub(peptide, -1, -1)) %>% 
+  mutate(length = rend - lend) %>% 
+  filter(start == "M", stop == "*", length >= 100) %>% 
+  separate(transcript_id, c("gene_id", "isoform"), remove = F)
+gene_f <- vroom::vroom("data/mutations/sixto/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+   filter(name %in% fai_f$name) %>%
+  mutate(interval = cut(start, breaks = seq(0, max(start)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(gene = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+```
+
+```{r, eval=FALSE}
+png("save/SixtoCircosmutations.png", width = 1000, height = 1000, bg = NA)
+circos.par(gap.degree = c(rep(1, nrow(fai_f)-2), 5, rep(1, 1)),
+           track.height = 0.2,
+           points.overflow.warning = F)
+circos.initializeWithIdeogram(as.data.frame(fai_f),
+                              labels.cex = 4, axis.labels.cex = 1)
+circos.genomicTrack(gene_f, track.height = 0.1,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#7070ff", border = "#7070ff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(5, 10, 15), labels.cex = 1)
+circos.genomicTrack(te_f, track.height = 0.1,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#66ccff", border = "#66ccff", area = T, ...)
+})
+circos.yaxis(side = "left", at = c(100, 200, 300), labels.cex = 1)
+circos.genomicTrack(mutation_f,
+    panel.fun = function(region, value, ...) {
+        circos.genomicLines(region, value, col = "#ffc000", border = "#ffc000", area = T, ...)
+})
+circos.yaxis(side = "left", labels.cex = 1)
+circos.genomicLabels(transmitted_f, labels.column = 4, side = "inside", 
+                     col = "#cc0000", cex = 1.5)
+dev.off()
+circos.clear()
+```
+
+```{r}
+include_graphics("save/SixtoCircosmutations.png")
+```
+
+## Rubrynolide enzymes
+
+```{r, eval=F}
+t <- googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1KD4RpBwSlpjqXevWjCW-VXFHM9jQRYeDJJ8mmcW1InA/edit?usp=sharing") %>% 
+  dplyr::rename(info = `Name IMG gene ID`) %>% 
+  mutate(id = stringr::str_sub(info, -10))
+paste("Query:", paste(t$id, collapse = ','))
+rm(t)
+```
+
+```{bash, eval=F, echo=T}
+On https://img.jgi.doe.gov/cgi-bin/m/main.cgi
+> Find gene
+> dplyr::select All
+> Add dplyr::selected to Gene Cart
+> Uplad & Export
+>  FASTA Nucleic Acid format 
+> Show in export format
+> Copy in rubrynolide.fa
+```
+
+```{bash, eval=F, echo=T}
+cd data/mutations/sixto/genome/
+~/Tools/blatSrc/bin/blat HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa rubrynolide.fa rubrynolide_on_sixto_anchored.psl
+```
+
+**No match!**
+
+## Heterozygosity
+
+We used k-mer analyses (21-mers) using `jellyfish` and the `GenomeScope` to estimate genetic diversity $\pi=0.901%$ (Fig. \@ref(fig:genomescopeSixto)).
+We detected and filtered SNPs as follow:
+
+* Raw: raw result from `GATK HaplotypeCaller + GenomicsDBImport + GenotypeGVCFs`
+* Biallelic: biallelic sites with `bcftools`
+* SNP SNPs with `GATK`
+* Filtered: SNPs with QUAL < 30, QD < 2, FS > 60, SOR > 3 using `GATK`
+* Non-missing: SNPs in all genotypes and individuals with `plink`
+* Shared=8M : shared SNPs by at least 32 out of 33 individuals with  `bcftools`
+
+
+```{r genomescopeSixto, fig.cap="GenomeScope Profile. Full results here: http://genomescope.org/analysis.php?code=Esy8w8C9yQa4rmw87o6y."}
+knitr::include_graphics("data/mutations/sixto/hz/genomescope.png")
+```
+
+## Mutations filters
+
+```{r, cache=FALSE}
+trunk <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/sixto/raw/cambium_nonhz_mutations.sql") %>%
+  tbl("mutations")
+leaf <- DBI::dbConnect(RSQLite::SQLite(), "data/mutations/sixto/raw/leaf_nonhz_mutations.sql") %>% 
+  tbl("mutations")
+```
+
+We removed all candidate mutations present in the heterozygous sites and in the raw candidate mutations from the cambium.
+We kept only mutations with no copy of the mutated allele in the normal sample (NAC, `normal_altCount == 0`).
+We tested independently the effect of 4 filters and look their effect on (1) the percentage kept, (2) the distribution of allelic frequencies, and (3) the overlap between filters:
+
+1. **MAC**: a minimum of 5 copies of the mutated allele in the mutated sample (`mutation_altCount >= 5`)
+1. **DP**: a read depth for the two sample between the 5th quantile and the 95th quantile of the coverage of the corresponding library (`normal_DP <= high_cov, normal_DP >= low_cov, mutation_DP <= high_cov, mutation_DP >= low_cov`)
+1. **BIO**: the mutation is present in at least two biological replicates (2 leaves from the crown)
+1. **EVS**: `Strelka 2` automatic filtering based on the empiric variant score (`Filter == "PASS"`)
+
+**MAC** and **EVS** are the most stringent filters (Fig. \@ref(fig:pctmutfilter), 
+and mostly **MAC** filter changes the allele frequencies distribution (Fig. \@ref(fig:afmutfilter).
+Most filters share mutations, except **EVS** and **BIO** that rejected individually a lot mutations shared by the two others (Fig. \@ref(fig:vennmutfilter).
+And all filters except **MAC** are not sensitive to the library coverage (Fig. \@ref(fig:nmutcovfilter).
+We will thus use two filters for next steps:
+
+1. **base**: 
+    * **NAC**: no copy of the mutated allele in the normal sample (`normal_altCountT1 == 0`)
+    * **MAC**: a minimum of 5 copies of the mutated allele in the mutated sample (`mutation_altCount >= 5`)
+    * **DP**: a read depth for the two sample between the 10th quantile and the 90th quantile of the coverage of the mutated library (`normal_DP <= high_cov, normal_DP >= low_cov, mutation_DP <= high_cov, mutation_DP >= low_cov`)
+    * **BIO**: the mutation is present in at least two biological replicates (2 leaves from the crown)
+1. **evs**: 
+    * **base**
+    * **EVS**: `Strelka 2` automatic filtering based on the empiric variant score (`Filter == "PASS"`)
+
+```{r, eval=F}
+library(dtplyr)
+# pot trunk
+trunk_pot_mut <- trunk %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  dplyr::select(SNV) %>% collect() %>% unlist()
+# all leaves
+leaf_mutations <- leaf %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+   dplyr::select(tumor, normal,SNV, normal_altCountT1, normal_altCountT2, normal_DP, mutation_DP, 
+                 mutation_altCountT1, mutation_altCountT2, FILTER, mutation_AF) %>% 
+  collect() %>% 
+  filter(!(SNV %in% trunk_pot_mut))
+# define filters
+leaf_mutations <- leaf_mutations %>% 
+  left_join(rename(cov_lims, tumor = library, mutation_high_cov = high_cov, mutation_low_cov = low_cov, mutation_med_cov = med_cov)) %>% 
+  left_join(rename(cov_lims, normal = library, normal_high_cov = high_cov, normal_low_cov = low_cov, normal_med_cov = med_cov)) %>% 
+  mutate(DP = (normal_DP <= normal_high_cov &
+                 normal_DP >= normal_low_cov &
+                 mutation_DP <= mutation_high_cov &
+                 mutation_DP >= mutation_low_cov)) %>% 
+  mutate(MAC = (mutation_altCountT1 >= 10 & mutation_altCountT1 >= 10)) %>% 
+  mutate(EVS = (FILTER == "PASS")) %>% 
+  group_by(SNV) %>% 
+  mutate(replicate = n()) %>% 
+  ungroup() %>% 
+  mutate(BIO = replicate >= 2) %>% 
+  dplyr::select(tumor, SNV, mutation_AF, normal_DP, mutation_DP, replicate, DP, MAC, EVS, BIO) %>% 
+  reshape2::melt(c("tumor", "SNV", "mutation_AF", "normal_DP", "mutation_DP", "replicate"), variable.name = "filter")
+vroom::vroom_write(leaf_mutations, "data/mutations/sixto/filters/filters_mutations.stats")
+# percentanges
+lazy_dt(leaf_mutations) %>% 
+  group_by(tumor, filter, value) %>% 
+  summarise(N = n())  %>% 
+  as_tibble() %>% 
+  reshape2::dcast(tumor + filter ~ value, value.var = 'N') %>% 
+  mutate(percentage = `TRUE`/(`TRUE`+`FALSE`)*100) %>% 
+  vroom::vroom_write("data/mutations/sixto/filters/filters_mutations.pct")
+# AF
+g <- ggplot(leaf_mutations, aes(mutation_AF, col = value)) +
+  geom_density() +
+  scale_x_sqrt() +
+  facet_wrap(~ filter) +
+  xlab("Mutation allelic frequency") +
+  theme(legend.position = "bottom")
+ggsave(g, filename = "data/mutations/sixto/filters/filters_mutations_af.png", width = 4, height = 4, bg = "white")
+# sharing
+t_venn <- lazy_dt(leaf_mutations) %>% 
+  filter(filter != "BASE") %>% 
+  filter(value == TRUE) %>%
+  dplyr::select(-mutation_AF, -tumor, -value) %>% 
+  unique() %>% 
+  as_tibble()
+g <- ggvenn::ggvenn(lapply(split(t_venn, t_venn$filter), `[[`, "SNV"), show_percentage = F)
+ggsave(g, filename = "data/mutations/sixto/filters/filters_mutations_venn.png", bg = "white")
+rm(t_venn, g)
+```
+
+```{r pctmutfilterSixto, fig.cap="Percentage of kept mutations per filter."}
+vroom::vroom("data/mutations/sixto/filters/filters_mutations.pct") %>% 
+  ggplot(aes(filter, percentage)) +
+  geom_boxplot() +
+  geom_jitter(aes(col = tumor)) +
+  scale_y_log10() +
+  scale_color_discrete("") +
+  xlab("Filter") + ylab("Percentage of mutations kept")    
+```
+
+```{r afmutfilterSixto, fig.cap="Alleles frequencies of filtered mutations.", fig.width=4, fig.height=4}
+knitr::include_graphics("data/mutations/sixto/filters/filters_mutations_af.png")   
+```
+
+```{r vennmutfilterSixto, fig.cap="Filtered mutations sharing across filters.", fig.width=4, fig.height=4}
+knitr::include_graphics("data/mutations/sixto/filters/filters_mutations_venn.png")  
+```
+
+```{r nmutcovfilterSixto, fig.cap="Link between the number of detected mutations and the coverage across samples depending on the filter used."}
+vroom::vroom("data/mutations/sixto/filters/filters_mutations.pct")  %>%  
+  filter(filter != "BASE") %>% 
+  left_join(dplyr::rename(cov_lims, tumor = library)) %>% 
+  group_by(tumor, filter) %>% 
+  ggplot(aes(med_cov, `TRUE`, col = filter, label = tumor)) +
+  geom_point() +
+  ggrepel::geom_text_repel() +
+  geom_smooth(se = F, method = "lm") +
+  scale_y_log10() +
+  xlab("Coverage") + ylab("Number of mutations")  
+```
+
+## Leaf mutations
+
+```{r, eval=F}
+library(dtplyr)
+trunk_pot_mut <- trunk %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  dplyr::select(SNV) %>% collect() %>% unlist()
+leaf_mutations <- leaf %>% 
+  filter(!(SNV %in% trunk_pot_mut)) %>% 
+  mutate(SNV = paste0(CHROM, "#", as.integer(POS))) %>% 
+  filter(normal_altCountT1 == 0, normal_altCountT2 == 0) %>% 
+  filter(mutation_altCountT1 >= 5, mutation_altCountT2 >= 5) %>% 
+  collect() %>% 
+  lazy_dt() %>% 
+  left_join(rename(cov_lims, tumor = library, mutation_high_cov = high_cov, mutation_low_cov = low_cov, mutation_med_cov = med_cov)) %>% 
+  left_join(rename(cov_lims, normal = library, normal_high_cov = high_cov, normal_low_cov = low_cov, normal_med_cov = med_cov)) %>% 
+  filter(normal_DP <= normal_high_cov & normal_DP >= normal_low_cov & mutation_DP <= mutation_high_cov & mutation_DP >= mutation_low_cov) %>%
+  group_by(SNV) %>% 
+  mutate(replicate = n()) %>% 
+  filter(replicate >= 2) %>% 
+  ungroup() %>% 
+  mutate(Filter = ifelse(FILTER == "PASS", "evs", "base")) %>% 
+  dplyr::select(-ChromKey, -NT, -ID, -QUAL, -FILTER, -SOMATIC, -PNOISE, -PNOISE2, -normal, -caller, 
+                -mutation_high_cov, -mutation_low_cov, -mutation_med_cov, -normal_high_cov, -normal_low_cov, -normal_med_cov) %>% 
+  group_by(tumor, SNV, Filter, CHROM, POS, REF, ALT, SGT) %>% 
+  summarise_all(median) %>% 
+  mutate(branch = str_sub(tumor, 1, 2), tip = str_sub(tumor, 3, 3), leaf = str_sub(tumor, 4, 4))
+vroom::vroom_write(as_tibble(leaf_mutations), "data/mutations/sixto/filters/leaf_mutations.tsv")
+rm(leaf_mutations, trunk_pot_mut) ; invisible(gc())
+```
+
+14 to 59  mutations passed evs filtering across samples (Fig. \@ref(fig:nmutTrunkFiltTabSixto)).
+Most of mutations are low frequency (Fig. \@ref(fig:afLeafFiltFigSixto)).
+Most of mutations are not shared by biological replicates (Fig. \@ref(fig:vennLeafFiltevsFigSixto) and Fig. \@ref(fig:vennLeafFiltbaseFigSixto)).
+
+```{r nmutLeafFiltTabSixto, fig.cap="Number of filtered mutations per leaf."}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  group_by(tumor, branch, tip, leaf, Filter) %>% 
+  summarise(N = n()) %>% 
+  # filter(Filter == "evs") %>% summary()
+  ggplot(aes(branch, N, fill = tip)) +
+  geom_boxplot() +
+  facet_wrap(~ Filter, scales = "free_x") +
+  coord_flip() +
+  ylab("Number of mutations") + xlab("Branch")    
+```
+
+```{r afLeafFiltFigSixto, fig.cap="Alleles-frequencies of filtered mutations in leaf samples."}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  ggplot(aes(mutation_AF, col = tumor), fill = NA) +
+  geom_density(size = 1.3) +
+  scale_color_discrete("Sample") +
+  xlab("Allelic frequency") +
+  facet_wrap(~ Filter)    
+```
+
+```{r vennLeafFiltevsFigSixto, fig.cap="Filtered mutations sharing across leaf samples within tips for evs filtering.", fig.height=8}
+t <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% filter(Filter == "evs")
+g1 <- lapply(unique(filter(t, tip == "S")$branch), function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "S"),
+                              filter(t, branch == B, tip == "S")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+g2 <- lapply(unique(filter(t, tip == "L")$branch), function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "L"),
+                              filter(t, branch == B, tip == "L")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+cowplot::plot_grid(plotlist = c(g1,g2)) 
+rm(t, g1, g2)  
+```
+
+```{r vennLeafFiltbaseFigSixto, fig.cap="Filtered mutations sharing across leaf samples within tips for base filtering.", fig.height=8}
+t <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")
+g1 <- lapply(unique(filter(t, tip == "S")$branch), function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "S"),
+                              filter(t, branch == B, tip == "S")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+g2 <- lapply(unique(filter(t, tip == "L")$branch), function(B)
+  ggvenn::ggvenn(lapply(split(filter(t, branch == B, tip == "L"),
+                              filter(t, branch == B, tip == "L")$tumor),
+                        `[[`, "SNV"), show_percentage = F)
+)
+cowplot::plot_grid(plotlist = c(g1,g2)) 
+rm(t, g1, g2)  
+```
+
+## Mutations architecture
+
+```{r archiMutationsEVSFigSixto}
+archi_mutations <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  filter(Filter == "evs") %>% 
+  mutate(tip = paste0(branch, tip)) %>%
+  mutate(branch = str_sub(branch, 1, 1)) %>%
+  group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
+  summarise(mutation_AF = mean(mutation_AF)) %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
+            n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+  ungroup() %>% 
+  arrange(desc(n_tips), desc(mutation_AF)) %>% 
+  mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
+  mutate(origin1 = ifelse(origin1 == "branch" & n_branches == 1, branch, origin1)) %>% 
+  mutate(origin1 = ifelse(origin1 == "branch", paste0("X", str_sub(branch, -1, -1)), origin1)) %>% 
+    mutate(origin2 = ifelse(n_tips == 1, "tip", "x")) %>% 
+  mutate(origin2 = ifelse(origin2 == "x" & n_branches == 1, "branch", origin2)) %>% 
+  mutate(origin2 = ifelse(origin2 == "x", "carpenter", origin2)) %>% 
+  mutate(origin2 = ifelse(origin1 == "XI", "crown", origin2))
+sixto <- 
+  "(((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64)T:1.3;"
+sixto <- phylobase::phylo4d(read.tree(text = sixto))
+sixto@data <- data.frame(label = sixto@label) %>% 
+  left_join(archi_mutations %>% 
+              group_by(origin1) %>% 
+              summarise(mutations = n()) %>% 
+              dplyr::rename(label = origin1)) %>% 
+  mutate(mutations = ifelse(is.na(mutations), 0, mutations)) %>% 
+  dplyr::select(-label)
+ggtree(sixto, right = T) +
+  geom_point2(aes(size = mutations, col = mutations)) +
+  geom_tiplab(offset = 1) +
+  geom_nodelab(nudge_x = 0.8) +
+  geom_label(aes(label = mutations, fill = mutations), vjust=1.5, col = "white") +
+  theme_tree() +
+  theme(legend.position = "right") +
+  xlim(20, 50) +
+  viridis::scale_color_viridis(limits = c(1, 260), trans = scales::log10_trans()) +
+  viridis::scale_fill_viridis(limits = c(1, 260), trans = scales::log10_trans()) +
+  scale_size_continuous(guide = "none", limits = c(1, 260)) +
+  coord_flip() +
+  ggtitle("Mutations origin in the crown", "At least in 2-leaves with evs filtering.")
+```
+
+```{r archiMutationsEVSFigAFSixto}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  left_join(dplyr::select(archi_mutations, SNV, origin2)) %>% 
+  group_by(origin2, SNV) %>% 
+  filter(!is.na(origin2)) %>% 
+  ggplot(aes(x = SNV, y = mutation_AF, color = SNV)) +
+  geom_boxplot() +
+  scale_color_discrete(guide = "none") +
+  coord_flip() +
+  ylab("Allelic frequencies (AF)") + xlab("") +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank()) +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  facet_wrap(~origin2, nrow = 1, scales = "free_y")
+```
+
+```{r archiMutationsBaseFigSixto}
+archi_mutations <-vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  mutate(tip = paste0(branch, tip)) %>%
+  mutate(branch = str_sub(branch, 1, 1)) %>%
+  group_by(SNV, CHROM, POS, REF, ALT, branch, tip) %>% 
+  summarise(mutation_AF = mean(mutation_AF)) %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  summarise(tip = paste(tip, collapse = " "), mutation_AF = mean(mutation_AF), n_tips = n(),
+            n_branches = length(unique(branch)), branch = paste(sort(unique(branch)), collapse = " ")) %>% 
+  ungroup() %>% 
+  arrange(desc(n_tips), desc(mutation_AF)) %>% 
+  mutate(origin1 = ifelse(n_tips == 1, tip, "branch")) %>% 
+  mutate(origin1 = ifelse(origin1 == "branch" & n_branches == 1, branch, origin1)) %>% 
+  mutate(origin1 = ifelse(origin1 == "branch", paste0("X", str_sub(branch, -1, -1)), origin1)) %>% 
+    mutate(origin2 = ifelse(n_tips == 1, "tip", "x")) %>% 
+  mutate(origin2 = ifelse(origin2 == "x" & n_branches == 1, "branch", origin2)) %>% 
+  mutate(origin2 = ifelse(origin2 == "x", "carpenter", origin2)) %>% 
+  mutate(origin2 = ifelse(origin1 == "XI", "crown", origin2))
+sixto <- 
+  "(((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64)T:1.3;"
+sixto <- phylobase::phylo4d(read.tree(text = sixto))
+sixto@data <- data.frame(label = sixto@label) %>% 
+  left_join(archi_mutations %>% 
+              group_by(origin1) %>% 
+              summarise(mutations = n()) %>% 
+              dplyr::rename(label = origin1)) %>% 
+  mutate(mutations = ifelse(is.na(mutations), 0, mutations)) %>% 
+  dplyr::select(-label)
+ggtree(sixto, right = T) +
+  geom_point2(aes(size = mutations, col = mutations)) +
+  geom_tiplab(offset = 1) +
+  geom_nodelab(nudge_x = 0.8) +
+  geom_label(aes(label = mutations, fill = mutations), vjust=1.5, col = "white") +
+  theme_tree() +
+  theme(legend.position = "right") +
+  xlim(20, 50) +
+  viridis::scale_color_viridis(limits = c(1, 10849), trans = scales::log10_trans()) +
+  viridis::scale_fill_viridis(limits = c(1, 10849), trans = scales::log10_trans()) +
+  scale_size_continuous(guide = "none", limits = c(1, 10849)) +
+  coord_flip() +
+  ggtitle("Mutations origin in the crown", "At least in 2-leaves with base filtering.")
+```
+
+```{r archiMutationsEVSFig2AFSixto}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  left_join(dplyr::select(archi_mutations, SNV, origin2)) %>% 
+  filter(!is.na(origin2)) %>%
+  sample_n(10^3) %>% 
+  group_by(origin2, SNV) %>% 
+  ggplot(aes(x = SNV, y = mutation_AF, color = SNV)) +
+  geom_boxplot() +
+  scale_color_discrete(guide = "none") +
+  coord_flip() +
+  ylab("Allelic frequencies (AF)") + xlab("") +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank()) +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  facet_wrap(~origin2, nrow = 1, scales = "free_y")
+```
+
+```{r archiMutationsEVSFig2AF2Sixto}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  left_join(dplyr::select(archi_mutations, SNV, origin2)) %>% 
+  filter(!is.na(origin2)) %>% 
+  ggplot(aes(x = mutation_AF, color = origin2)) +
+  geom_density() + scale_x_log10() +
+  xlab("Allelic frequencies (AF)")
+```
+
+## Phylogeny
+
+```{r tipsvcfsSixto, eval=F}
+library(vcfR)
+tip_mutations <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  mutate(tumor = paste0(branch, tip)) %>% 
+  group_by(tumor, SNV, CHROM, POS, REF, ALT) %>% 
+  summarise(Filter = ifelse("evs" %in% Filter, "evs", "base")) %>% 
+  ungroup()
+# vcf header
+ref_mut_vcf <- read.vcfR("data/mutations/angela/raw/AL1_vs_T2.raw.vcf")
+header <- ref_mut_vcf@meta
+header[64] <- "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+header[65] <- "##FILTER=<ID=base,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (5th-95th), and mutations sharing across leaves (at least 2 in the crown).\">"
+header[66] <- "##FILTER=<ID=evs,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (5th-95th), and mutations sharing across leaves (at least 2 in the crown).\">"
+header <- header[-c(67:88)]
+# filters
+mutations <- list(
+  base = filter(tip_mutations, Filter %in% c("base",  "evs")),
+  evs = filter(tip_mutations, Filter %in% c("evs"))
+)
+vcfs <- lapply(mutations, function(data){
+  fix <- data %>% 
+    mutate(QUAL = NA, INFO=NA) %>% 
+    dplyr::rename(ID = SNV, FILTER = Filter) %>% 
+    dplyr::select(CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO) %>% 
+    arrange(CHROM, POS) %>% 
+    mutate(POS = as.character(POS))
+  # head(as.matrix(fix))
+  gt <- dplyr::select(data, SNV) %>% 
+    mutate(tumor = list(unique(data$tumor))) %>% 
+    unnest() %>% 
+    left_join(select(data, SNV, tumor, Filter)) %>% 
+    mutate(GT = ifelse(is.na(Filter), "0/0", "1/1")) %>% 
+    mutate(FORMAT = "GT") %>% 
+    dplyr::select(SNV, FORMAT, GT, tumor) %>% 
+    unique() %>% 
+    reshape2::dcast(SNV + FORMAT ~ tumor, value.var = "GT") %>% 
+    dplyr::rename(ID = SNV) %>% 
+    mutate(R = "0/0")
+  gt <- left_join(dplyr::select(fix, ID), gt) %>% 
+    dplyr::select(-ID)
+  # head(as.matrix(gt))
+  mutation_vcf <- ref_mut_vcf
+  mutation_vcf@meta <- header
+  mutation_vcf@fix <- as.matrix(fix)
+  mutation_vcf@gt <- as.matrix(gt)
+  return(mutation_vcf)
+})
+invisible(lapply(names(vcfs), function(v) write.vcf(vcfs[[v]], paste0("data/mutations/sixto/trees/", v, ".vcf.gz"))))
+# wget https://raw.githubusercontent.com/edgardomortiz/vcf2phylip/master/vcf2phylip.py
+# for file in $(ls *.vcf.gz); do python vcf2phylip.py -i $file -n ; done
+files <- list.files(path = "data/mutations/sixto/trees/", pattern = ".nexus")
+invisible(lapply(files, function(f){
+  mutations <- phangorn::read.phyDat(file.path("data/mutations/sixto/trees", f), format = "nexus")
+  mutations <- ape::as.DNAbin(mutations)
+  ips::write.fas(mutations, file.path("data/mutations/sixto/trees", gsub("nexus", "fa", f)))
+}))
+# for file in $(ls *.min4.fa); do iqtree2 -s $file -redo -o R ; done
+```
+
+```{r angleatipsphyloSixto, fig.width=12}
+files <- list.files(path = "data/mutations/sixto/trees/", pattern = ".min4.fa.treefile")
+phylos <- lapply(files, function(f) read.tree(file.path("data/mutations/sixto/trees", f)))
+names(phylos) <- gsub(".min4.fa.treefile", "", files)
+cowplot::plot_grid(plotlist = lapply(phylos, function(p) 
+  ggtree(phylobase::phylo4d(p)) + geom_tippoint(aes(col = substr(label, 1, 1)), size = 4) + geom_tiplab()
+), labels = names(phylos)) 
+```
+
+## Light & annotation
+
+```{r, eval=F}
+library(Biostrings)
+library(genomeIntervals)
+genome <- readDNAStringSet("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa")
+genome_index <- read_tsv("data/mutations/sixto/genome/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.fai",
+                         col_names = c("CHROM", "length", "bytesindex", "basesperline", "bytesperline")) %>%
+  dplyr::select(CHROM, length) %>%
+  mutate(start = 0, end = length) %>%
+  dplyr::select(-length)
+mutations <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  # filter(Filter == "evs") %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  unique() %>% 
+  ungroup()
+seqs <- lapply(1:nrow(mutations), function(i)
+  as.character(unlist(extractAt(genome[mutations$CHROM[i]], IRanges(mutations$POS[i]-1, width=3)))))
+t <- mutations %>% 
+  mutate(spectra = unlist(seqs)) %>% 
+  mutate(REF5 = str_sub(spectra, 1, 1), REFspectra = str_sub(spectra, 2, 2), REF3 = str_sub(spectra, 3, 3)) %>% 
+  dplyr::select(-REFspectra) %>% 
+  mutate(type = paste0(REF, "->", ALT)) %>% 
+  mutate(strand = recode(type,
+                         "G->T" = "-",
+                         "C->A" = "+",
+                         "G->C" = "-",
+                         "C->G" = "+",
+                         "G->A" = "-",
+                         "C->T" = "+",
+                         "A->T" = "-",
+                         "T->A" = "+",
+                         "A->G" = "-",
+                         "T->C" = "+",
+                         "A->C" = "-",
+                         "T->G" = "+"
+                       )) %>%
+  mutate(type = recode(type,
+                       "G->T" = "C->A",
+                       "G->C" = "C->G",
+                       "G->A" = "C->T",
+                       "A->T" = "T->A",
+                       "A->G" = "T->C",
+                       "A->C" = "T->G"
+  )) %>%
+  mutate(POS5 = REF5, POS3 = REF3) %>% 
+  mutate(POS5r = recode(POS5, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(REFr = recode(REF, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS3r = recode(POS3, "A" = "T", "T" = "A", "C" = "G", "G" = "C")) %>%
+  mutate(POS5f = ifelse(strand == "+", POS5, POS3r)) %>%
+  mutate(REFf = ifelse(strand == "+", REF, REFr)) %>%
+  mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
+  mutate(spectra = paste0(POS5f, REFf, POS3f)) %>% 
+  dplyr::select(CHROM, POS, SNV, REF, ALT, tumor, branch, tip, mutation_AF, Filter, type, spectra)
+write_tsv(t, "data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") 
+```
+
+```{r, fig.cap="Number of mutations per filter and light condition across branches."}
+ vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+   group_by(branch, tip, Filter) %>%
+  summarise(N = n()) %>%
+  reshape2::dcast(branch + tip ~ Filter, value.var = "N") %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  mutate(base = base + evs) %>% 
+  reshape2::melt(c("branch", "tip"), variable.name = "filter", value.name = "mutations") %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  ggplot(aes(filter, mutations, fill = condition)) +
+  geom_boxplot() +
+  scale_y_sqrt() +
+  xlab("") + ylab("Number of mutations") + scale_color_discrete("")  +
+  facet_wrap(~ filter, scales = "free") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test")
+```
+
+```{r}
+vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") %>% 
+  filter(!(Filter %in% c("base1", "evs1"))) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  mutate(sample = paste0(branch, tip)) %>% 
+  group_by(type, sample, condition) %>% 
+  summarise(N = n()) %>% 
+  group_by(sample) %>% 
+  ggplot(aes(type, N, fill = condition)) +
+  geom_boxplot(position = "dodge") + 
+  theme(axis.text.x = element_blank(), axis.title.x = element_blank(),
+        axis.line.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  facet_wrap(~ type, nrow = 1, scales = "free_x") +
+  xlab("Percentage of mutations (%) per sample") +
+  ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
+  ggtitle("Mutation type", "At least in 2-leaves with evs filtering.") +
+  ylab("Number of mutations")
+```
+
+```{r, fig.width=12}
+vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") %>% 
+    filter(!(Filter %in% c("base1", "evs1"))) %>% 
+  mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
+  mutate(sample = paste0(branch, tip)) %>% 
+  group_by(spectra) %>% 
+  group_by(type, spectra, sample, condition) %>% 
+  summarise(N = n()) %>% 
+  ggplot(aes(spectra, N, fill = condition)) +
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~ type, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom", axis.title.x = element_blank()) +
+  theme(panel.spacing = unit(0, "lines"), panel.border = element_rect(size = 0.25, color = "black", fill = NA)) +
+  scale_y_log10() +
+  ylab("Number of mutations") + ggtitle("Mutation spectra", "At least in 2-leaves with evs filtering.")
+```
+
+## Rate
+
+```{r}
+vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv") %>% 
+  mutate(Filter = recode(Filter, "evs" = "evs base")) %>% 
+  separate_rows(Filter) %>% 
+  group_by(Filter) %>% 
+  arrange(desc(mutation_AF)) %>% 
+  mutate(mutations = 1) %>% 
+  mutate(cummulated_mutations = cumsum(mutations)) %>% 
+  ggplot(aes(mutation_AF, cummulated_mutations, col = Filter)) +
+  geom_line() +
+  scale_y_log10() + scale_x_reverse() +
+  xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF")
+```
+
+## Mutations for Fruits
+
+```{r fruitMutationsSixto}
+fruit_mutations <- vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") %>% 
+  filter(str_sub(branch, 1, 1) %in% c("F", "C", "B", "E")) %>% 
+  filter(Filter == "evs") %>% 
+  group_by(SNV, CHROM, POS, REF, ALT) %>% 
+  summarise(af = mean(mutation_AF), replicate = n(), branch = paste(sort(unique(branch)), collapse = ", ")) %>% 
+  ungroup() %>% 
+  filter(replicate > 2) %>% 
+  arrange(desc(replicate), desc(af)) %>% 
+  mutate(rank = 1:n())    
+# write_tsv(fruit_mutations, "data/mutations/sixto/filters/sixto_fruits_candidate_mutations.tsv")
+```
+
+Selection of mutations for transmission in fruits.
+
+```{r fruitMutationsTabSixto}
+fruit_mutations %>% 
+  group_by(replicate) %>% 
+  summarise(N = n(), minAF = min(af), meanAF = mean(af), maxAF = max(af)) %>% 
+  ungroup() %>% 
+  arrange(desc(replicate)) %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  kable(caption = "Number of mutations per branch.", digits = 2)   
+```
+
+```{r fruitMutationsFigSixto}
+ggplot(filter(fai, name %in% gsub("Super-Scaffold_", "", unique(fruit_mutations$CHROM))),
+       aes(x = name, xend = name)) +
+  geom_segment(aes(y = start/10^6, yend = end/10^6), size = 3, col = "grey") +
+  coord_flip() +
+  ylab("Position (Mb)") +
+  geom_point(aes(y = POS/10^6, col = af, size = replicate), 
+             data = mutate(fruit_mutations, name = gsub("Super-Scaffold_", "", CHROM))) +
+  theme(axis.line.y = element_blank(), axis.title.y = element_blank(), 
+        axis.ticks.y = element_blank()) +
+  viridis::scale_color_viridis("Allele\nfrequency", trans = scales::log_trans()) +
+  scale_size_continuous("Number\nof branches") +
+  ggtitle(paste(nrow(fruit_mutations), "candidate mutations for transmission to fruits."))    
+```
+
+```{r fruitMutationsTab2Sixto}
+fruit_mutations %>% 
+  dplyr::select(-SNV) %>% 
+  mutate(af = round(af, 2)) %>% 
+  dplyr::select(CHROM, POS, branch, replicate, af, rank) %>% 
+  DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank"))
+```
+
+## Genes
+
+```{r, eval=F}
+genes <- read_tsv("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("CHROM", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  filter(type == "transcript")
+t <- archi_mutations %>%
+  split(.$SNV) %>%
+  lapply(function(x) left_join(x, genes, by = "CHROM") %>%
+           filter(start <= POS, end >= POS)) %>%
+  bind_rows(.id = "SNV")
+nrow(t)/nrow(archi_mutations)*100 # 2067 in trsc
+annotation <- DBI::dbConnect(RSQLite::SQLite(), dbname = "data/mutations/angela/annotation/angela.annot.sqlite")
+orfs <-  tbl(annotation, "ORF") %>%
+  mutate(start_aa = str_sub(peptide, 1, 1)) %>%
+  mutate(stop_aa = str_sub(peptide, -1, -1)) %>%
+  mutate(length = rend - lend) %>%
+  collect()
+t <- t %>%
+  left_join(orfs, by = c("attributes" = "transcript_id")) %>%
+  filter(!is.na(orf_id))
+rm(orfs)
+DBI::dbDisconnect(annotation) ; rm(annotation)
+write_tsv(t, "save/tmp2.tsv")
+read_tsv("save/tmp2.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% # 567 in CDS
+  dplyr::select(attributes, posTrsc, ALT) %>% 
+  write_tsv("data/mutations/sixto/annotation/SNPsOnTrsc.tsv", col_names = F)
+```
+
+```{bash, eval=F, echo=T}
+cd data/mutations/sixto/annotation
+~/Tools/gffread/gffread trsc.fa.transdecoder.gff3 -T -o trsc.fa.transdecoder.gtf
+perl ~/Tools/SNPdat_package_v1.0.5/SNPdat_v1.0.5.pl \
+  -i SNPsOnTrsc.tsv \
+  -g trsc.fa.transdecoder.gtf \
+  -f trsc.fa \
+  -s synonymy.summary \
+  -o synonymy.output
+```
+
+```{r, eval=F}
+read_tsv("save/tmp2.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+  mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+  dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+  left_join(read_tsv("data/mutations/sixto/annotation/synonymy.output", col_names = T)) %>% 
+  group_by(SNV, synonymous) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(SNV ~ synonymous) %>% 
+  filter(!is.na(N)) %>% 
+  nrow()
+```
+
+```{r goeSixto}
+go <- read_tsv("data/mutations/sixto/annotation/trinotate_go_annotations.txt", col_names = c("gene", "id")) %>% 
+  separate_rows(id, sep = ",") %>% 
+  left_join(src_sqlite("data/mutations/sixto/annotation/sixto.annot.sqlite") %>% 
+              tbl("go") %>% 
+              collect())
+genes <- read_tsv("save/tmp2.tsv") %>% 
+  mutate_at(c("lend", "rend"), as.numeric) %>% 
+  mutate(posTrsc = POS - start + 1) %>% 
+  filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+  mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+  dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+  left_join(read_tsv("data/mutations/sixto/annotation/synonymy.output", col_names = T)) %>% 
+  filter(synonymous == "N") %>% 
+  separate(`Chromosome Number`, c("gene", "trsc_id"), remove = F) %>% 
+  dplyr::select(gene) %>% 
+  unique() %>% 
+  mutate(gene = tolower(gene))
+goe <- clusterProfiler::enricher(gene = unique(genes$gene),
+                          pvalueCutoff = 0.05, 
+                          pAdjustMethod = "BH",
+                          universe = unique(go$gene),
+                          minGSSize = 10, 
+                          maxGSSize = 500, 
+                          qvalueCutoff = 0.05, 
+                          TERM2GENE = dplyr::select(go, id, gene),
+                          TERM2NAME = dplyr::select(go, id, name))
+```
+
+```{r, fig.cap="Mutations types."}
+data.frame(type = c("All", "Within transcripts with genes", "Within CDS", "Non-synonymous"),
+           count = c(3223, 210, 31, 9)) %>% 
+  ggplot(aes(type, count)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_log10() +
+  ggtitle("Type of mutations for Sixto") +
+  xlab("") +
+  geom_text(aes(y = 2, label = format(count, big.mark = " ")), col = "white")
+```
+
+```{r, fig.cap="Mutation allelic fraction per type."}
+# genes <- genomeIntervals::readGff3("data/mutations/sixto/annotation/trsc.fa.transdecoder.gff3")
+# genes <- genomeIntervals::interval_union(genes)
+# sum(genomeIntervals::width(genes))/sum(fai$end)*100
+data <- archi_mutations %>% 
+  mutate(all = 1) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              dplyr::select(SNV) %>% 
+              mutate(transcript = 1)) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(CDS = 1)) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+              dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+              left_join(read_tsv("data/mutations/sixto/annotation/synonymy.output", col_names = T)) %>% 
+              group_by(SNV, synonymous) %>% 
+              summarise(N = n()) %>% 
+              reshape2::dcast(SNV ~ synonymous) %>% 
+              filter(!is.na(N)) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(nonsynonymous = 1)) %>% 
+  left_join(filter(goe@result, qvalue < 0.05) %>% 
+              dplyr::select(geneID) %>% 
+              separate_rows(geneID) %>% 
+              unique() %>% 
+              left_join(read_tsv("save/tmp2.tsv") %>% 
+                          dplyr::select(SNV, attributes) %>% 
+                          separate(attributes, c("geneID", "transcript"))) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(goenriched = 1))
+g1 <- data %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, CDS) %>% 
+  unique() %>% 
+  mutate(type = ifelse(is.na(CDS), "intergenic", "CDS")) %>% 
+  ggplot(aes(type, mutation_AF)) +
+  geom_violin() +
+  ggpubr::stat_compare_means(method = "t.test") +
+  ylab("Allelic fraction") +
+  ggtitle("All mutations AF > 0.01", "ratio:0.010 (<expected:0.166)") +
+  geom_point(col = "red", size = 2,
+             data = data.frame(mutation_AF = c(median(filter(data, is.na(CDS))$mutation_AF),
+                                               median(filter(data, CDS == 1)$mutation_AF)),
+                               type = c("intergenic", "CDS")))
+g2 <- filter(data, CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
+  dplyr::select(SNV, synonymy, mutation_AF) %>% 
+  unique() %>% 
+  ggplot(aes(synonymy, mutation_AF)) +
+  geom_violin() +
+  ggpubr::stat_compare_means(method = "t.test") +
+  ylab("Allelic fraction") +
+  ggtitle("Mutations in CDS, AF > 0.01", "dN/dS=0.41") +
+  geom_point(col = "red", size = 2,
+             data = data.frame(mutation_AF = c(median(filter(data, CDS == 1, nonsynonymous == 1)$mutation_AF),
+                                               median(filter(data, CDS == 1, is.na(nonsynonymous))$mutation_AF)),
+                                            synonymy = c("NS", "S")))
+cowplot::plot_grid(g2, g1)
+```
+
+```{r, fig.cap="Synonymy with allelic fraction."}
+data <- archi_mutations %>% 
+  mutate(all = 1) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              dplyr::select(SNV) %>% 
+              mutate(transcript = 1)) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(CDS = 1)) %>% 
+  left_join(read_tsv("save/tmp2.tsv") %>% 
+              mutate_at(c("lend", "rend"), as.numeric) %>% 
+              mutate(posTrsc = POS - start + 1) %>% 
+              filter(posTrsc >= lend, posTrsc <=   rend) %>% 
+              mutate(`Chromosome Number` = toupper(attributes), `SNP Position` = posTrsc) %>% 
+              dplyr::select(SNV, `Chromosome Number`, `SNP Position`) %>% 
+              left_join(read_tsv("data/mutations/sixto/annotation/synonymy.output", col_names = T)) %>% 
+              group_by(SNV, synonymous) %>% 
+              summarise(N = n()) %>% 
+              reshape2::dcast(SNV ~ synonymous) %>% 
+              filter(!is.na(N)) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(nonsynonymous = 1)) %>% 
+  left_join(filter(goe@result, qvalue < 0.05) %>% 
+              dplyr::select(geneID) %>% 
+              separate_rows(geneID) %>% 
+              unique() %>% 
+              left_join(read_tsv("save/tmp2.tsv") %>% 
+                          dplyr::select(SNV, attributes) %>% 
+                          separate(attributes, c("geneID", "transcript"))) %>% 
+              dplyr::select(SNV) %>% 
+              mutate(goenriched = 1))
+write_tsv(data, "save/mutations_annotated_sixto.tsv")
+filter(data, CDS == 1) %>% 
+  filter(mutation_AF > 0.01) %>% 
+  dplyr::select(SNV, mutation_AF, nonsynonymous) %>% 
+  mutate(synonymy = ifelse(is.na(nonsynonymous), "S", "NS")) %>% 
+  dplyr::select(SNV, synonymy, mutation_AF) %>% 
+  unique() %>% 
+  mutate(AF = cut(mutation_AF, seq(0, 0.5, by = 0.005))) %>% 
+  group_by(AF, synonymy) %>% 
+  summarise(N = n()) %>% 
+  reshape2::dcast(AF ~ synonymy) %>% 
+  mutate_at(c("NS", "S"), funs(ifelse(is.na(.),0,.))) %>% 
+  mutate(dNds = NS/S, N = NS+S) %>% 
+  separate(AF, c("X1", "X2"), ",") %>% 
+  mutate(X1 = as.numeric(gsub("(", "", X1, fixed = T))) %>% 
+  mutate(X2 = as.numeric(gsub("]", "", X2, fixed = T))) %>% 
+  mutate(AF = (X1+X2)/2) %>% 
+  ggplot(aes(AF, dNds, size = N)) +
+  geom_smooth(method = "lm", size = 1) +
+  geom_point() +
+  geom_hline(yintercept = 1, linetype = "dashed")
+```
+
+```{r, fig.cap="GO enrichment for Angela non-synonymous mutations."}
+goe@result %>% 
+  filter(qvalue <= 0.05) %>% 
+  na.omit() %>% 
+  ggplot(aes(reorder(Description, qvalue), Count, fill = -log(qvalue))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  viridis::scale_fill_viridis() +
+  theme(axis.title = element_blank()) +
+  ggtitle("GO enrichment for Sixto non-synonymous mutations")
+```
+
+```{r, fig.cap="Enrichment map of GO enrichment for Angela non-synonymous mutations.", eval=F}
+enrichplot::emapplot(goe) +
+  ggtitle("GO enrichment for Sixto non-synonymous mutations")
+```
+
