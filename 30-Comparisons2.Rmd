@@ -189,8 +189,11 @@ sixto@data <- data.frame(label = sixto@label) %>%
   mutate(mutations_base = ifelse(is.na(mutations_base), 0, mutations_base)) %>% 
   dplyr::select(-label)
 # phylogenies
-angela_phylo <- ape::read.tree("data/mutations/angela/trees/base.min4.fa.treefile")
-sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/base.min4.fa.treefile")
+angela_phylo <- ape::read.tree("data/mutations/angela/trees/leaf_mutations.min4.fa.treefile")
+sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/leaf_mutations.min4.fa.treefile")
+# evs
+evs <- unique(archi_mutations_angela_evs$SNV,
+              archi_mutations_sixto_evs$SNV)
 ```
 
 # Comparisons 2
@@ -415,7 +418,7 @@ Therefore, mutations are strongly shared across the crown and do not always foll
 
 ```{r, fig.width=5, fig.height=6}
 cowplot::plot_grid(
-  treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
+  treeio::read.nhx("data/mutations/angela/trees/leaf_mutations.min4.fa.contree") %>% 
     ggtree() + 
     geom_tippoint(aes(col = label),
                   size = 4) + 
@@ -423,7 +426,7 @@ cowplot::plot_grid(
     geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
     theme(legend.position = "none") +
     ggtitle("Angela"),
-  treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
+  treeio::read.nhx("data/mutations/sixto/trees/leaf_mutations.min4.fa.contree") %>% 
     ggtree() + 
     geom_tippoint(aes(col = substr(label, 1, 1)),
                   size = 4) + 
@@ -435,6 +438,28 @@ cowplot::plot_grid(
 )
 ```
 
+```{r rev2phylo, fig.width=5, fig.height=6, eval=FALSE}
+g <- cowplot::plot_grid(
+  treeio::read.nhx("data/mutations/angela/rev2/leaf_mutations.min4.fa.contree") %>% 
+    ggtree() + 
+    geom_tippoint(aes(col = label),
+                  size = 4) + 
+    geom_tiplab() +
+    geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
+    theme(legend.position = "none") +
+    ggtitle("D. guianensis"),
+  treeio::read.nhx("data/mutations/sixto/rev2/leaf_mutations.min4.fa.contree") %>% 
+    ggtree() + 
+    geom_tippoint(aes(col = substr(label, 1, 1)),
+                  size = 4) + 
+    geom_tiplab() +
+    geom_nodelab(aes(x=branch, label=label), vjust = -0.5) +
+    theme(legend.position = "none") +
+    ggtitle("S. rubra"),
+  nrow = 2
+)
+ggsave(g, file = "~/Téléchargements/rev2.png")
+```
 
 ```{r angelaphyloarchi, fig.cap="Caption."}
 dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);")), 
@@ -446,11 +471,49 @@ dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text = "(((((AS:3.8
 
 ```{r sixtophyloarchi, fig.cap="Caption.", eval=F}
 dendextend::dendlist(phylogram::as.dendrogram(ape::read.tree(text =  "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);")), 
-                     treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree")) %>%
+                     treeio::read.nhx("data/mutations/angela/trees/leaf_mutations.min4.fa.contree")) %>%
   dendextend::untangle(method = "ladderize") %>%
   dendextend::tanglegram(sort = T, common_subtrees_color_branches = TRUE, , highlight_distinct_edges = F,
                          main_right = "Sixto - Phylogeny", main_left = " Sixto - Architecture") 
 ```
+
+```{r}
+n <- 10^3
+library(tidyverse)
+library(ape)
+sixto_archi_text <- "((((((B1L:5.2,(C3L:4.47, C1S:0.75)C:0.4)XC:3.08,(E2L:3.8, E4S:3.5)E:1.6)XE:0.6,F2S:4.37)XF:1.6,(I1L:3.3, I2S:1.15)I:1.1)XI:28.64):0,R:0);"
+sixto_archi <- read.tree(text = sixto_archi_text) %>% 
+  drop.tip("R") %>% 
+  unroot()
+sixto_phylo <- ape::read.tree("data/mutations/sixto/trees/leaf_mutations.min4.fa.treefile") %>% 
+  drop.tip("R") %>% 
+  unroot()
+angela_archi_text <- "(((((AS:3.83,AL:6.04)A:6.44,(BS:3.34,BL:10.64)B:1.6)AB:6.5,((CS:3.8,CL:5.13)C:14.45,(DS:3.5,DL:7.76)D:6.2)CD:1.7,(ES:0,EL:2.2)E:3.7)X:26.5):0,R:0);"
+angela_archi <- read.tree(text = angela_archi_text) %>% 
+  drop.tip("R") %>% 
+  unroot()
+angela_phylo <- ape::read.tree("data/mutations/angela/trees/leaf_mutations.min4.fa.treefile") %>% 
+  drop.tip("R") %>% 
+  unroot()
+
+list(
+  "Dicorynia guianensis" = data.frame(dist = unlist(as.matrix(dist.topo(rmtopology(10^3, 10, tip.label = angela_archi$tip.label), angela_phylo))[,1001])),
+  "Sextonia rubra" = data.frame(dist = unlist(as.matrix(dist.topo(rmtopology(10^3, 8, tip.label = sixto_archi$tip.label), sixto_phylo))[,1001]))
+) %>% 
+  bind_rows(.id = "tree") %>% 
+  ggplot(aes(dist)) +
+  geom_histogram(fill = "lightgrey") +
+  theme_bw() +
+  geom_vline(col = "red", aes(xintercept = dist),
+             data = data.frame(tree = c("Dicorynia guianensis", "Sextonia rubra"), 
+                               dist = c(dist.topo(angela_archi, angela_phylo),
+                                        dist.topo(sixto_archi, sixto_phylo)))) +
+  xlab("Path distane of the phylogeny from physical tree compared to null typology") +
+  facet_wrap(~ tree)
+
+```
+
+
 
 ## Light
 
@@ -471,6 +534,17 @@ list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
   ggpubr::stat_compare_means(label = "p.signif", method = "t.test") +
   xlab("") + ylab("Number of mutations") +
   scale_fill_manual("", values = c("gold", "gray83"))
+```
+
+```{r, eval=FALSE}
+list(Angela = vroom::vroom("data/mutations/angela//filters/leaf_mutations.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations.tsv")) %>% 
+  bind_rows(.id = "tree") %>% 
+  mutate(type = paste0(REF, ">", ALT)) %>% 
+  dplyr::select(tree, type, SomaticEVS) %>% 
+  ggplot(aes(type, SomaticEVS, col = tree)) +
+  geom_boxplot() +
+  theme_bw() + xlab("")
 ```
 
 ```{r lightComp2baseKS, fig.cap="Caption."}
@@ -562,8 +636,8 @@ vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv") 
 Mutation types are similar between Angela and Sixto, with the exception of an increase in C->A and C->T but a decrease in T->A in Sixto compared to Angela, which are probably due to the sampling effect (Fig. \@ref(fig:typeComp2), to be further investigated).
 
 ```{r typeComp2, fig.cap="Caption."}
-list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
-     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+list(Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations_spectra.tsv")) %>% 
   bind_rows(.id = "tree") %>% 
   group_by(type, tumor, tree) %>% 
   summarise(N = n()) %>% 
@@ -587,8 +661,8 @@ list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations
 The mutation spectra are similar between Angela and Sixto, with a few exceptions that are probably due to a sampling effect (Fig. \@ref(fig:spectraComp2), to be explored further). 
 
 ```{r spectraComp2, fig.cap="Caption."}
-list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv"),
-     Sixto = vroom::vroom("data/mutations/sixto/filters/filtered_tip_mutations_spectra.tsv")) %>% 
+list(Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv"),
+     Sixto = vroom::vroom("data/mutations/sixto/filters/leaf_mutations_spectra.tsv")) %>% 
   bind_rows(.id = "tree") %>% 
   group_by(type, spectra, tumor, tree) %>% 
   summarise(N = n()) %>% 
@@ -603,7 +677,113 @@ list(Angela = vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations
   ggpubr::stat_compare_means(label = "p.signif", label.y.npc = 0.9, size = 3,
                              symnum.args = list(cutpoints = c(0, 0.0001, 0.001, 0.01, 1),
                                   symbols = c("***", "**", "*", "ns"))) +
-  ylab("Percentage of mutations per library")
+  ylab("Percentage of mutations per library") +
+  theme_bw()
+```
+
+```{r, eval=FALSE}
+library(cmdstanr)
+data <- vroom::vroom("data/mutations/sixto/filters/leaf_mutations_spectra.tsv") %>% 
+    mutate(spectra = paste(type, spectra)) %>% 
+  mutate(branch = paste(branch, tip)) %>% 
+  dplyr::select(SNV, branch, tip, spectra) %>% 
+  group_by(SNV, branch, tip, spectra) %>%
+  sample_n(1) %>% 
+  ungroup() %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(names_from = spectra, values_from = value) %>% 
+  mutate_all(~ ifelse(is.na(.), 0, .))
+mdata <- list(
+  N = nrow(data),
+  S = length(names(data)[-c(1:3)]),
+  B = length(unique(data$branch)),
+  Y = dplyr::select(data, -SNV, -branch, -tip) %>% as.matrix(),
+  light = as.numeric(data$tip == 'L'),
+  branch = as.numeric(as.factor(data$branch))
+)
+model <- cmdstan_model("model/n1.stan")
+fit <- model$sample(data = mdata, parallel_chains = 4)
+fit_sixto <- rstan::read_stan_csv(fit$output_files())
+save(fit_sixto, file = "model/n1_sixto.Rdata") 
+```
+
+
+```{r, eval=FALSE}
+library(cmdstanr)
+library(tidyverse)
+data <- vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv") %>% 
+  mutate(spectra = paste(type, spectra)) %>% 
+  mutate(branch = paste(branch, tip)) %>% 
+  dplyr::select(SNV, branch, tip, spectra) %>% 
+  group_by(SNV, branch, tip, spectra) %>%
+  sample_n(1) %>% 
+  ungroup() %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(names_from = spectra, values_from = value) %>% 
+  mutate_all(~ ifelse(is.na(.), 0, .))
+mdata <- list(
+  N = nrow(data),
+  S = length(names(data)[-c(1:3)]),
+  B = length(unique(data$branch)),
+  Y = dplyr::select(data, -SNV, -branch, -tip) %>% as.matrix(),
+  light = as.numeric(data$tip == 'L'),
+  branch = as.numeric(as.factor(data$branch))
+)
+model <- cmdstan_model("model/n1.stan")
+fit <- model$sample(data = mdata, parallel_chains = 4)
+fit_angela <- rstan::read_stan_csv(fit$output_files())
+save(fit_angela, file = "model/n1_angela.Rdata") 
+```
+
+```{r}
+library(tidyverse)
+data <- vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv") %>% 
+  mutate(spectra = paste(type, spectra)) %>% 
+  mutate(branch = paste(branch, tip)) %>% 
+  dplyr::select(SNV, branch, tip, spectra) %>% 
+  group_by(SNV, branch, tip, spectra) %>%
+  sample_n(1) %>% 
+  ungroup() %>% 
+  mutate(value = 1) %>% 
+  pivot_wider(names_from = spectra, values_from = value) %>% 
+  mutate_all(~ ifelse(is.na(.), 0, .))
+mdata <- list(
+  N = nrow(data),
+  S = length(names(data)[-c(1:3)]),
+  B = length(unique(data$branch)),
+  Y = dplyr::select(data, -SNV, -branch, -tip) %>% as.matrix(),
+  light = as.numeric(data$tip == 'L'),
+  branch = as.numeric(as.factor(data$branch))
+)
+load("model/n1_angela.Rdata") 
+bayesplot::mcmc_intervals_data(fit_angela, regex_pars = "alpha",
+                               prob = 0.95, prob_outer = 1, alpha = 0.5) %>% 
+  mutate(spectrum = colnames(mdata$Y)) %>% 
+  separate(spectrum, c("type", "spectrum"), " ") %>% 
+  ggplot(aes(spectrum, m)) +
+  geom_point() +
+  geom_segment(aes(xend = spectrum, y = l, yend = h), linewidth = 1) +
+  geom_segment(aes(xend = spectrum, y = ll, yend = hh), linewidth = 0.5) +
+  geom_hline(yintercept = 0, col = "red") +
+  theme_bw() +
+  facet_wrap(~ type, scales = "free_x", ) +
+  theme(axis.text.x = element_text(angle = 90), axis.title = element_blank())
+```
+
+
+```{r}
+library(patchwork)
+load("model/n1_sixto.Rdata") 
+load("model/n1_angela.Rdata") 
+g <- bayesplot::mcmc_intervals(fit_angela, regex_pars = "alpha",
+                             prob = 0.95, prob_outer = 1, alpha = 0.5) +
+  ggtitle("D. guianensis") +
+  scale_y_discrete("", labels = colnames(mdata$Y)) +
+  bayesplot::mcmc_intervals(fit_sixto, regex_pars = "alpha",
+                               prob = 0.95, prob_outer = 1, alpha = 0.5) +
+    ggtitle("S. rubra") +
+  scale_y_discrete("", labels = colnames(mdata$Y))
+ggsave(g, file = "~/Téléchargements/SI.png")
 ```
 
 ## Rates
@@ -626,9 +806,61 @@ list(Angela = vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv"),
   xlab("Allelic frequency") + ylab("Cummulated mutations with decreasing AF")
 ```
 
+
+
+
 ## Annotations
 
 *In progress.*
+
+```{r tepercentangela, eval=FALSE}
+te_angela <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("CHROM", "source", "type", "start_te", "end_te", "score", "strand", "phase", "te")) %>% 
+  dplyr::select(CHROM, start_te, end_te, te)
+mutations_angela <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv")
+te <- rep(NA, nrow(mutations_angela))
+for(n in 1:nrow(mutations_angela)){
+  te[n] <- paste((mutations_angela[n,] %>% 
+                    left_join(filter(te_angela, CHROM == CHROM),
+                              by = join_by(CHROM)) %>% 
+                    filter(POS >= start_te, POS <= end_te))$te, collapse = ", ")
+  svMisc::progress(n, nrow(mutations_angela))
+}
+mutations_angela$te <- te
+write_tsv(mutations_angela, "save/te_angela.tsv")  
+```
+
+```{r tepercentsixto, eval=FALSE}
+te_an <- read_tsv("data/mutations/sixto/annotation/HS1_Sru_omap1_hap1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("CHROM", "source", "type", "start_te", "end_te", "score", "strand", "phase", "te")) %>% 
+  dplyr::select(CHROM, start_te, end_te, te)
+mutations <- vroom::vroom("data/mutations/sixto//filters/leaf_mutations.tsv")
+te <- rep(NA, nrow(mutations))
+for(n in 1:nrow(mutations)){
+  te[n] <- paste((mutations[n,] %>% 
+                    left_join(filter(te_an, CHROM == CHROM),
+                              by = join_by(CHROM)) %>% 
+                    filter(POS >= start_te, POS <= end_te))$te, collapse = ", ")
+  svMisc::progress(n, nrow(mutations))
+}
+mutations$te <- te
+write_tsv(mutations, "save/te_sixto.tsv")  
+```
+
+```{r, eval=FALSE}
+read_tsv("save/te_angela.tsv") %>% 
+  group_by(te) %>% 
+  summarise(N = n()) %>% 
+  filter(grepl(")n", te)) %>% 
+  summarise(N = sum(N)) %>% 
+  mutate(percentage = N/39845*100)
+read_tsv("save/te_sixto.tsv") %>% 
+  group_by(te) %>% 
+  summarise(N = n()) %>% 
+  filter(grepl(")n", te)) %>% 
+  summarise(N = sum(N)) %>% 
+  mutate(percentage = N/7976*100)
+```
 
 ## Genes
 
@@ -670,7 +902,6 @@ aov(lm(log(mutation_AF) ~ tree + synonymy, data)) %>% summary()
   theme(axis.title.x = element_blank(), axis.text.x = element_blank(), legend.position = "bottom"))
 cowplot::save_plot(paste0("~/Téléchargements/nsAF.png"), g, dpi = 800)
 ```
-
 
 ## Fruits
 
@@ -816,13 +1047,13 @@ libs <- data.frame(file = list.files("~/Téléchargements/fruits/")) %>%
   mutate(library = gsub(".fastq.gz", "", file)) %>% 
   separate(library, c("library", "cell", "lane", "strand", "X"), "_") %>% 
   separate(library, c("library", "repetition"), "-") %>% 
-  select(-cell, -lane, -X) %>% 
+  dplyr::select(-cell, -lane, -X) %>% 
   left_join(refs) %>% 
     separate(Echantillon, c("tree2", "branch", "fruit", "tissue2"), 
              remove = FALSE) %>% 
-  select(-tree2, -tissue2)
+  dplyr::select(-tree2, -tissue2)
 sra1 <- libs %>% 
-  select(Echantillon, tree, branch, fruit, tissue, library, repetition) %>% 
+  dplyr::select(Echantillon, tree, branch, fruit, tissue, library, repetition) %>% 
   rename(sample = Echantillon, isolate = tree) %>% 
   mutate(organism = ifelse(isolate == "Angela", "Dicorynia guyanensis", 
                            "Sextonia rubra")) %>% 
@@ -837,7 +1068,7 @@ sra1 <- libs %>%
   unique()
 write_tsv(sra1, "~/Téléchargements/sra1.tsv")
 sra2 <- libs %>% 
-  select(Echantillon, library, tree, file) %>% 
+  dplyr::select(Echantillon, library, tree, file) %>% 
   rename(sample_name = Echantillon, library_ID = library) %>% 
   group_by(sample_name, library_ID, tree) %>% 
   mutate(filename = c("filename", "filename2")) %>% 
@@ -854,7 +1085,7 @@ sra2 <- libs %>%
   mutate(instrument_model = "Illumina MiSeq") %>% 
   mutate(design_description = "Extraction CTAB and preparation of amplicons with PCR") %>% 
   mutate(filetype = "fastq") %>% 
-  select(sample_name, library_ID, title, library_strategy, library_source, 
+  dplyr::select(sample_name, library_ID, title, library_strategy, library_source, 
          library_selection, library_layout, platform, instrument_model,
          design_description, filetype, filename, filename2)
 write_tsv(sra2, "~/Téléchargements/sra2.tsv")
@@ -1040,10 +1271,24 @@ fruits %>%
   reshape2::dcast(fruit ~ tissue, value = "genotype") %>% kable()
 ```
 
+```{r}
+transmitted %>% 
+  mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
+  left_join(dplyr::select(agreement, SNV, agreement)) %>% 
+  left_join(list("Sixto" = archi_mutations_sixto_base,
+                 "Angela" = archi_mutations_angela_base) %>% 
+              bind_rows(.id = "tree") %>% 
+              filter(SNV %in% transmitted$mutation) %>% 
+              mutate(mutation = SNV, origin = origin1) %>% 
+              dplyr::select(mutation, origin)) %>% 
+  write_tsv("~/Téléchargements/fruits_mutations.tsv")
+```
+
+
 ```{r , eval=F}
 transmitted %>% 
   mutate(AF_branch_med = round(AF_branch_med, 3)) %>% 
-  left_join(select(agreement, SNV, agreement)) %>% 
+  left_join(dplyr::select(agreement, SNV, agreement)) %>% 
   left_join(list("Sixto" = archi_mutations_sixto_base,
                  "Angela" = archi_mutations_angela_base) %>% 
               bind_rows(.id = "tree") %>% 
@@ -1069,3 +1314,74 @@ all %>%
   summarise(mutation = length(unique(fruit))) %>% 
   reshape2::dcast(SNV ~ tissue) %>% kable()
 ```
+
+#### Frequencies
+
+```{r}
+transmitted <- read_tsv("~/Téléchargements/mutations.tsv")
+mutations <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "mutations") %>% 
+  filter(SNV %in% transmitted$SNV) %>% 
+  filter(Type != "reference") %>% 
+  mutate(code = paste(SNV, Genotype))
+sequences <- readxl::read_xlsx("data/mutations/fruits/SSRseq_TreeMutation_DataAnalysis.xlsx", "AlleleInformation") %>% 
+  dplyr::rename(locus = Locus, genotype = AlleleSeqCode, sequence = AlleleSequence) %>% 
+  dplyr::select(locus, genotype, sequence) %>% 
+  mutate(locus2 = gsub("TreeMut_SNP-", "", locus)) %>% 
+  separate(locus2, c("mutation", "pos"), "_Super-Scaffold_", convert = T) %>% 
+  separate_rows(mutation, convert = T) %>% 
+  separate(pos, "CHROM", convert = T) %>% 
+  mutate(SNV = paste0("SNV", sprintf("%03d", mutation))) %>% 
+  dplyr::select(locus, SNV, genotype, sequence) %>% 
+  filter(paste(SNV, genotype) %in% mutations$code)
+
+refs <- bind_rows(readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Sixto") %>% 
+            mutate(tree = "Sixto"),
+          readxl::read_xlsx("data/mutations/fruits/treemutation_fruits.xlsx", "Angela") %>% 
+            mutate(tree = "Angela")) %>% 
+  mutate(library = paste0(Code_Espece, Tube), tissue = Tissu) %>%
+  dplyr::select(library, tree, tissue, Echantillon) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Angela.xlsx", "libraries") %>% 
+              mutate(tissue = paste("branch", branch), library = idOld, tree = "Angela") %>% 
+              dplyr::select(library, tree, tissue)) %>% 
+  bind_rows(readxl::read_xlsx("data/mutations/fruits/Sixto.xlsx", "samples") %>% 
+              mutate(tissue = paste("branch", Branch), library = id, tree = "Sixto") %>% 
+              dplyr::select(library, tree, tissue))
+
+files <- list.files("data/mutations/fruits/tssvResults", full.names = TRUE)
+names(files) <- list.files("data/mutations/fruits/tssvResults")
+reads <- lapply(files, vroom::vroom) %>% 
+  bind_rows(.id = "file")
+# reads %>% 
+#   group_by(file, marker) %>% 
+#   summarise(depth = sum(total)) %>% 
+#   filter(depth > 0, depth < 10^3) %>% 
+#   ggplot(aes(depth)) + geom_histogram() + theme_bw()
+# ggplot(reads, aes(total)) + geom_histogram() + theme_bw() + xlim(1, 30)
+af <- reads %>% 
+  mutate(file = gsub("_tssv.txt", "", file)) %>% 
+  filter(total > 1) %>%
+  group_by(file) %>% 
+  filter(marker %in% sequences$locus) %>% 
+  mutate(mutation = (sequence %in% sequences$sequence)) %>% 
+  group_by(file, marker, mutation) %>% 
+  summarise(count = sum(total)) %>% 
+  pivot_wider(names_from = mutation, values_from = count) %>% 
+  mutate(`TRUE` = ifelse(is.na(`TRUE`), 0, `TRUE`)) %>% 
+  mutate(af = `TRUE`/(`TRUE`+`FALSE`)) %>% 
+  na.omit() %>% 
+  left_join(unique(dplyr::select(sequences, locus, SNV)), by = c("marker" = "locus")) %>% 
+  ungroup() %>% 
+  dplyr::select(file, SNV, af) %>% 
+  separate(file, c("library", "rep")) %>% 
+  left_join(refs) %>% 
+  na.omit()
+ggplot(af, aes(af, fill = SNV)) +
+  geom_histogram() +
+  facet_wrap(~ tissue) +
+  theme_bw()
+ggplot(af, aes(af, fill = tissue)) +
+  geom_histogram() +
+  facet_wrap(~ SNV) +
+  theme_bw()
+```
+

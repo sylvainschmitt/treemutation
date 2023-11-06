@@ -87,6 +87,6 @@ leaflet() %>%
   addCircles(data = candidates, label = ~name, col = "red", radius = 20, group = "Trees") %>% 
   addCircles(data = drone, col = "blue", radius = 2, label = ~filename, group = "Drone") %>% 
   addLayersControl(overlayGroups = c("OSM", "trajectos", "DCM", "Trees", "Drone"),
-                   options = layersControlOptions(collapsed = T)) 
+                   options = layersControlOptions(collapsed = T))  
 ```
 

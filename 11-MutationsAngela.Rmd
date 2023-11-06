@@ -451,6 +451,134 @@ chromoMap(list(t1), list(t2), data_based_color_map = T,
 # library(RIdeogram)
 ```
 
+### Comp
+
+```{r}
+library(ivs)
+window <- 10^5
+windows <- hs1 %>% 
+  filter(end > window) %>% 
+  rowwise() %>% 
+  mutate(window_end = list(seq(from = (0+window), to = end, by = window))) %>% 
+  unnest_longer(window_end) %>% 
+  mutate(window_start = lag(window_end)) %>% 
+  mutate(window_start = ifelse(is.na(window_start), 0, window_start)) %>% 
+  filter(window_end - window_start == window) %>% 
+  mutate(window  = ivs::iv(window_start, window_end)) %>% 
+  dplyr::select(name, window)
+genes <- vroom::vroom("data/mutations/angela/annotation/braker.gtf",
+                   col_names = c("scf", "source", "type", "start", "end", 
+                                 "score", "strand", "phase", "attributes")) %>% 
+   filter(type  == "gene") %>% 
+  filter(attributes %in% unique(orfs$gene_id)) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  group_by(name) %>% 
+  mutate(gene = ivs::iv(start, end)) %>% 
+  dplyr::select(name, gene)
+gene_pct <- lapply(unique(windows$name), function(n){
+  locations <- iv_locate_overlaps(
+    filter(windows, name == n)$window,
+    filter(genes, name == n)$gene,
+    type = "contains", 
+    no_match = "drop"
+  )
+  iv_align(filter(windows, name == n)$window, filter(genes, name == n)$gene,
+           locations = locations) %>% 
+    group_by(needles) %>% 
+    reframe(range = iv_groups(haystack)) %>% 
+    mutate(length = iv_end(range) - iv_start(range)) %>% 
+    group_by(needles) %>% 
+    summarise(length = sum(length)) %>% 
+    mutate(percentage_gene = length/window) %>% 
+    mutate(start = iv_start(needles), stop = iv_end(needles)) %>% 
+    mutate(name = n) %>% 
+    dplyr::select(name, start, stop, percentage_gene)
+}) %>% bind_rows()
+mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
+  unique() %>% 
+  mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
+  mutate(interval = cut(POS, breaks = seq(0, max(POS)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+all <- gene_pct %>% 
+  left_join(mutations) %>% 
+  mutate(mutations = ifelse(is.na(mutations), 0, mutations)) %>% 
+  mutate(percentage_gene_interval = cut(percentage_gene, 
+                                        breaks = seq(0, 1, by = 0.1)))
+ggplot(all, aes(percentage_gene, mutations)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "red") +
+  ggtitle("Angela", "Windows of 10^5")
+glm(mutations ~ percentage_gene, all, family = "poisson") %>% 
+  summary()
+```
+
+```{r}
+library(ivs)
+window <- 10^5
+windows <- hs1 %>% 
+  filter(end > window) %>% 
+  rowwise() %>% 
+  mutate(window_end = list(seq(from = (0+window), to = end, by = window))) %>% 
+  unnest_longer(window_end) %>% 
+  mutate(window_start = lag(window_end)) %>% 
+  mutate(window_start = ifelse(is.na(window_start), 0, window_start)) %>% 
+  filter(window_end - window_start == window) %>% 
+  mutate(window  = ivs::iv(window_start, window_end)) %>% 
+  dplyr::select(name, window)
+tes <- read_tsv("data/mutations/angela/annotation/Dgu_HS1_HYBRID_SCAFFOLD.fa.out.gff", skip = 3, 
+               col_names = c("scf", "source", "type", "start", "end", "score", "strand", "phase", "attributes")) %>% 
+  mutate(name = gsub("Super-Scaffold_", "", scf)) %>% 
+  group_by(name) %>% 
+  mutate(te = ivs::iv(start, end)) %>% 
+  dplyr::select(name, te)
+tes_pct <- lapply(unique(windows$name), function(n){
+  locations <- iv_locate_overlaps(
+    filter(windows, name == n)$window,
+    filter(tes, name == n)$te,
+    type = "contains", 
+    no_match = "drop"
+  )
+  iv_align(filter(windows, name == n)$window, filter(tes, name == n)$te,
+           locations = locations) %>% 
+    group_by(needles) %>% 
+    reframe(range = iv_groups(haystack)) %>% 
+    mutate(length = iv_end(range) - iv_start(range)) %>% 
+    group_by(needles) %>% 
+    summarise(length = sum(length)) %>% 
+    mutate(percentage_te = length/window) %>% 
+    mutate(start = iv_start(needles), stop = iv_end(needles)) %>% 
+    mutate(name = n) %>% 
+    dplyr::select(name, start, stop, percentage_te)
+}) %>% bind_rows()
+mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  dplyr::select(SNV, CHROM, POS) %>% 
+  unique() %>% 
+  mutate(name = gsub("Super-Scaffold_", "", CHROM)) %>% 
+  mutate(interval = cut(POS, breaks = seq(0, max(POS)+window, by = window))) %>% 
+  group_by(name, interval) %>% 
+  summarise(mutations = n()) %>% 
+  mutate(interval = gsub("(", "", interval, fixed = T)) %>% 
+  mutate(interval = gsub("]", "", interval, fixed = T)) %>% 
+  separate(interval, c("start", "stop"), ",", convert = T) %>% 
+  ungroup()
+all <- tes_pct %>% 
+  left_join(mutations) %>% 
+  mutate(mutations = ifelse(is.na(mutations), 0, mutations))
+ggplot(all, aes(percentage_te, mutations)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "red") +
+  ggtitle("Angela", "Windows of 10^5")
+glm(mutations ~ percentage_te, all, family = "poisson") %>% 
+  summary()
+```
+
+
 ## Heterozygosity
 
 We used k-mer analyses (21-mers) using `jellyfish` and the `GenomeScope` to estimate genetic diversity $\pi=0.901%$ (Fig. \@ref(fig:genomescopeAngela)).
@@ -810,11 +938,10 @@ vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>%
 
 ```{r tipsvcfs, eval=F}
 library(vcfR)
-tip_mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
   mutate(tumor = paste0(branch, tip)) %>% 
-  group_by(tumor, SNV, CHROM, POS, REF, ALT) %>% 
-  summarise(Filter = ifelse("evs" %in% Filter, "evs", "base")) %>% 
-  ungroup()
+  select(tumor, SNV, CHROM, POS, REF, ALT, Filter) %>% 
+  unique()
 # vcf header
 ref_mut_vcf <- read.vcfR("data/mutations/angela/raw/AL1_vs_T2.raw.vcf")
 header <- ref_mut_vcf@meta
@@ -823,11 +950,7 @@ header[65] <- "##FILTER=<ID=base,Description=\"Filter based on minimum allele co
 header[66] <- "##FILTER=<ID=evs,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (5th-95th), and mutations sharing across leaves (at least 2 in the crown).\">"
 header <- header[-c(67:88)]
 # filters
-mutations <- list(
-  base = filter(tip_mutations, Filter %in% c("base",  "evs")),
-  evs = filter(tip_mutations, Filter %in% c("evs"))
-)
-vcfs <- lapply(mutations, function(data){
+tsv2vcf <- function(data){
   fix <- data %>% 
     mutate(QUAL = NA, INFO=NA) %>% 
     dplyr::rename(ID = SNV, FILTER = Filter) %>% 
@@ -854,10 +977,10 @@ vcfs <- lapply(mutations, function(data){
   mutation_vcf@fix <- as.matrix(fix)
   mutation_vcf@gt <- as.matrix(gt)
   return(mutation_vcf)
-})
-invisible(lapply(names(vcfs), function(v) write.vcf(vcfs[[v]], paste0("data/mutations/angela/trees/", v, ".vcf.gz"))))
+}
+write.vcf(tsv2vcf(mutations), "data/mutations/angela/trees/leaf_mutations.vcf.gz")
 # wget https://raw.githubusercontent.com/edgardomortiz/vcf2phylip/master/vcf2phylip.py
-# for file in $(ls *.vcf.gz); do python vcf2phylip.py -i $file -n ; done
+# for file in $(ls *.vcf.gz); do python3 vcf2phylip.py -i $file -n ; done
 files <- list.files(path = "data/mutations/angela/trees/", pattern = ".nexus")
 invisible(lapply(files, function(f){
   mutations <- phangorn::read.phyDat(file.path("data/mutations/angela/trees", f), format = "nexus")
@@ -868,6 +991,74 @@ invisible(lapply(files, function(f){
 ```
 
 ```{r angleatipsphylo, fig.width=12}
+files <- list.files(path = "data/mutations/angela/trees/", pattern = ".min4.fa.treefile")
+phylos <- lapply(files, function(f) read.tree(file.path("data/mutations/angela/trees", f)))
+names(phylos) <- gsub(".min4.fa.treefile", "", files)
+cowplot::plot_grid(plotlist = lapply(phylos, function(p) 
+  ggtree(phylobase::phylo4d(p)) + geom_tippoint(aes(col = substr(label, 1, 1)), size = 4) + geom_tiplab()
+), labels = names(phylos)) 
+```
+
+```{r rev2phyloangela, eval=F}
+library(vcfR)
+library(ape)
+library(ggtree)
+mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
+  arrange(branch, tip, SNV) %>% 
+  group_by(branch, tip, SNV) %>% 
+  filter(n() == 3) %>% 
+  ungroup() %>% 
+  mutate(tumor = paste0(branch, tip)) %>% 
+  select(tumor, SNV, CHROM, POS, REF, ALT, Filter) %>% 
+  unique()
+# vcf header
+ref_mut_vcf <- read.vcfR("data/mutations/angela/raw/AL1_vs_T2.raw.vcf")
+header <- ref_mut_vcf@meta
+header[64] <- "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+header[65] <- "##FILTER=<ID=base,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (5th-95th), and mutations sharing across leaves (at least 2 in the crown).\">"
+header[66] <- "##FILTER=<ID=evs,Description=\"Filter based on minimum allele count for mutation (>10) and normal sample (=0), sequencing depth (5th-95th), and mutations sharing across leaves (at least 2 in the crown).\">"
+header <- header[-c(67:88)]
+# filters
+tsv2vcf <- function(data){
+  fix <- data %>% 
+    mutate(QUAL = NA, INFO=NA) %>% 
+    dplyr::rename(ID = SNV, FILTER = Filter) %>% 
+    dplyr::select(CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO) %>% 
+    arrange(CHROM, POS) %>% 
+    mutate(POS = as.character(POS))
+  # head(as.matrix(fix))
+  gt <- dplyr::select(data, SNV) %>% 
+    mutate(tumor = list(unique(data$tumor))) %>% 
+    unnest() %>% 
+    left_join(select(data, SNV, tumor, Filter)) %>% 
+    mutate(GT = ifelse(is.na(Filter), "0/0", "1/1")) %>% 
+    mutate(FORMAT = "GT") %>% 
+    dplyr::select(SNV, FORMAT, GT, tumor) %>% 
+    unique() %>% 
+    reshape2::dcast(SNV + FORMAT ~ tumor, value.var = "GT") %>% 
+    dplyr::rename(ID = SNV) %>% 
+    mutate(R = "0/0")
+  gt <- left_join(dplyr::select(fix, ID), gt) %>% 
+    dplyr::select(-ID)
+  # head(as.matrix(gt))
+  mutation_vcf <- ref_mut_vcf
+  mutation_vcf@meta <- header
+  mutation_vcf@fix <- as.matrix(fix)
+  mutation_vcf@gt <- as.matrix(gt)
+  return(mutation_vcf)
+}
+write.vcf(tsv2vcf(mutations), "data/mutations/angela/rev2//leaf_mutations.vcf.gz")
+# wget https://raw.githubusercontent.com/edgardomortiz/vcf2phylip/master/vcf2phylip.py
+# for file in $(ls *.vcf.gz); do python3 vcf2phylip.py -i $file -n ; done
+files <- list.files(path = "data/mutations/angela/rev2/", pattern = ".nexus")
+invisible(lapply(files, function(f){
+  mutations <- phangorn::read.phyDat(file.path("data/mutations/angela/rev2", f), format = "nexus")
+  mutations <- ape::as.DNAbin(mutations)
+  ips::write.fas(mutations, file.path("data/mutations/angela/rev2", gsub("nexus", "fa", f)))
+}))
+```
+
+```{r angleatipsphylo2, fig.width=12}
 files <- list.files(path = "data/mutations/angela/trees/", pattern = ".min4.fa.treefile")
 phylos <- lapply(files, function(f) read.tree(file.path("data/mutations/angela/trees", f)))
 names(phylos) <- gsub(".min4.fa.treefile", "", files)
@@ -888,7 +1079,6 @@ genome_index <- read_tsv("data/mutations/angela/genome/Dgu_HS1_HYBRID_SCAFFOLD.f
   mutate(start = 0, end = length) %>% 
   dplyr::select(-length)
 mutations <- vroom::vroom("data/mutations/angela/filters/leaf_mutations.tsv") %>% 
-  # filter(Filter == "evs") %>% 
   group_by(SNV, CHROM, POS, REF, ALT) %>% 
   unique() %>% 
   ungroup()
@@ -930,7 +1120,7 @@ t <- mutations %>%
   mutate(POS3f = ifelse(strand == "+", POS3, POS5r)) %>% 
   mutate(spectra = paste0(POS5f, REFf, POS3f)) %>% 
   dplyr::select(CHROM, POS, SNV, REF, ALT, tumor, branch, tip, mutation_AF, Filter, type, spectra)
-write_tsv(t, "data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv") 
+write_tsv(t, "data/mutations/angela/filters/leaf_mutations_spectra.tsv") 
 ```
 
 ```{r, fig.cap="Number of mutations per filter and light condition across branches."}
@@ -951,7 +1141,7 @@ write_tsv(t, "data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv")
 ```
 
 ```{r}
-vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv") %>% 
+vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv") %>% 
   filter(!(Filter %in% c("base1", "evs1"))) %>% 
   mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
   mutate(sample = paste0(branch, tip)) %>% 
@@ -971,7 +1161,7 @@ vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv")
 ```
 
 ```{r, fig.width=12}
-vroom::vroom("data/mutations/angela/filters/filtered_tip_mutations_spectra.tsv") %>% 
+vroom::vroom("data/mutations/angela/filters/leaf_mutations_spectra.tsv") %>% 
     filter(!(Filter %in% c("base1", "evs1"))) %>% 
   mutate(condition = recode(tip, "L" = "Light", "S" = "Shadow")) %>% 
   mutate(sample = paste0(branch, tip)) %>% 
@@ -1051,7 +1241,7 @@ fruit_mutations %>%
   dplyr::select(-SNV) %>% 
   mutate(af = round(af, 2)) %>% 
   dplyr::select(CHROM, POS, branch, replicate, af, rank) %>% 
-  DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank"))
+  DT::datatable(colnames = c("Super scaffold", "position", "branch(es)", "replicate", "allele frequency", "rank")) 
 ```
 
 ## Genes

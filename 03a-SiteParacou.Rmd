@@ -57,7 +57,7 @@ Cons:
 * Non destructive sampling
 * Avoid trunk
 
-```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns."}
+```{r paracouMap, fig.cap="Paracou individuals and MNC since 2004 LiDAR campaigns.", eval=FALSE}
 leaflet() %>%
   addTiles() %>% 
   addRasterImage(aggregate(dcm2004, 4), colors = "Greys", group = "DCM 2004") %>%
@@ -68,5 +68,5 @@ leaflet() %>%
   addCircles(data = p, group = "Individuals", col = "red", radius =  30) %>% 
   addLayersControl(overlayGroups = c("DCM 2004", "DCM 2009", "DCM 2013", "DCM 2015",
                                      'Plots', 'Individuals'),
-                   options = layersControlOptions(collapsed = T))
+                   options = layersControlOptions(collapsed = T)) 
 ```

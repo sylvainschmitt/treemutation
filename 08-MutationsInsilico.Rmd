@@ -294,11 +294,11 @@ anim_save("save/insilico.gif", g, renderer = gifski_renderer())
 ```
 
 
-```{r mutissf5.2, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
+```{r mutissf52, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage."}
 include_graphics("save/insilico.gif")
 ```
 
-```{r mutissf5.3, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 7, fig.width = 7}
+```{r mutissf53, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 7, fig.width = 7}
 rev_sqrt_trans <- function() {
     scales::trans_new(
         name = "rev_sqrt", 
@@ -367,7 +367,7 @@ l2 <- cowplot::get_legend(g2)
 cowplot::plot_grid(g, l1, l2, nrow = 3, rel_heights = c(8,1,1))
 ```
 
-```{r mutissf5.4, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 10, fig.width = 7}
+```{r mutissf54, fig.cap="Variation in the performance of mutation detection tools with varying biological and sequencing parameters. The recall and the precision rates have been assessed for each tool to detect mutations with varying transition/transversion ratio, allelic fraction, and coverage.", fig.height = 10, fig.width = 7}
 rev_sqrt_trans <- function() {
     scales::trans_new(
         name = "rev_sqrt", 

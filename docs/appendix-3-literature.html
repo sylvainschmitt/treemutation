@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>C Appendix 3: Literature | TreeMutation</title>
   <meta name="description" content="Mutation in the tropical tree canopy." />
-  <meta name="generator" content="bookdown 0.32 and GitBook 2.6.7" />
+  <meta name="generator" content="bookdown 0.35 and GitBook 2.6.7" />
 
   <meta property="og:title" content="C Appendix 3: Literature | TreeMutation" />
   <meta property="og:type" content="book" />
@@ -23,7 +23,7 @@
 <meta name="author" content="Sylvain Schmitt" />
 
 
-<meta name="date" content="2023-06-01" />
+<meta name="date" content="2023-11-06" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -52,16 +52,16 @@
 <link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
 <link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
 <script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
-<script src="libs/htmlwidgets-1.6.1/htmlwidgets.js"></script>
+<script src="libs/htmlwidgets-1.6.2/htmlwidgets.js"></script>
 <link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
 <script src="libs/leaflet-1.3.1/leaflet.js"></script>
 <link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
 <script src="libs/proj4-2.6.2/proj4.min.js"></script>
 <script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
 <link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
-<script src="libs/leaflet-binding-2.1.1/leaflet.js"></script>
+<script src="libs/leaflet-binding-2.2.0/leaflet.js"></script>
 <link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
-<script src="libs/datatables-binding-0.28/datatables.js"></script>
+<script src="libs/datatables-binding-0.29/datatables.js"></script>
 <link href="libs/dt-core-1.13.4/css/jquery.dataTables.min.css" rel="stylesheet" />
 <link href="libs/dt-core-1.13.4/css/jquery.dataTables.extra.css" rel="stylesheet" />
 <script src="libs/dt-core-1.13.4/js/jquery.dataTables.min.js"></script>
@@ -134,6 +134,10 @@ code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
 <style type="text/css">
 /* Used with Pandoc 2.11+ new --citeproc when CSL is used */
 div.csl-bib-body { }
@@ -256,6 +260,7 @@ div.csl-indent {
 <ul>
 <li class="chapter" data-level="10.2.1" data-path="mutations-angela.html"><a href="mutations-angela.html#annotation"><i class="fa fa-check"></i><b>10.2.1</b> Annotation</a></li>
 <li class="chapter" data-level="10.2.2" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations"><i class="fa fa-check"></i><b>10.2.2</b> Mutations</a></li>
+<li class="chapter" data-level="10.2.3" data-path="mutations-angela.html"><a href="mutations-angela.html#comp"><i class="fa fa-check"></i><b>10.2.3</b> Comp</a></li>
 </ul></li>
 <li class="chapter" data-level="10.3" data-path="mutations-angela.html"><a href="mutations-angela.html#heterozygosity"><i class="fa fa-check"></i><b>10.3</b> Heterozygosity</a></li>
 <li class="chapter" data-level="10.4" data-path="mutations-angela.html"><a href="mutations-angela.html#mutations-filters"><i class="fa fa-check"></i><b>10.4</b> Mutations filters</a></li>
@@ -274,6 +279,7 @@ div.csl-indent {
 <ul>
 <li class="chapter" data-level="11.2.1" data-path="mutations-sixto.html"><a href="mutations-sixto.html#annotation-1"><i class="fa fa-check"></i><b>11.2.1</b> Annotation</a></li>
 <li class="chapter" data-level="11.2.2" data-path="mutations-sixto.html"><a href="mutations-sixto.html#mutations-1"><i class="fa fa-check"></i><b>11.2.2</b> Mutations</a></li>
+<li class="chapter" data-level="11.2.3" data-path="mutations-sixto.html"><a href="mutations-sixto.html#comp-1"><i class="fa fa-check"></i><b>11.2.3</b> Comp</a></li>
 </ul></li>
 <li class="chapter" data-level="11.3" data-path="mutations-sixto.html"><a href="mutations-sixto.html#rubrynolide-enzymes"><i class="fa fa-check"></i><b>11.3</b> Rubrynolide enzymes</a></li>
 <li class="chapter" data-level="11.4" data-path="mutations-sixto.html"><a href="mutations-sixto.html#heterozygosity-1"><i class="fa fa-check"></i><b>11.4</b> Heterozygosity</a></li>
@@ -309,7 +315,7 @@ div.csl-indent {
 <li class="chapter" data-level="13.1" data-path="comparisons-5.html"><a href="comparisons-5.html#genomes-1"><i class="fa fa-check"></i><b>13.1</b> Genomes</a></li>
 <li class="chapter" data-level="13.2" data-path="comparisons-5.html"><a href="comparisons-5.html#libraries-1"><i class="fa fa-check"></i><b>13.2</b> Libraries</a></li>
 <li class="chapter" data-level="13.3" data-path="comparisons-5.html"><a href="comparisons-5.html#mutations-3"><i class="fa fa-check"></i><b>13.3</b> Mutations</a></li>
-<li class="chapter" data-level="13.4" data-path="comparisons-5.html"><a href="comparisons-5.html#frequencies-1"><i class="fa fa-check"></i><b>13.4</b> Frequencies</a></li>
+<li class="chapter" data-level="13.4" data-path="comparisons-5.html"><a href="comparisons-5.html#frequencies-2"><i class="fa fa-check"></i><b>13.4</b> Frequencies</a></li>
 <li class="chapter" data-level="13.5" data-path="comparisons-5.html"><a href="comparisons-5.html#types"><i class="fa fa-check"></i><b>13.5</b> Types</a></li>
 <li class="chapter" data-level="13.6" data-path="comparisons-5.html"><a href="comparisons-5.html#spectra-1"><i class="fa fa-check"></i><b>13.6</b> Spectra</a></li>
 <li class="chapter" data-level="13.7" data-path="comparisons-5.html"><a href="comparisons-5.html#rates-1"><i class="fa fa-check"></i><b>13.7</b> Rates</a>
@@ -325,6 +331,11 @@ div.csl-indent {
 <li class="chapter" data-level="14.0.1" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-1"><i class="fa fa-check"></i><b>14.0.1</b> Figure 1</a></li>
 <li class="chapter" data-level="14.0.2" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-2"><i class="fa fa-check"></i><b>14.0.2</b> Figure 2</a></li>
 <li class="chapter" data-level="14.1" data-path="manuscript-figures.html"><a href="manuscript-figures.html#figure-3"><i class="fa fa-check"></i><b>14.1</b> Figure 3</a></li>
+</ul></li>
+<li class="chapter" data-level="15" data-path="manuscript-figures-evs.html"><a href="manuscript-figures-evs.html"><i class="fa fa-check"></i><b>15</b> Manuscript figures EVS</a>
+<ul>
+<li class="chapter" data-level="15.1" data-path="manuscript-figures-evs.html"><a href="manuscript-figures-evs.html#figure-2-evs"><i class="fa fa-check"></i><b>15.1</b> Figure 2 EVS</a></li>
+<li class="chapter" data-level="15.2" data-path="manuscript-figures-evs.html"><a href="manuscript-figures-evs.html#figure-3-evs"><i class="fa fa-check"></i><b>15.2</b> Figure 3 EVS</a></li>
 </ul></li>
 <li class="appendix"><span><b>Appendix</b></span></li>
 <li class="chapter" data-level="A" data-path="appendix-1-meetings.html"><a href="appendix-1-meetings.html"><i class="fa fa-check"></i><b>A</b> Appendix 1: Meetings</a>
@@ -426,10 +437,10 @@ div.csl-indent {
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="appendix-3-literature" class="section level1 hasAnchor" number="17">
+<div id="appendix-3-literature" class="section level1 hasAnchor" number="18">
 <h1><span class="header-section-number">C</span> Appendix 3: Literature<a href="appendix-3-literature.html#appendix-3-literature" class="anchor-section" aria-label="Anchor link to header"></a></h1>
 <p>This appendix keeps literature review up-to-date.</p>
-<div id="bergeron2023" class="section level3 hasAnchor" number="17.0.1">
+<div id="bergeron2023" class="section level3 hasAnchor" number="18.0.1">
 <h3><span class="header-section-number">C.0.1</span> Bergeron2023<a href="appendix-3-literature.html#bergeron2023" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <ul>
 <li>difficulty of com-paring GMR estimates derived using different methodologies</li>
@@ -439,22 +450,22 @@ div.csl-indent {
 <li>hominoid slowdown hypothesis</li>
 </ul>
 </div>
-<div id="genome-assembly-1" class="section level2 hasAnchor" number="17.1">
+<div id="genome-assembly-1" class="section level2 hasAnchor" number="18.1">
 <h2><span class="header-section-number">C.1</span> Genome assembly<a href="appendix-3-literature.html#genome-assembly-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div id="johnson2020" class="section level3 hasAnchor" number="17.1.1">
-<h3><span class="header-section-number">C.1.1</span> <span class="citation">Johnson <em>et al.</em> (<a href="#ref-Johnson2020" role="doc-biblioref">2020</a>)</span><a href="appendix-3-literature.html#johnson2020" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="johnson2020" class="section level3 hasAnchor" number="18.1.1">
+<h3><span class="header-section-number">C.1.1</span> <span class="citation">Johnson <em>et al.</em> (<a href="#ref-Johnson2020">2020</a>)</span><a href="appendix-3-literature.html#johnson2020" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Draft genome assemblies using sequencing reads from Oxford Nanopore Technology and Illumina platforms for four species of North American Fundulus killifish</strong></p>
 <p><em>de novo</em> assembly of high-quality genomes combining short-read Illumina data to polish assemblies from long-read ONT data.</p>
 </div>
-<div id="plomion2018" class="section level3 hasAnchor" number="17.1.2">
-<h3><span class="header-section-number">C.1.2</span> <span class="citation">Plomion <em>et al.</em> (<a href="#ref-Plomion2018" role="doc-biblioref">2018</a>)</span><a href="appendix-3-literature.html#plomion2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="plomion2018" class="section level3 hasAnchor" number="18.1.2">
+<h3><span class="header-section-number">C.1.2</span> <span class="citation">Plomion <em>et al.</em> (<a href="#ref-Plomion2018">2018</a>)</span><a href="appendix-3-literature.html#plomion2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Oak genome reveals facets of long lifespan</strong></p>
 </div>
-<div id="msc" class="section level3 hasAnchor" number="17.1.3">
+<div id="msc" class="section level3 hasAnchor" number="18.1.3">
 <h3><span class="header-section-number">C.1.3</span> Msc<a href="appendix-3-literature.html#msc" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <ul>
 <li>also mutation detection</li>
-<li>Use <span class="citation">Cibulskis <em>et al.</em> (<a href="#ref-Cibulskis2013" role="doc-biblioref">2013</a>)</span> to detect somatic mutations</li>
+<li>Use <span class="citation">Cibulskis <em>et al.</em> (<a href="#ref-Cibulskis2013">2013</a>)</span> to detect somatic mutations</li>
 <li>orthogroups expanded in tandem duplicated genes are enriched in gene ontology terms relating to biotic interactions (disease-resistance R genes)</li>
 <li>expanded orthorgroups are more degenerated (higher pi0/pi4) than stable orhogroups</li>
 <li>rapide selection on leucine-rich repeat receptor like kinase (LRR-RLK) for oak immunity</li>
@@ -464,17 +475,17 @@ div.csl-indent {
 <li>mutation detection: BWA-MEM + MuTect</li>
 </ul>
 </div>
-<div id="si" class="section level3 hasAnchor" number="17.1.4">
+<div id="si" class="section level3 hasAnchor" number="18.1.4">
 <h3><span class="header-section-number">C.1.4</span> SI<a href="appendix-3-literature.html#si" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 </div>
-<div id="httpswww.oakgenome.frpage_id587" class="section level3 hasAnchor" number="17.1.5">
+<div id="httpswww.oakgenome.frpage_id587" class="section level3 hasAnchor" number="18.1.5">
 <h3><span class="header-section-number">C.1.5</span> <a href="https://www.oakgenome.fr/?page_id=587" class="uri">https://www.oakgenome.fr/?page_id=587</a><a href="appendix-3-literature.html#httpswww.oakgenome.frpage_id587" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 </div>
 </div>
-<div id="mutation-detection-1" class="section level2 hasAnchor" number="17.2">
+<div id="mutation-detection-1" class="section level2 hasAnchor" number="18.2">
 <h2><span class="header-section-number">C.2</span> Mutation detection<a href="appendix-3-literature.html#mutation-detection-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div id="orr2019" class="section level3 hasAnchor" number="17.2.1">
-<h3><span class="header-section-number">C.2.1</span> <span class="citation">Orr <em>et al.</em> (<a href="#ref-Orr2019" role="doc-biblioref">2019</a>)</span><a href="appendix-3-literature.html#orr2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="orr2019" class="section level3 hasAnchor" number="18.2.1">
+<h3><span class="header-section-number">C.2.1</span> <span class="citation">Orr <em>et al.</em> (<a href="#ref-Orr2019">2019</a>)</span><a href="appendix-3-literature.html#orr2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>A phylogenomic approach reveals a low somatic mutation rate in a long-lived plant</strong></p>
 <ul>
 <li><strong>Methodology</strong>
@@ -495,13 +506,13 @@ div.csl-indent {
 </ul></li>
 </ul>
 </div>
-<div id="ramu2013" class="section level3 hasAnchor" number="17.2.2">
-<h3><span class="header-section-number">C.2.2</span> <span class="citation">Ramu <em>et al.</em> (<a href="#ref-Ramu2013" role="doc-biblioref">2013</a>)</span><a href="appendix-3-literature.html#ramu2013" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="ramu2013" class="section level3 hasAnchor" number="18.2.2">
+<h3><span class="header-section-number">C.2.2</span> <span class="citation">Ramu <em>et al.</em> (<a href="#ref-Ramu2013">2013</a>)</span><a href="appendix-3-literature.html#ramu2013" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>DeNovoGear: De novo indel and point mutation discovery and phasing</strong></p>
 <p>Tools to detect ponit mutations used in Orr et al. 2019 and compared with <code>SAMtools</code>, <code>polyMutt</code>, and <code>GATK</code>.</p>
 </div>
-<div id="hanlon2019" class="section level3 hasAnchor" number="17.2.3">
-<h3><span class="header-section-number">C.2.3</span> <span class="citation">Hanlon <em>et al.</em> (<a href="#ref-Hanlon2019" role="doc-biblioref">2019</a>)</span><a href="appendix-3-literature.html#hanlon2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="hanlon2019" class="section level3 hasAnchor" number="18.2.3">
+<h3><span class="header-section-number">C.2.3</span> <span class="citation">Hanlon <em>et al.</em> (<a href="#ref-Hanlon2019">2019</a>)</span><a href="appendix-3-literature.html#hanlon2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Somatic mutations substantially increase the per‐generation mutation rate in the conifer Picea sitchensis</strong></p>
 <ul>
 <li><strong>Methodology</strong>
@@ -532,8 +543,8 @@ div.csl-indent {
 </ul></li>
 </ul>
 </div>
-<div id="cibulskis2013" class="section level3 hasAnchor" number="17.2.4">
-<h3><span class="header-section-number">C.2.4</span> <span class="citation">Cibulskis <em>et al.</em> (<a href="#ref-Cibulskis2013" role="doc-biblioref">2013</a>)</span><a href="appendix-3-literature.html#cibulskis2013" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="cibulskis2013" class="section level3 hasAnchor" number="18.2.4">
+<h3><span class="header-section-number">C.2.4</span> <span class="citation">Cibulskis <em>et al.</em> (<a href="#ref-Cibulskis2013">2013</a>)</span><a href="appendix-3-literature.html#cibulskis2013" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Sensitive detection of somatic point mutations in impure and heterogeneous cancer samples</strong></p>
 <ul>
 <li><code>MuTect</code> has higher sensitivity with similar specificity, especially for mutations with allelic fractions as low as 0.1</li>
@@ -588,13 +599,13 @@ div.csl-indent {
 </ul></li>
 </ul>
 </div>
-<div id="nicholson2018" class="section level3 hasAnchor" number="17.2.5">
-<h3><span class="header-section-number">C.2.5</span> <span class="citation">Nicholson <em>et al.</em> (<a href="#ref-Nicholson2018" role="doc-biblioref">2018</a>)</span><a href="appendix-3-literature.html#nicholson2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="nicholson2018" class="section level3 hasAnchor" number="18.2.5">
+<h3><span class="header-section-number">C.2.5</span> <span class="citation">Nicholson <em>et al.</em> (<a href="#ref-Nicholson2018">2018</a>)</span><a href="appendix-3-literature.html#nicholson2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Fixation and Spread of Somatic Mutations in Adult Human Colonic Epithelium</strong></p>
 <p>Variant fixation requires all wild-type stem cells to be displaced defining a process of monoclonal conversion of crypts that takes many years in human colonic epithelium. But biased behaviors are confirmed to subvert these processes to achieve variant over representation.</p>
 </div>
-<div id="alioto2015" class="section level3 hasAnchor" number="17.2.6">
-<h3><span class="header-section-number">C.2.6</span> <span class="citation">Alioto <em>et al.</em> (<a href="#ref-Alioto2015" role="doc-biblioref">2015</a>)</span><a href="appendix-3-literature.html#alioto2015" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="alioto2015" class="section level3 hasAnchor" number="18.2.6">
+<h3><span class="header-section-number">C.2.6</span> <span class="citation">Alioto <em>et al.</em> (<a href="#ref-Alioto2015">2015</a>)</span><a href="appendix-3-literature.html#alioto2015" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>A comprehensive assessment of somatic mutation detection in cancer using whole-genome sequencing</strong></p>
 <ul>
 <li>PCR-free library preparation</li>
@@ -607,28 +618,28 @@ div.csl-indent {
 </ul>
 </div>
 </div>
-<div id="unclassified" class="section level2 hasAnchor" number="17.3">
+<div id="unclassified" class="section level2 hasAnchor" number="18.3">
 <h2><span class="header-section-number">C.3</span> Unclassified<a href="appendix-3-literature.html#unclassified" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div id="michael2020" class="section level3 hasAnchor" number="17.3.1">
-<h3><span class="header-section-number">C.3.1</span> <span class="citation">Michael &amp; VanBuren (<a href="#ref-Michael2020" role="doc-biblioref">2020</a>)</span><a href="appendix-3-literature.html#michael2020" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="michael2020" class="section level3 hasAnchor" number="18.3.1">
+<h3><span class="header-section-number">C.3.1</span> <span class="citation">Michael &amp; VanBuren (<a href="#ref-Michael2020">2020</a>)</span><a href="appendix-3-literature.html#michael2020" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <p><strong>Building near-complete plant genomes</strong></p>
 </div>
 </div>
-<div id="to-read" class="section level2 hasAnchor" number="17.4">
+<div id="to-read" class="section level2 hasAnchor" number="18.4">
 <h2><span class="header-section-number">C.4</span> To read<a href="appendix-3-literature.html#to-read" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div id="belser2018" class="section level3 hasAnchor" number="17.4.1">
-<h3><span class="header-section-number">C.4.1</span> <span class="citation">Belser <em>et al.</em> (<a href="#ref-Belser2018" role="doc-biblioref">2018</a>)</span><a href="appendix-3-literature.html#belser2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="belser2018" class="section level3 hasAnchor" number="18.4.1">
+<h3><span class="header-section-number">C.4.1</span> <span class="citation">Belser <em>et al.</em> (<a href="#ref-Belser2018">2018</a>)</span><a href="appendix-3-literature.html#belser2018" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 </div>
-<div id="edwards1990" class="section level3 hasAnchor" number="17.4.2">
-<h3><span class="header-section-number">C.4.2</span> <span class="citation">Edwards <em>et al.</em> (<a href="#ref-Edwards1990" role="doc-biblioref">1990</a>)</span><a href="appendix-3-literature.html#edwards1990" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="edwards1990" class="section level3 hasAnchor" number="18.4.2">
+<h3><span class="header-section-number">C.4.2</span> <span class="citation">Edwards <em>et al.</em> (<a href="#ref-Edwards1990">1990</a>)</span><a href="appendix-3-literature.html#edwards1990" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 </div>
-<div id="leebens-mack2019" class="section level3 hasAnchor" number="17.4.3">
-<h3><span class="header-section-number">C.4.3</span> <span class="citation">Leebens-Mack <em>et al.</em> (<a href="#ref-Leebens-Mack2019" role="doc-biblioref">2019</a>)</span><a href="appendix-3-literature.html#leebens-mack2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="leebens-mack2019" class="section level3 hasAnchor" number="18.4.3">
+<h3><span class="header-section-number">C.4.3</span> <span class="citation">Leebens-Mack <em>et al.</em> (<a href="#ref-Leebens-Mack2019">2019</a>)</span><a href="appendix-3-literature.html#leebens-mack2019" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <ul>
 <li>Schmid-Siegert et al. 2017</li>
 </ul>
 </div>
-<div id="links" class="section level3 hasAnchor" number="17.4.4">
+<div id="links" class="section level3 hasAnchor" number="18.4.4">
 <h3><span class="header-section-number">C.4.4</span> links<a href="appendix-3-literature.html#links" class="anchor-section" aria-label="Anchor link to header"></a></h3>
 <ul>
 <li><a href="https://academic.oup.com/bioinformatics/article/32/20/3058/2196489?login=true" class="uri">https://academic.oup.com/bioinformatics/article/32/20/3058/2196489?login=true</a></li>

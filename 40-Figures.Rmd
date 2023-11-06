@@ -15,12 +15,16 @@ This chapter develop the code for figure preparation for the final manuscript.
 ### Figure 1
 
 ```{r}
-# rsvg::rsvg_png("data/circlize/Circlize_angela_v130223_withannotations.svg", "data/circlize/AngelaCircos.png", width = 1311, height = 1311)
-# rsvg::rsvg_png("data/circlize/Circlize_sixto_v130223_withannotations.svg", "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
+# rsvg::rsvg_png("data/circlize/Circlize_angela_v271023_withannotations.svg",
+#                "data/circlize/AngelaCircos.png", width = 1311, height = 1311)
+# rsvg::rsvg_png("data/circlize/Circlize_sixto_v271023_withannotations.svg",
+#                "data/circlize/SixtoCircos.png", width = 1311, height = 1311)
 ga <- grid::rasterGrob(png::readPNG("data/circlize/AngelaCircos.png"), interpolate = T)
 gb <- grid::rasterGrob(png::readPNG("data/circlize/SixtoCircos.png"), interpolate = T)
-g <- cowplot::plot_grid(ga, gb, nrow = 2, labels = c("a", "b"))
+g <- cowplot::plot_grid(ga, gb, nrow = 2)
+                        # , labels = c("a", "b"))
 cowplot::save_plot(paste0("figs/Fig1.png"), g, dpi = 1000, base_width = 10, base_height = 20, bg = "white")
+cowplot::save_plot(paste0("figs/Fig1.pdf"), g, dpi = 1000, base_width = 10, base_height = 20)
 # cowplot::save_plot(paste0("~/Téléchargements/Fig1_lr.png"), g, dpi = 1000, base_width = 10, base_height = 5, bg = "white")
 ```
 
@@ -53,7 +57,7 @@ angela_archi <- read.tree(text = angela_archi) %>%
   phylogram::as.dendrogram() %>% 
   prune("R") %>% 
   set("labels_col", cols[labels(.)])
-angela_phylo <- treeio::read.nhx("data/mutations/angela/trees/base.min4.fa.contree") %>% 
+angela_phylo <- treeio::read.nhx("data/mutations/angela/trees/leaf_mutations.min4.fa.contree") %>% 
   as.phylo() %>% 
   root(outgroup = "R", resolve.root = TRUE) %>% 
   phylogram::as.dendrogram() %>% 
@@ -84,7 +88,7 @@ sixto_archi <- read.tree(text = sixto_archi) %>%
   prune("R") %>% 
   set("labels", str_sub(labels(.), 1, 2)) %>% 
   set("labels_col", cols[labels(.)])
-sixto_phylo <- treeio::read.nhx("data/mutations/sixto/trees/base.min4.fa.contree") %>% 
+sixto_phylo <- treeio::read.nhx("data/mutations/sixto/trees/leaf_mutations.min4.fa.contree") %>% 
   as.phylo() %>% 
   root(outgroup = "R", resolve.root = TRUE) %>% 
   phylogram::as.dendrogram() %>% 
@@ -114,7 +118,7 @@ gd <- grid::rasterGrob(png::readPNG("save/SixtoTanglegram.png"), interpolate = T
 
 ```{r figlightn}
 make_plot_light <- function(name = "angela"){
-  t1 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
+  t1 <- vroom::vroom(paste0("data/mutations/", name, "/filters/leaf_mutations_spectra.tsv"), 
                      show_col_types = FALSE) %>%   
     dplyr::select(tip, tumor, Filter, SNV) %>% 
     unique() %>% 
@@ -123,7 +127,7 @@ make_plot_light <- function(name = "angela"){
     filter(Filter == "base") %>% 
     mutate(type = "All") %>% 
     dplyr::select(-Filter)
-  t2 <- vroom::vroom(paste0("data/mutations/", name, "/filters/filtered_tip_mutations_spectra.tsv"), 
+  t2 <- vroom::vroom(paste0("data/mutations/", name, "/filters/leaf_mutations_spectra.tsv"), 
                      show_col_types = FALSE) %>%   
     dplyr::select(type, tip, tumor, SNV) %>% 
     unique() %>% 
@@ -158,10 +162,11 @@ ge <- make_plot_light("angela")
 gf <- make_plot_light("sixto")
 ```
 
-```{r}
+```{r, eval=FALSE}
 g <- cowplot::plot_grid(ga, gb, gc, gd, ge, gf, nrow = 3, labels = c("a", "b", "c", "d", "e", "f"),
                         rel_heights = c(1.5, 1, 1))
 cowplot::save_plot(paste0("figs/Fig2.png"), g, dpi = 1000, base_width = 8, base_height = 9, bg = "white")
+cowplot::save_plot(paste0("figs/Fig2.pdf"), g, dpi = 1000, base_width = 8, base_height = 9)
 ```
 
 ```{r fig2final, fig.cap="Fig. 2 | Somatic mutation distributions through physical trees, phylogenies, and with light. Somatic mutation distributions through physical trees, phylogenies, and with light are similarly portrayed for the two tropical trees: the Dicorynia guianensis tree named Angela (a,c,e), and the Sextonia rubra tree named Sixto (b,d,f). (a-b) The physical architecture of the tree is shown in black with the bough names in white boxes. The number of somatic mutations through the crown is indicated in the yellow boxes before the original branching event. The balloons circles indicate the sample points of three leaves in the light-exposed branches (light colours) and in the shaded branches (dark colours). Fruit sampling points are represented by red fruits, with the number of fruits sampled indicated in black. The red boxes with white labels indicate the transmission of mutations to fruit embryos out of the total number of mutations tested. (c-d) A side-by-side comparison of the physical tree (left, branch length in metres) and the maximum likelihood phylogeny (right, branch length in substitutions per site). The letters on the ends of the branches indicate the sample points with unique colours. (e-f) The effect of light exposure on the accumulation of somatic mutations as a function of mutation type is represented in yellow and grey boxes. The yellow boxes represent the number of mutations accumulated in all leaves of light exposed branches and the grey boxes in all leaves of shaded branches. The 'ns' labels indicate non-significant differences in Student's t-tests. Mutation types include all mutations and all types of transitions and transversions. The y-axis has been scaled logarithmically to facilitate reading of low values."}
@@ -181,6 +186,11 @@ t.test(
 )
 ```
 
+```{r, eval=FALSE}
+mutations %>% 
+  group_by(tree) %>% 
+  summarise(sum(mutation_AF < 0.25)/n()*100)
+```
 
 ```{r histaf}
 library(readr)
@@ -194,14 +204,17 @@ candidates <- bind_rows(
     mutate(mutation = 125:(124+n()), tree = "Sixto")
 ) %>% 
   dplyr::select(CHROM, POS, REF, ALT, af, branch, mutation, tree) %>% 
-  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM)))
-mutations_fruits <- readxl::read_xlsx("data/mutations/fruits/fruit_mutations_igv.xlsx", "classification") %>% 
-  mutate(mutation = as.numeric(gsub("SNV", "", SNV))) %>% 
-  dplyr::select(mutation, Type) %>% 
-  left_join(candidates) %>% 
-  mutate(transmitted = ifelse(mutation %in% c(6, 13, 31, 54, 57, 107, 128, 132, 151, 160), "yes", "no")) %>% 
-  mutate(SNV = paste0("Super-Scaffold_", CHROM, "#", POS)) %>% 
-  dplyr::select(SNV, transmitted)
+  mutate(CHROM = as.numeric(gsub("Super-Scaffold_", "", CHROM))) %>% 
+  mutate(SNV = paste0("Super-Scaffold_", as.numeric(CHROM), "#", as.numeric(POS))) %>% 
+  dplyr::select(SNV)
+mutations_fruits <- read_tsv("data/mutations/fruits2/fruit_mutations.tsv") %>% 
+  filter(allelic_fraction > 0, heterozygous_call_gatk == 1) %>%
+  mutate(transmitted = "yes") %>% 
+  mutate(SNV = paste0("Super-Scaffold_", as.numeric(scaffold), "#", as.numeric(position))) %>% 
+  dplyr::select(SNV, transmitted) %>% 
+  full_join(candidates) %>%
+  unique() %>% 
+  mutate(transmitted = ifelse(is.na(transmitted), "no", transmitted))
 mutations <- list(Napoleon = vroom::vroom("data/mutations/swiss/leaf_mutations.tsv"),
      "3P" = vroom::vroom("data/mutations/bordeaux/leaf_mutations.tsv"),
      Verzy = vroom::vroom("data/mutations/hetre/leaf_mutations.tsv"),
@@ -246,7 +259,7 @@ make_plot_af <- function(name = "Angela") {
   g1 <- ggplot(filter(mutations_hist_log, tree == name),
                  aes(mutation_AF_class, N+1)) +
     geom_col(aes(fill = "mutation"), col = NA) +
-    geom_col(aes(fill = "tested for transmition"), col = NA, 
+    geom_col(aes(fill = "tested for transmission"), col = NA, 
            data = filter(mutations_hist_log_tested, tree == name)) +
     geom_col(aes(fill = "found transmitted"), col = NA, 
            data = filter(mutations_hist_log_embryo, tree == name)) +
@@ -317,6 +330,8 @@ gc <- list("Q. robur - Lausanne (60X)" = vroom::vroom("data/mutations/swiss/leaf
   scale_fill_manual(guide = "none", values = cols)
 ```
 
+
+
 ```{r synaf}
 data_inter <- list(Angela = read_tsv("save/mutations_angela_sixto.tsv"), 
              Sixto = read_tsv("save/mutations_annotated_sixto.tsv")) %>% 
@@ -376,10 +391,11 @@ gd <- ggplot(data, aes(category, mutation_AF, fill = category)) +
         legend.spacing.y = unit(8, "points"), strip.text = element_text(face = "italic"))
 ```
 
-```{r}
+```{r, eval=FALSE}
 g <- cowplot::plot_grid(ga, gb, gc, gd, nrow = 2, labels = c("a", "b", "c", "d"),
                         rel_heights = c(1, 1))
 cowplot::save_plot(paste0("figs/Fig3.png"), g, dpi = 1000, base_width = 8, base_height = 6, bg = "white")
+cowplot::save_plot(paste0("figs/Fig3.pdf"), g, dpi = 1000, base_width = 8, base_height = 6)
 ```
 
 ```{r fig3final, fig.cap="Fig. 3 | Allelic fractions of somatic mutations among trees and among genomic elements. Histogram of allelic fractions of mutations detected in the crown of the two tropical trees: the Dicorynia guianensis tree named Angela (a), and the Sextonia rubra tree named Sixto (b). The main histogram shows the allelic fractions of the somatic mutations using a bin of 0.02 and a log-transformed count with the mutations detected in the crown in yellow, the mutations tested for transmission in grey, and the mutations transmitted to the embryos in red. The inner histogram shows the allelic fractions of the somatic mutations using a bin of 0.001 and a natural count. (c) Cumulative number of somatic mutations per branch with decreasing allelic fraction for five trees reanalysed with the same pipeline. The five trees include the two tropical trees studied, the Dicorynia guianensis tree named Angela in orange and the Sextonia rubra tree named Sixto in red, and three temperate trees, two pedunculate oaks Quercus robur named 3P in green and Napoleon in blue and a tortuous beech Fagus sylvatica named Verzy in purple. All trees were analysed with the same pipeline (see methods) but were sequenced with a different depth indicated in brackets. The line represents the median value while the area represents the minimum and maximum values on the 2 to 10 branches per tree. (d) Comparisons of allelic fractions for non-synonymous mutations in red with synonymous mutations in yellow, intronic mutations in green and intergenic mutations in blue for the two tropical trees: the Dicorynia guianensis tree named Angela (left panel), and the Sextonia rubra tree named Sixto (right panel). The p-value above the bars indicates the significance of the Student's T-test for the pairs of groups."}
