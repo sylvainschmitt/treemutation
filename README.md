@@ -17,6 +17,7 @@ Links and statistics can be found (not exhaustive) on [Altmetric](https://pnas.a
 
 ### Scientific articles (preprint & peer review)
 
+* [Spotlight in Trends in Genetics](https://www.cell.com/trends/genetics/pdf/S0168-9525(24)00107-0.pdf)
 * First paper [peer-review](https://genomics.peercommunityin.org/articles/rec?id=163)
 * First paper [preprint](https://genomics.peercommunityin.org/articles/rec?id=163) (with version history)
 * Second paper [preprint](https://www.biorxiv.org/content/10.1101/2023.06.05.543657v2) (with version history)
@@ -28,8 +29,8 @@ Links and statistics can be found (not exhaustive) on [Altmetric](https://pnas.a
 * [Technology Networks](http://ct.moreover.com/?a=53221502429&p=1pl&v=1&x=yIzK9TJuu8AhEC_X4YZfHQ)
 * [Science Mag](https://scienmag.com/unveiling-rare-diversity-the-origin-of-heritable-mutations-in-trees/)
 * [Bioengineer](https://bioengineer.org/unveiling-rare-diversity-the-origin-of-heritable-mutations-in-trees/)
-* France Culture (coming soon, french 🇫🇷)
-* Natura Sciences (coming soon, french 🇫🇷)
+* [France Culture](https://www.radiofrance.fr/franceculture/podcasts/avec-sciences/les-ultraviolets-ne-guident-pas-l-evolution-des-arbres-3680252?fbclid=IwAR0IuauO716i1yCCTJC60_w-0An-WE2-BAw9MfZPIRPPxviOM-aSHCyjCc8) (french 🇫🇷)
+* [Natura Sciences](https://www.natura-sciences.com/comprendre/mutations-arbres-consequences-adaptation-climat.html) (french 🇫🇷)
 
 ### Press release
 
